@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小采 AI 助手 1.0 架构拓扑图</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #667085;
+      --accent: #1d3557;
+      --line: #d6dee8;
+      --soft: #f8fafc;
+      --soft-2: #eef3f8;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #fbfcfe 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: "SF Pro Display", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .page {
+      width: 1560px;
+      margin: 0 auto;
+      padding: 36px 28px 48px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      color: var(--accent);
+      letter-spacing: 0.01em;
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .meta {
+      min-width: 300px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .board {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .banner {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 12px;
+      padding: 16px 22px;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .rows {
+      display: grid;
+      gap: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 180px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 220px 1fr 226px;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      min-height: 92px;
+    }
+
+    .box.soft {
+      background: var(--soft);
+    }
+
+    .box-title {
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .box-subtitle {
+      margin: 0 0 10px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .box p,
+    .box li {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .box ul {
+      margin: 0;
+      padding-left: 0;
+      list-style: none;
+      display: grid;
+      gap: 2px;
+    }
+
+    .box .muted {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .down {
+      text-align: center;
+      color: var(--accent);
+      line-height: 1;
+      margin: -2px 0 2px;
+      user-select: none;
+    }
+
+    .kernel {
+      padding: 14px 16px;
+    }
+
+    .kernel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+
+    .kernel-head .muted {
+      margin: 0;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .kernel-inner {
+      border: 1px dashed #d9e2ec;
+      border-radius: 12px;
+      background: #fafbfd;
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .engine-flow {
+      display: grid;
+      grid-template-columns: 1fr 24px 1fr 24px 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .engine {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .engine.soft {
+      background: var(--soft);
+    }
+
+    .engine h4 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    .engine p,
+    .engine li {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .engine ul {
+      margin: 0;
+      padding-left: 0;
+      list-style: none;
+      display: grid;
+      gap: 2px;
+    }
+
+    .chevron {
+      align-self: center;
+      justify-self: center;
+      color: var(--accent);
+      font-size: 26px;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .langgraph {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .runtime-flow {
+      display: grid;
+      grid-template-columns: 1fr 18px 1fr 18px 1fr 18px 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .runtime-step {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+      padding: 8px 10px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .runtime-step h5 {
+      margin: 0;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .runtime-step p {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .runtime-arrow {
+      align-self: center;
+      justify-self: center;
+      color: var(--accent);
+      font-size: 14px;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .engine-link {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .engine-link .rel-arrow {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .subgrid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .grid-6 {
+      display: grid;
+      grid-template-columns: 220px 1.05fr 1.05fr 1.15fr 1.15fr 1.3fr 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .compact p {
+      line-height: 1.4;
+    }
+
+    .side-rail {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--soft);
+      padding: 16px 14px;
+      min-height: 100%;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .side-rail .box-title {
+      margin-bottom: 2px;
+    }
+
+    .side-rail .rail-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .rail-block {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+    }
+
+    .rail-block h4 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    .rail-block p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .tag-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .tag {
+      display: inline-block;
+      width: fit-content;
+      max-width: 100%;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--soft);
+      font-size: 11px;
+      line-height: 1.3;
+      color: var(--ink);
+      white-space: normal;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>小采 AI 助手 1.0 架构拓扑图</h1>
+        <p>七层引擎架构、业务主线、模型服务与知识承接关系示意</p>
+      </div>
+      <div class="meta">
+        <div>项目：小采 AI 助手 1.0</div>
+        <div>类型：静态 HTML 架构图</div>
+        <div>保密级别：内部资料（仅限项目沟通与交付评审使用）</div>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="banner">小采 AI 助手 1.0 · Enterprise Topology</div>
+
+      <div class="layout">
+      <div class="rows">
+        <div class="row">
+          <div class="box soft">
+            <div class="box-title">应用层</div>
+            <div class="box-subtitle">Application Layer</div>
+            <ul>
+              <li>需求梳理 / 智能寻源 / Project</li>
+              <li>知识库 / 使用量管理 / 对话界面</li>
+            </ul>
+          </div>
+          <div class="box">
+            <div class="box-title">业务入口与主线承接</div>
+            <ul>
+              <li>用户可从对话界面、需求梳理、智能寻源、Project 或知识库进入系统。</li>
+              <li>本期主线为：需求梳理 &gt; 智能寻源 &gt; 结果承接到 Project。</li>
+            </ul>
+          </div>
+          <div class="box">
+            <div class="box-title">关键输出</div>
+            <ul>
+              <li>承接业务入口</li>
+              <li>触发后续处理流程</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="down">⌄</div>
+
+        <div class="row">
+          <div class="box soft">
+            <div class="box-title">展现层</div>
+            <div class="box-subtitle">Presentation Layer</div>
+            <ul>
+              <li>React / TypeScript / SSE</li>
+              <li>Web UI / Vite</li>
+            </ul>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 400px; gap:14px;">
+            <div class="box">
+              <div class="box-title">Presentation Engine / UI Engine</div>
+              <ul>
+                <li>页面交互组织、结果卡片呈现。</li>
+                <li>实时回传与前端状态承接。</li>
+              </ul>
+              <div class="muted">负责把内核输出整理成用户可理解、可继续操作的界面结果。</div>
+            </div>
+            <div class="box">
+              <div class="box-title">呈现结果示例</div>
+              <ul>
+                <li>需求确认结果 / 寻源结果页</li>
+                <li>风险摘要 / Project 承接视图</li>
+              </ul>
+              <div class="muted">由 Presentation Engine 统一组织 UI payload。</div>
+            </div>
+          </div>
+          <div class="box">
+            <div class="box-title">关键输出</div>
+            <ul>
+              <li>组织界面结果</li>
+              <li>向用户实时回传</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="down">⌄</div>
+
+        <div class="row">
+          <div class="box soft">
+            <div class="box-title">网关层</div>
+            <div class="box-subtitle">API Gateway Layer</div>
+            <ul>
+              <li>FastAPI / API Gateway / SSE</li>
+              <li>Auth / 系统对接</li>
+            </ul>
+          </div>
+          <div class="box">
+            <div class="box-title">API Gateway / FastAPI</div>
+            <div class="subgrid-4">
+              <div class="engine">
+                <h4>请求入口</h4>
+                <p>统一 API 接收入口</p>
+              </div>
+              <div class="engine">
+                <h4>身份承接</h4>
+                <p>认证与会话承接</p>
+              </div>
+              <div class="engine">
+                <h4>接口服务</h4>
+                <p>业务接口与系统对接</p>
+              </div>
+              <div class="engine">
+                <h4>结果返回</h4>
+                <p>SSE 流式输出 / 响应返回</p>
+              </div>
+            </div>
+            <div class="muted">连接前端与核心编排层，承接认证、流式输出与系统接口。</div>
+          </div>
+          <div class="box">
+            <div class="box-title">关键输出</div>
+            <ul>
+              <li>统一 API 入口</li>
+              <li>向内部分发请求</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="down">⌄</div>
+
+        <div class="row">
+          <div class="box soft">
+            <div class="box-title">AI 编排核心层</div>
+            <div class="box-subtitle">Orchestration Core</div>
+            <ul>
+              <li>Project Agent</li>
+              <li>Kernel</li>
+              <li>Decision / Execution</li>
+              <li>Skills / LangGraph Runtime</li>
+            </ul>
+          </div>
+          <div class="box kernel">
+            <div class="kernel-head">
+              <div class="box-title" style="margin:0;">Project Agent + Kernel</div>
+              <div class="muted">业务编排主容器</div>
+            </div>
+            <div class="kernel-inner">
+              <div class="muted">Kernel 内部主动作链与工作流运行能力</div>
+              <div class="engine-flow">
+                <div class="engine">
+                  <h4>Decision Engine</h4>
+                  <ul>
+                    <li>路由 / 规划</li>
+                    <li>条件判断 / 策略选择</li>
+                    <li>决定当前调用什么</li>
+                  </ul>
+                </div>
+                <div class="chevron">&gt;</div>
+                <div class="engine">
+                  <h4>Execution Engine</h4>
+                  <ul>
+                    <li>状态流转 / 执行推进</li>
+                    <li>流式输出 / 重试</li>
+                    <li>运行时：LangGraph Runtime</li>
+                    <li>负责把动作真正跑起来</li>
+                  </ul>
+                </div>
+                <div class="chevron">&gt;</div>
+                <div class="engine">
+                  <h4>Skills</h4>
+                  <ul>
+                    <li>可插拔业务动作单元</li>
+                    <li>原子能力调用</li>
+                    <li>例：字段确认 / 寻源分析 / 结果生成</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="engine-link">
+                <span>Execution Engine</span>
+                <span class="rel-arrow">&gt;</span>
+                <span>LangGraph Runtime</span>
+                <span class="rel-arrow">&gt;</span>
+                <span>Skills 调用</span>
+              </div>
+              <div class="muted">LangGraph Runtime 运行时编排能力</div>
+              <div class="langgraph">
+                <div class="runtime-flow">
+                  <div class="runtime-step">
+                    <h5>节点调度</h5>
+                    <p>按流程装配节点</p>
+                  </div>
+                  <div class="runtime-arrow">&gt;</div>
+                  <div class="runtime-step">
+                    <h5>状态流转</h5>
+                    <p>推进阶段与上下文</p>
+                  </div>
+                  <div class="runtime-arrow">&gt;</div>
+                  <div class="runtime-step">
+                    <h5>分支与重试</h5>
+                    <p>控制失败与回退</p>
+                  </div>
+                  <div class="runtime-arrow">&gt;</div>
+                  <div class="runtime-step">
+                    <h5>Skills 调用</h5>
+                    <p>驱动原子能力执行</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="box">
+            <div class="box-title">关键结构</div>
+            <div class="subgrid-4" style="grid-template-columns: 1fr; margin-top: 10px;">
+              <div class="engine">
+                <h4>主动作链</h4>
+                <p>Decision &gt; Execution &gt; Skills</p>
+              </div>
+              <div class="engine">
+                <h4>运行时技术</h4>
+                <p>LangGraph Runtime</p>
+              </div>
+              <div class="engine">
+                <h4>业务装配</h4>
+                <p>Project Agent 负责业务装配</p>
+              </div>
+              <div class="engine">
+                <h4>分层关系</h4>
+                <p>Engine 定义能力</p>
+                <p>Runtime 负责执行</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="down">⌄</div>
+
+        <div class="row">
+          <div class="box soft">
+            <div class="box-title">AI 模型服务层</div>
+            <div class="box-subtitle">Model Layer</div>
+            <ul>
+              <li>主力模型 / 备用模型</li>
+              <li>Embedding / 模型路由</li>
+            </ul>
+          </div>
+          <div class="box">
+            <div class="box-title">模型服务能力</div>
+            <div class="subgrid-4">
+              <div class="engine">
+                <h4>模型选择</h4>
+                <p>主力 / 备用模型切换</p>
+              </div>
+              <div class="engine">
+                <h4>模型路由</h4>
+                <p>请求分发与调用策略</p>
+              </div>
+              <div class="engine">
+                <h4>模型推理</h4>
+                <p>生成结果与推理返回</p>
+              </div>
+              <div class="engine">
+                <h4>检索召回</h4>
+                <p>Embedding / 向量检索 / 知识召回</p>
+              </div>
+            </div>
+            <div class="muted">模型层主要负责底层模型调用、检索服务与推理结果返回。</div>
+          </div>
+          <div class="box">
+            <div class="box-title">关键输出</div>
+            <ul>
+              <li>提供模型推理能力</li>
+              <li>提供检索与召回能力</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="down">⌄</div>
+
+        <div class="grid-6">
+          <div class="box soft">
+            <div class="box-title">知识与数据支撑层</div>
+            <div class="box-subtitle">Knowledge / Data Support</div>
+            <ul>
+              <li>PostgreSQL / Qdrant / Redis</li>
+              <li>文件 / 知识 / 结构化结果</li>
+            </ul>
+          </div>
+          <div class="box compact">
+            <div class="box-title">Ingestion Engine</div>
+            <p>文件接入</p>
+            <p>资料承接</p>
+          </div>
+          <div class="box compact">
+            <div class="box-title">Context Engine</div>
+            <p>知识组织</p>
+            <p>上下文拼装</p>
+          </div>
+          <div class="box compact">
+            <div class="box-title">Memory Engine</div>
+            <p>会话记忆 / Project 归属</p>
+            <p>结果承接</p>
+          </div>
+          <div class="box compact">
+            <div class="box-title">Observation Engine</div>
+            <p>过程追踪 / 指标记录</p>
+            <p>运行状态</p>
+          </div>
+          <div class="box compact">
+            <div class="box-title">承载对象</div>
+            <p>PostgreSQL / Qdrant</p>
+            <p>Redis / 文件 / 知识 / 结果</p>
+          </div>
+          <div class="box compact">
+            <div class="box-title">基础设施</div>
+            <p>Compose / 监控</p>
+            <p>日志 / 上线部署</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-rail">
+        <div>
+          <div class="box-title">横切能力</div>
+          <div class="rail-label">Cross-Cutting Capabilities</div>
+        </div>
+        <div class="rail-block">
+          <h4>日志</h4>
+          <div class="tag-list">
+            <div class="tag">结构化日志</div>
+            <div class="tag">接口日志</div>
+            <div class="tag">运行日志</div>
+          </div>
+        </div>
+        <div class="rail-block">
+          <h4>监控</h4>
+          <div class="tag-list">
+            <div class="tag">资源监控</div>
+            <div class="tag">服务状态</div>
+            <div class="tag">链路健康度</div>
+          </div>
+        </div>
+        <div class="rail-block">
+          <h4>追踪</h4>
+          <div class="tag-list">
+            <div class="tag">请求追踪</div>
+            <div class="tag">流程追踪</div>
+            <div class="tag">trace_id 关联</div>
+          </div>
+        </div>
+        <div class="rail-block">
+          <h4>告警</h4>
+          <div class="tag-list">
+            <div class="tag">异常告警</div>
+            <div class="tag">失败重试提示</div>
+            <div class="tag">运行阈值提醒</div>
+          </div>
+        </div>
+        <div class="rail-block">
+          <h4>成本与使用量</h4>
+          <div class="tag-list">
+            <div class="tag">模型调用量</div>
+            <div class="tag">Token 成本</div>
+            <div class="tag">使用量统计</div>
+          </div>
+        </div>
+        <div class="rail-block">
+          <h4>权限与配置</h4>
+          <div class="tag-list">
+            <div class="tag">RBAC</div>
+            <div class="tag">API Keys</div>
+            <div class="tag">版本配置</div>
+            <div class="tag">环境控制</div>
+          </div>
+        </div>
+      </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

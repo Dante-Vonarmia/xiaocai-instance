@@ -1,0 +1,17 @@
+.
+├── 01-llm-benchmark.md
+├── 02-knowledge-architecture-benchmark.md
+├── 03-agent-framework-benchmark.md
+├── 04-vector-database-benchmark.md
+├── 05-api-gateway-benchmark.md
+├── 06-frontend-framework-benchmark.md
+├── 07-end-to-end-benchmark.md
+├── notebooks
+├── README.md
+├── requirements.txt
+├── scripts
+│   └── benchmark_llm.py
+├── STRUCTURE.txt
+└── tech-channels.md
+
+3 directories, 12 files

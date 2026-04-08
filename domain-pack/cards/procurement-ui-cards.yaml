@@ -1,0 +1,187 @@
+# xiaocai UI 卡片模板定义
+# 用途: 定义采购流程中使用的 UI 卡片（表单、确认框、列表等）
+# 参考: docs/discussions/phase-1-procurement-product-logic.md
+
+# 需求梳理卡片
+requirement-form:
+  type: form
+  title: 需求梳理
+  description: 请填写您的采购需求信息
+  fields:
+    - name: category
+      label: 采购类目
+      type: select
+      required: true
+      options:
+        - value: office-equipment
+          label: 办公设备
+        - value: office-supplies
+          label: 办公用品
+        - value: it-hardware
+          label: IT 硬件
+        - value: it-software
+          label: IT 软件
+        - value: furniture
+          label: 办公家具
+        - value: other
+          label: 其他
+
+    - name: description
+      label: 需求描述
+      type: textarea
+      required: true
+      placeholder: 请详细描述您的采购需求...
+
+    - name: quantity
+      label: 采购数量
+      type: number
+      required: true
+      min: 1
+
+    - name: budget
+      label: 预算范围
+      type: text
+      required: false
+      placeholder: 例如: 10万-20万
+
+    - name: deadline
+      label: 期望交付时间
+      type: date
+      required: false
+
+    - name: quality_requirements
+      label: 质量要求
+      type: textarea
+      required: false
+      placeholder: 对产品质量、品牌、认证等的要求
+
+  actions:
+    - type: submit
+      label: 提交需求
+      primary: true
+    - type: cancel
+      label: 取消
+
+# 供应商推荐卡片
+supplier-recommendation:
+  type: list
+  title: 供应商推荐
+  description: 根据您的需求，我们为您推荐以下供应商
+  itemTemplate:
+    title: "{{ supplier.name }}"
+    subtitle: "匹配度: {{ supplier.matchScore }}%"
+    fields:
+      - label: 主营产品
+        value: "{{ supplier.mainProducts }}"
+      - label: 服务区域
+        value: "{{ supplier.serviceRegions }}"
+      - label: 价格区间
+        value: "{{ supplier.priceRange }}"
+      - label: 交付周期
+        value: "{{ supplier.deliveryTime }}"
+    actions:
+      - type: view-detail
+        label: 查看详情
+      - type: contact
+        label: 联系供应商
+
+  actions:
+    - type: next
+      label: 下一步
+      primary: true
+
+# 需求确认卡片
+requirement-confirmation:
+  type: confirmation
+  title: 需求确认
+  description: 请确认以下需求信息是否正确
+  fields:
+    - label: 采购类目
+      value: "{{ requirement.category }}"
+    - label: 需求描述
+      value: "{{ requirement.description }}"
+    - label: 采购数量
+      value: "{{ requirement.quantity }}"
+    - label: 预算范围
+      value: "{{ requirement.budget }}"
+    - label: 期望交付时间
+      value: "{{ requirement.deadline }}"
+
+  actions:
+    - type: confirm
+      label: 确认无误
+      primary: true
+    - type: edit
+      label: 修改
+    - type: cancel
+      label: 取消
+
+# 文件上传卡片
+knowledge-upload:
+  type: file-upload
+  title: 知识库上传
+  description: 上传采购相关文件（需求文档、技术规格等）
+  accept:
+    - .pdf
+    - .doc
+    - .docx
+    - .xls
+    - .xlsx
+    - .txt
+  maxSize: 10485760  # 10MB
+  multiple: true
+
+  actions:
+    - type: upload
+      label: 开始上传
+      primary: true
+    - type: cancel
+      label: 取消
+
+# 采购进度卡片
+procurement-progress:
+  type: progress
+  title: 采购进度
+  description: 当前采购项目的进度
+  steps:
+    - id: requirement-collection
+      label: 需求梳理
+      description: 收集和确认采购需求
+    - id: supplier-search
+      label: 供应商寻源
+      description: 搜索和推荐合适的供应商
+    - id: quotation
+      label: 询价比价
+      description: 获取报价并进行比较
+    - id: negotiation
+      label: 商务谈判
+      description: 与供应商进行商务谈判
+    - id: contract
+      label: 合同签订
+      description: 签订采购合同
+    - id: delivery
+      label: 交付验收
+      description: 产品交付和验收
+
+  currentStep: "{{ project.currentStep }}"
+
+# 意图确认卡片
+intent-confirmation:
+  type: confirmation
+  title: 意图确认
+  description: 我理解您的意图是否正确？
+  content: "{{ intent.description }}"
+  actions:
+    - type: confirm
+      label: 正确
+      primary: true
+    - type: clarify
+      label: 需要补充
+    - type: reject
+      label: 不正确
+
+# 后续可按业务扩展更多卡片类型
+# - 供应商对比卡片
+# - 报价单卡片
+# - 合同模板卡片
+# - 交付清单卡片

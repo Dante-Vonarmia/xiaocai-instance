@@ -1,0 +1,44 @@
+scenario:
+  id: scenario-content-production-procurement
+  name: 内容制作采购
+  category_path:
+    一级品类: 内容制作
+    二级品类: 视频拍摄
+
+input:
+  user_message: 需要拍摄3条产品宣传片，预算35万，7月底前完成交付，含后期制作。
+  attachments: []
+
+expected:
+  classification:
+    一级品类: 内容制作
+    二级品类: 视频拍摄
+  required_fields_present:
+    - 采购目的
+    - 一级品类
+    - 二级品类
+    - 产品/服务
+    - 数量
+    - 单位
+    - 预算金额
+    - 交付时间
+  blocker:
+    should_trigger: true
+    reason: 缺少验收口径和版权要求
+  chooser:
+    should_trigger: false
+  search:
+    target_fields:
+      - 验收口径
+      - 历史案例
+      - 风险分析
+    expected_query_intent: 验收标准检索
+  replace:
+    candidate_field: 验收口径
+    decision_mode: recommend_only
+  output_assertions:
+    analysis_sections:
+      - 项目理解与核心需求
+      - 成本结构分析
+      - 项目风险分析
+    rfx_type: RFP

@@ -1,0 +1,249 @@
+# xiaocai 采购术语定义
+# 用途: 定义采购领域的专业术语和同义词，用于意图识别和知识匹配
+# 参考: docs/discussions/phase-1-procurement-product-logic.md（意图识别）
+
+# 采购流程相关
+procurement_process:
+  - term: 需求梳理
+    synonyms:
+      - 需求收集
+      - 需求分析
+      - 需求整理
+      - 需求确认
+    english: requirement collection
+    description: 收集、分析和确认采购需求的过程
+
+  - term: 供应商寻源
+    synonyms:
+      - 寻找供应商
+      - 供应商搜索
+      - 供应商推荐
+      - 寻源
+    english: supplier sourcing
+    description: 根据需求寻找合适的供应商
+
+  - term: 询价
+    synonyms:
+      - 询价比价
+      - 获取报价
+      - 价格咨询
+    english: request for quotation (RFQ)
+    description: 向供应商询问产品或服务的价格
+
+  - term: 商务谈判
+    synonyms:
+      - 谈判
+      - 价格谈判
+      - 合同谈判
+    english: negotiation
+    description: 与供应商进行商务条款和价格的谈判
+
+  - term: 合同签订
+    synonyms:
+      - 签合同
+      - 合同确认
+    english: contract signing
+    description: 与供应商签订采购合同
+
+  - term: 交付验收
+    synonyms:
+      - 验收
+      - 收货验收
+      - 交付确认
+    english: delivery and acceptance
+    description: 产品或服务的交付和验收过程
+
+# 采购类目相关
+procurement_categories:
+  - term: 办公设备
+    synonyms:
+      - 办公器材
+      - 办公机器
+    english: office equipment
+    examples:
+      - 打印机
+      - 复印机
+      - 投影仪
+      - 扫描仪
+
+  - term: IT 硬件
+    synonyms:
+      - 计算机硬件
+      - 电脑硬件
+      - IT 设备
+    english: IT hardware
+    examples:
+      - 台式机
+      - 笔记本
+      - 服务器
+      - 网络设备
+
+  - term: IT 软件
+    synonyms:
+      - 软件
+      - 应用程序
+      - 系统软件
+    english: IT software
+    examples:
+      - 办公软件
+      - 开发工具
+      - 企业应用
+      - 安全软件
+
+  - term: 办公用品
+    synonyms:
+      - 文具
+      - 办公耗材
+    english: office supplies
+    examples:
+      - 文具
+      - 纸张
+      - 笔
+      - 本子
+
+  - term: 办公家具
+    synonyms:
+      - 家具
+      - 办公桌椅
+    english: office furniture
+    examples:
+      - 办公桌
+      - 办公椅
+      - 文件柜
+      - 沙发
+
+# 意图相关
+intents:
+  - intent: start_procurement
+    description: 开始采购流程
+    triggers:
+      - 我要采购
+      - 需要采购
+      - 想买
+      - 我想购买
+      - 帮我采购
+    examples:
+      - 我需要采购一批办公电脑
+      - 我想买一些办公用品
+      - 帮我采购打印机
+
+  - intent: clarify_requirement
+    description: 澄清需求
+    triggers:
+      - 需求是
+      - 具体需求
+      - 我需要
+      - 要求是
+    examples:
+      - 我需要20台笔记本
+      - 预算在10万左右
+      - 需要在月底前交付
+
+  - intent: search_supplier
+    description: 寻找供应商
+    triggers:
+      - 找供应商
+      - 推荐供应商
+      - 有哪些供应商
+      - 谁能提供
+    examples:
+      - 帮我找合适的供应商
+      - 有哪些供应商可以提供这个产品
+      - 推荐几家供应商
+
+  - intent: inquire_price
+    description: 询价
+    triggers:
+      - 多少钱
+      - 价格
+      - 报价
+      - 费用
+    examples:
+      - 这个多少钱
+      - 请提供报价
+      - 价格是多少
+
+  - intent: upload_knowledge
+    description: 上传知识库
+    triggers:
+      - 上传文件
+      - 上传文档
+      - 添加资料
+    examples:
+      - 我有一份需求文档
+      - 上传技术规格书
+      - 添加采购清单
+
+  - intent: check_progress
+    description: 查看进度
+    triggers:
+      - 进度
+      - 到哪一步了
+      - 当前状态
+    examples:
+      - 采购进度如何
+      - 到哪一步了
+      - 当前是什么状态
+
+# 供应商相关
+supplier_attributes:
+  - attribute: 匹配度
+    synonyms:
+      - 吻合度
+      - 适合度
+    english: match score
+    description: 供应商与需求的匹配程度
+
+  - attribute: 主营产品
+    synonyms:
+      - 产品类型
+      - 经营范围
+    english: main products
+    description: 供应商主要提供的产品或服务
+
+  - attribute: 服务区域
+    synonyms:
+      - 覆盖区域
+      - 配送范围
+    english: service regions
+    description: 供应商可以提供服务的地理区域
+
+  - attribute: 交付周期
+    synonyms:
+      - 交货时间
+      - 交付时间
+      - 发货时间
+    english: delivery time
+    description: 从下单到交付的时间
+
+# 质量要求相关
+quality_requirements:
+  - term: 品牌
+    synonyms:
+      - 牌子
+      - 厂家
+    english: brand
+
+  - term: 认证
+    synonyms:
+      - 资质
+      - 证书
+    english: certification
+    examples:
+      - ISO认证
+      - 3C认证
+      - CE认证
+
+  - term: 保修
+    synonyms:
+      - 质保
+      - 保修期
+      - 售后
+    english: warranty
+
+  - term: 技术规格
+    synonyms:
+      - 规格
+      - 参数
+      - 配置
+    english: specifications

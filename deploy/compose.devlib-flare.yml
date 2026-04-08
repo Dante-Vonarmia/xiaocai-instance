@@ -1,0 +1,32 @@
+# devlib-only compose
+# Development-only helper stack for FLARE kernel mock/runtime verification.
+
+services:
+  devlib-flare-kernel:
+    build:
+      context: ./mock-kernel
+      dockerfile: Dockerfile
+    container_name: devlib-flare-kernel
+    ports:
+      - "${KERNEL_PORT:-8000}:8000"
+    environment:
+      - KERNEL_PORT=8000
+      - KERNEL_RUN_PATH=/chat/run
+      - KERNEL_STREAM_PATH=/chat/stream
+      - DOMAIN_PACK_ROOT=/domain-pack
+    volumes:
+      - ../domain-pack:/domain-pack:ro
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  inst-xiaocai-net:
+    name: ${INSTANCE_NETWORK_NAME:-inst-xiaocai-net-dev}
+    driver: bridge

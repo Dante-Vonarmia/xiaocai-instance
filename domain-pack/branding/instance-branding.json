@@ -1,0 +1,73 @@
+{
+  "$schema": "../schema/branding-schema.json",
+  "comment": "xiaocai 品牌配置 - 定义品牌名称、logo、颜色等视觉元素",
+
+  "instance": {
+    "name": "xiaocai",
+    "displayName": "小采",
+    "subtitle": "采购助手",
+    "description": "智能采购需求梳理与供应商寻源"
+  },
+
+  "branding": {
+    "logo": {
+      "light": "/assets/logo-light.svg",
+      "dark": "/assets/logo-dark.svg",
+      "favicon": "/assets/favicon.ico"
+    },
+
+    "colors": {
+      "primary": "#1976d2",
+      "secondary": "#dc004e",
+      "accent": "#f50057",
+      "background": "#ffffff",
+      "surface": "#f5f5f5",
+      "error": "#f44336",
+      "warning": "#ff9800",
+      "info": "#2196f3",
+      "success": "#4caf50"
+    },
+
+    "typography": {
+      "fontFamily": "'Inter', 'Noto Sans SC', sans-serif",
+      "fontSize": {
+        "small": "12px",
+        "medium": "14px",
+        "large": "16px",
+        "xlarge": "20px"
+      }
+    }
+  },
+
+  "ui": {
+    "comment": "UI 组件配置",
+    "chat": {
+      "avatar": {
+        "assistant": "/assets/avatar-xiaocai.svg",
+        "user": "/assets/avatar-default.svg"
+      },
+      "placeholder": "请告诉我您的采购需求...",
+      "welcomeMessage": "你好！我是小采，您的采购助手。我可以帮助您梳理采购需求，并为您寻找合适的供应商。",
+      "starterPrompts": [
+        {
+          "key": "starter-office-laptop",
+          "label": "办公笔记本采购",
+          "description": "明确预算、配置、数量与交付周期。",
+          "prompt": "请帮我梳理一份办公笔记本采购需求，包含预算范围、CPU/内存/硬盘配置、数量和交付时间。"
+        },
+        {
+          "key": "starter-lab-equipment",
+          "label": "实验设备采购",
+          "description": "补齐技术参数、验收标准和风险点。",
+          "prompt": "我需要采购实验室设备，请先按需求梳理模式帮我补齐技术参数、验收标准和关键风险。"
+        },
+        {
+          "key": "starter-it-service",
+          "label": "IT 服务外包",
+          "description": "定义服务范围、SLA 和评估维度。",
+          "prompt": "请生成 IT 服务外包采购需求模板，包含服务范围、SLA 指标、报价结构和供应商评估标准。"
+        }
+      ]
+    }
+  }
+}

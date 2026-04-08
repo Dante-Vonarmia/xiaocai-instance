@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-02-19T10:24:12.507182",
+  "baseline_ms": {
+    "nginx_proxy": 2.0,
+    "api_gateway": 10.0,
+    "engine_routing": 5.0,
+    "session_read_pg": 50.0,
+    "session_write_pg": 55.0,
+    "redis_cache_hit": 5.0,
+    "redis_cache_miss": 8.0,
+    "embedding_medium": 30.0,
+    "qdrant_search_5": 5.0,
+    "llm_ttfb": 800.0,
+    "llm_generation": 1200.0,
+    "llm_total": 2000.0
+  },
+  "chain_totals": {
+    "cache_hit_ms": 2137.0,
+    "cache_miss_ms": 2178.0
+  },
+  "provider_totals": {
+    "APIPro/Claude": 2137.0,
+    "APIPro/Qwen": 1337.0,
+    "APIPro/DeepSeek": 1637.0,
+    "Ollama/14b": 8137.0,
+    "Ollama/7b": 4137.0
+  },
+  "bottlenecks": [
+    {
+      "rank": 1,
+      "target": "LLM 调用",
+      "issue": "ENGINE-034"
+    },
+    {
+      "rank": 2,
+      "target": "PostgreSQL 会话",
+      "issue": "ENGINE-035 (待创建)"
+    },
+    {
+      "rank": 3,
+      "target": "Embedding 推理",
+      "issue": "ENGINE-036 (待创建)"
+    }
+  ]
+}

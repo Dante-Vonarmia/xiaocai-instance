@@ -1,0 +1,47 @@
+scenario:
+  id: scenario-server-procurement
+  name: 服务器采购
+  category_path:
+    一级品类: 数据通讯设备
+    二级品类: 服务器
+
+input:
+  user_message: 需要采购10台机架服务器，用于新业务集群，预算120万，6月前交付到上海。
+  attachments: []
+
+expected:
+  classification:
+    一级品类: 数据通讯设备
+    二级品类: 服务器
+  required_fields_present:
+    - 采购目的
+    - 使用场景
+    - 一级品类
+    - 二级品类
+    - 产品/服务
+    - 数量
+    - 单位
+    - 预算金额
+    - 交付时间
+    - 交付地点
+  blocker:
+    should_trigger: true
+    reason: 缺少技术要求与验收口径
+  chooser:
+    should_trigger: false
+  search:
+    target_fields:
+      - 技术要求
+      - 质量标准
+      - 验收口径
+    expected_query_intent: 技术规格检索
+  replace:
+    candidate_field: 技术要求
+    decision_mode: recommend_only
+  output_assertions:
+    analysis_sections:
+      - 项目理解与核心需求
+      - 市场现状和分析
+      - 成本结构分析
+      - 项目风险分析
+    rfx_type: RFQ

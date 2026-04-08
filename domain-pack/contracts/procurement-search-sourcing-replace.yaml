@@ -1,0 +1,164 @@
+contract:
+  name: procurement-search-sourcing-replace
+  version: '1.0'
+  field_dictionary_ref: schema/procurement-field-dictionary.yaml
+
+search_mapping:
+  - id: map-tech-spec-to-field
+    target_field: 技术要求
+    query_intent: 技术规格检索
+    query_constraints:
+      required_inputs:
+        - 一级品类
+        - 二级品类
+        - 产品/服务
+      optional_inputs:
+        - 使用场景
+        - 预算金额
+        - 质量标准
+    evidence_contract:
+      required_fields:
+        - source
+        - title
+        - snippet
+        - matched_field
+        - candidate_value
+        - confidence
+      mapped_field_refs:
+        - 信息来源
+        - 结果标题
+        - 结果摘要
+        - 来源链接
+        - 可信度
+    candidate_mapping:
+      matched_field: 技术要求
+      candidate_value_field: 技术要求
+      min_confidence: 0.75
+
+  - id: map-quality-acceptance-to-field
+    target_field: 验收口径
+    query_intent: 验收标准检索
+    query_constraints:
+      required_inputs:
+        - 一级品类
+        - 二级品类
+        - 产品/服务
+      optional_inputs:
+        - 质量标准
+        - 交付方式
+    evidence_contract:
+      required_fields:
+        - source
+        - title
+        - snippet
+        - matched_field
+        - candidate_value
+        - confidence
+      mapped_field_refs:
+        - 信息来源
+        - 结果标题
+        - 结果摘要
+        - 来源链接
+        - 可信度
+    candidate_mapping:
+      matched_field: 验收口径
+      candidate_value_field: 验收口径
+      min_confidence: 0.70
+
+  - id: map-supplier-qualification-to-field
+    target_field: 供应商资质
+    query_intent: 供应商资质检索
+    query_constraints:
+      required_inputs:
+        - 一级品类
+        - 二级品类
+        - 供应商区域
+      optional_inputs:
+        - 纳税资质
+        - 历史案例
+    evidence_contract:
+      required_fields:
+        - source
+        - title
+        - snippet
+        - matched_field
+        - candidate_value
+        - confidence
+      mapped_field_refs:
+        - 信息来源
+        - 结果标题
+        - 结果摘要
+        - 来源链接
+        - 可信度
+    candidate_mapping:
+      matched_field: 供应商资质
+      candidate_value_field: 供应商资质
+      min_confidence: 0.80
+
+sourcing_rules:
+  required_requirement_fields:
+    - 一级品类
+    - 二级品类
+    - 产品/服务
+    - 交付地点
+    - 交付时间
+    - 预算金额
+  recommendation_contract:
+    required_fields:
+      - 公司名称
+      - 主营品类
+      - 所在地
+      - 服务区域
+      - 综合评分
+      - 历史案例
+      - 风险与诉讼
+      - 数据来源
+    rationale_fields:
+      - 履约能力
+      - 供应商资质
+      - 售后质保
+      - 风险等级
+  candidate_pool_policy:
+    default_candidate_count: 5
+    allow_new_supplier_field: 允许新供应商
+
+replace_rules:
+  auto_replace_allowed:
+    - 搜索关键词
+    - 搜索范围
+    - 结果标题
+    - 结果摘要
+    - 信息来源
+    - 来源链接
+    - 发布时间
+    - 可信度
+  recommend_only:
+    - 技术要求
+    - 质量标准
+    - 验收口径
+    - 履约能力
+    - 供应商资质
+    - 风险等级
+  user_confirm_required:
+    - 预算金额
+    - 交付时间
+    - 交付地点
+    - RFX类型
+    - 付款条款
+    - 发票类型
+    - 评估项
+    - 权重
+
+replace_history_contract:
+  required_fields:
+    - field_key
+    - old_value
+    - new_candidate
+    - evidence_ref
+    - decision
+    - operator
+    - timestamp
+  decision_enum:
+    - accepted
+    - rejected
+    - pending

@@ -1,0 +1,149 @@
+# instance-only compose
+# Production/Delivery baseline: only instance services are deployed.
+
+services:
+  inst-xiaocai-postgres:
+    image: postgres:15
+    container_name: inst-xiaocai-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-xiaocai}
+      - POSTGRES_USER=${POSTGRES_USER:-xiaocai}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-xiaocai_dev_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - inst-xiaocai-postgres-data:/var/lib/postgresql/data
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-xiaocai} -d ${POSTGRES_DB:-xiaocai}"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  inst-xiaocai-redis:
+    image: redis:7-alpine
+    container_name: inst-xiaocai-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - inst-xiaocai-redis-data:/data
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  inst-xiaocai-qdrant:
+    image: qdrant/qdrant:latest
+    container_name: inst-xiaocai-qdrant
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - inst-xiaocai-qdrant-data:/qdrant/storage
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+
+  inst-xiaocai-api:
+    build:
+      context: ../adapters/http_api
+      dockerfile: Dockerfile
+    container_name: inst-xiaocai-api
+    ports:
+      - "${API_PORT:-8001}:8001"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8001
+      - INSTANCE_JWT_SECRET=${INSTANCE_JWT_SECRET}
+      - KERNEL_RUNTIME_MODE=${KERNEL_RUNTIME_MODE:-http}
+      - KERNEL_BASE_URL=${KERNEL_BASE_URL}
+      - KERNEL_HOST=${KERNEL_HOST:-host.docker.internal}
+      - KERNEL_PORT=${KERNEL_PORT:-8000}
+      - KERNEL_RUN_PATH=${KERNEL_RUN_PATH:-/chat/run}
+      - KERNEL_STREAM_PATH=${KERNEL_STREAM_PATH:-/chat/stream}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL}
+      - LLM_PROVIDER_BACKEND=${LLM_PROVIDER_BACKEND:-dashscope}
+      - FLARE_DOMAIN_PACK_ROOT=/domain-pack
+      - STORAGE_DB_URL=${STORAGE_DB_URL:-postgresql://xiaocai:xiaocai_dev_password@inst-xiaocai-postgres:5432/xiaocai}
+      - STORAGE_DB_PATH=${STORAGE_DB_PATH:-/data/xiaocai-instance.db}
+      - UPLOAD_ROOT=${UPLOAD_ROOT:-/data/uploads}
+      - REDIS_URL=${REDIS_URL:-redis://inst-xiaocai-redis:6379/0}
+      - QDRANT_URL=${QDRANT_URL:-http://inst-xiaocai-qdrant:6333}
+      - UPLOAD_MAX_SIZE_BYTES=${UPLOAD_MAX_SIZE_BYTES:-20971520}
+      - UPLOAD_ALLOWED_EXTENSIONS=${UPLOAD_ALLOWED_EXTENSIONS:-["pdf","doc","docx","xls","xlsx","txt"]}
+      - ENABLED_MODES=${ENABLED_MODES:-["auto","requirement_canvas","intelligent_sourcing"]}
+      - DAILY_MESSAGE_LIMIT=${DAILY_MESSAGE_LIMIT:-0}
+      - DAILY_PROJECT_MESSAGE_LIMIT=${DAILY_PROJECT_MESSAGE_LIMIT:-0}
+      - MOCK_AUTH=${MOCK_AUTH:-true}
+      - REAL_AUTH_VERIFY_URL=${REAL_AUTH_VERIFY_URL}
+      - ROOT_AUTH_TOKEN=${ROOT_AUTH_TOKEN}
+      - ROOT_USER_ID=${ROOT_USER_ID:-root}
+    volumes:
+      - ../domain-pack:/domain-pack:ro
+      - inst-xiaocai-api-data:/data
+    depends_on:
+      - inst-xiaocai-postgres
+      - inst-xiaocai-redis
+      - inst-xiaocai-qdrant
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  inst-xiaocai-web:
+    build:
+      context: ../..
+      dockerfile: procurement-agents/frame/web/Dockerfile
+    container_name: inst-xiaocai-web
+    ports:
+      - "${WEB_PORT:-3001}:80"
+    environment:
+      - VITE_API_BASE_URL=/api
+    volumes:
+      - ../domain-pack:/usr/share/nginx/html/domain-pack:ro
+    depends_on:
+      - inst-xiaocai-api
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+
+  inst-xiaocai-nginx:
+    image: nginx:alpine
+    container_name: inst-xiaocai-nginx
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - inst-xiaocai-api
+      - inst-xiaocai-web
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
+
+networks:
+  inst-xiaocai-net:
+    name: ${INSTANCE_NETWORK_NAME:-inst-xiaocai-net-dev}
+    driver: bridge
+
+volumes:
+  inst-xiaocai-api-data:
+  inst-xiaocai-postgres-data:
+  inst-xiaocai-redis-data:
+  inst-xiaocai-qdrant-data:

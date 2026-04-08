@@ -1,0 +1,43 @@
+scenario:
+  id: scenario-gift-customization-procurement
+  name: 礼品定制采购
+  category_path:
+    一级品类: 礼品
+    二级品类: 设计开发与定制
+
+input:
+  user_message: 年中客户答谢要定制500份品牌礼盒，预算20万，要求可追溯供应链，深圳交付。
+  attachments: []
+
+expected:
+  classification:
+    一级品类: 礼品
+    二级品类: 设计开发与定制
+  required_fields_present:
+    - 采购目的
+    - 一级品类
+    - 二级品类
+    - 产品/服务
+    - 数量
+    - 单位
+    - 预算金额
+    - 交付地点
+  blocker:
+    should_trigger: true
+    reason: 缺少质量标准与供应商资质要求
+  chooser:
+    should_trigger: false
+  search:
+    target_fields:
+      - 供应商资质
+      - 质量标准
+      - 售后质保
+    expected_query_intent: 供应商资质检索
+  replace:
+    candidate_field: 供应商资质
+    decision_mode: recommend_only
+  output_assertions:
+    analysis_sections:
+      - 市场现状和分析
+      - 供应商选择建议
+    rfx_type: RFI

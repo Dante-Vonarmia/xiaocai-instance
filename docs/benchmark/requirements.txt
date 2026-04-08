@@ -1,0 +1,26 @@
+# Benchmark 测试依赖
+# 注意：本项目不使用 anthropic/openai SDK，统一通过 httpx 调用 APIPro（OpenAI 兼容接口）
+# 版本策略：不锁定 patch 版本，优先使用有 pre-built wheel 的版本（兼容 Python 3.12+）
+
+# HTTP 客户端（统一使用，替代各 SDK）
+httpx>=0.27.0
+
+# 数据处理（需要 pre-built wheel，不从源码编译）
+pandas>=2.2.0
+numpy>=1.26.4
+
+# 可视化
+matplotlib>=3.8.2
+seaborn>=0.13.2
+
+# 统计分析（scipy 需要 Fortran 编译器，改用 numpy.percentile / numpy.mean 等替代）
+# scipy 已移除，notebooks 中的统计计算直接使用 numpy
+
+# Jupyter 环境
+jupyter>=1.0.0
+ipykernel>=6.29.0
+ipywidgets>=8.1.1
+
+# 工具
+python-dotenv>=1.0.0
+tqdm>=4.66.1

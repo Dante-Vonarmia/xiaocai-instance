@@ -1,0 +1,39 @@
+# xiaocai HTTP API Adapter
+# 用途: 提供 REST API 接口，调用 FLARE kernel
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xiaocai-instance-api"
+version = "0.1.0"
+description = "xiaocai HTTP API adapter for FLARE kernel"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "PyJWT>=2.8",
+    "httpx>=0.24",
+    "psycopg[binary]>=3.2",
+    "python-multipart>=0.0.9",
+    "sse-starlette>=2.1",
+    "flare-kernel==0.1.0",
+    "flare-kernel-client-py==0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["xiaocai_instance_api*"]
+namespaces = true

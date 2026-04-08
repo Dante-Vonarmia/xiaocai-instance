@@ -1,0 +1,48 @@
+name: Dependency Boundary Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  boundary-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enforce FLARE dependency boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          failed=0
+
+          echo "[CHECK 1/3] package.json must not use local file: dependency to F.L.A.R.E"
+          if grep -nE '"[^"]+"\s*:\s*"file:.*F\.L\.A\.R\.E' frame/web/package.json; then
+            echo "[BLOCK] frame/web/package.json contains local file dependency to F.L.A.R.E"
+            failed=1
+          fi
+
+          echo "[CHECK 2/3] Dockerfile must not copy local F.L.A.R.E packages"
+          if grep -nE 'COPY[[:space:]]+F\.L\.A\.R\.E/packages' frame/web/Dockerfile; then
+            echo "[BLOCK] frame/web/Dockerfile copies local F.L.A.R.E packages"
+            failed=1
+          fi
+
+          echo "[CHECK 3/3] Python dependencies must not use local path"
+          if grep -nE '(^-e[[:space:]]+\.\.?/|file://|@ file:)' adapters/http_api/requirements.txt adapters/http_api/pyproject.toml; then
+            echo "[BLOCK] Python dependency file contains local path dependency"
+            failed=1
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            echo "[FAIL] Dependency boundary check failed."
+            exit 1
+          fi
+
+          echo "[PASS] Dependency boundary check passed."

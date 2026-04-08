@@ -1,0 +1,182 @@
+# xiaocai 采购工作流节点定义（首轮基线）
+# 范围: 需求梳理 -> 需求分析 -> RFX策略
+# 约束: 后续环节先占位，不在本轮实现
+
+workflow:
+  name: procurement
+  version: '1.0'
+  phase: first_baseline
+  source_field_dictionary: schema/procurement-field-dictionary.yaml
+
+stage_order:
+  - requirement-collection
+  - requirement-analysis
+  - rfx-strategy
+
+nodes:
+  requirement-collection:
+    id: requirement-collection
+    name: 需求梳理
+    status: active
+    inputs:
+      - 用户消息
+      - 附件
+      - 历史项目
+    outputs:
+      - 结构化需求草稿
+      - 缺失字段列表
+      - 字段完整度
+    field_contract:
+      dictionary_ref: schema/procurement-field-dictionary.yaml
+      required_set_ref: schema/procurement.yaml#stage_field_sets.需求梳理必填集
+      initial_required_fields:
+        - 采购目的
+        - 使用场景
+        - 一级品类
+        - 二级品类
+        - 数量
+        - 单位
+        - 预算金额
+        - 交付时间
+        - 交付地点
+      progressive_required_fields:
+        - 项目名称
+        - 需求来源
+        - 需求提出人
+        - 影响范围（部门/区域）
+        - 产品/服务
+        - 特殊要求
+    orchestration:
+      clarification_strategy:
+        enabled: true
+        continue_until_required_complete: true
+        ask_missing_fields_one_by_one: true
+      completion_rule:
+        pass_when: requirement_collection_required_fields_complete
+      output_contract:
+        - 项目名称
+        - 采购目的
+        - 使用场景
+        - 一级品类
+        - 二级品类
+        - 产品/服务
+        - 数量
+        - 单位
+        - 预算金额
+        - 预算币种
+        - 交付时间
+        - 交付地点
+        - 附件
+        - PR编号
+    transitions:
+      - to: requirement-analysis
+        condition: requirement_collection_required_fields_complete
+      - to: requirement-collection
+        condition: missing_required_fields
+
+  requirement-analysis:
+    id: requirement-analysis
+    name: 需求分析
+    status: active
+    inputs:
+      - requirement-collection.output
+      - 历史项目
+      - 行业资料
+      - 内部制度
+    outputs:
+      - 需求分析结果
+      - 风险分析结果
+      - 采购策略建议
+    field_contract:
+      dictionary_ref: schema/procurement-field-dictionary.yaml
+      required_set_ref: schema/procurement.yaml#stage_field_sets.需求分析必填集
+      must_enrich_fields:
+        - 产品/服务 说明
+        - 技术要求
+        - 质量标准
+        - 验收口径
+        - 风险等级
+        - 风险分析
+    orchestration:
+      analysis_template:
+        - 项目理解与核心需求
+        - 市场现状和分析
+        - 成本结构分析
+        - 项目风险分析
+        - 采购策略分析
+        - 供应商选择建议
+        - 项目实施计划与执行建议
+      completion_rule:
+        pass_when: analysis_required_fields_complete
+      output_contract:
+        - 质量标准
+        - 验收口径
+        - 风险等级
+        - 风险分析
+        - 历史项目
+        - 行业资料
+        - 内部制度
+    transitions:
+      - to: rfx-strategy
+        condition: analysis_required_fields_complete
+      - to: requirement-collection
+        condition: upstream_fields_incomplete
+
+  rfx-strategy:
+    id: rfx-strategy
+    name: RFX策略
+    status: active
+    inputs:
+      - requirement-analysis.output
+      - requirement-collection.output
+    outputs:
+      - rfx_strategy_result
+      - rfx_export_plan
+    field_contract:
+      dictionary_ref: schema/procurement-field-dictionary.yaml
+      required_set_ref: schema/procurement.yaml#stage_field_sets.RFX策略必填集
+      required_fields:
+        - RFX类型
+        - 付款条款
+        - 发票类型
+        - 评估项
+        - 权重
+        - 里程碑
+        - 决策人
+        - 输出物
+        - 输出格式
+    orchestration:
+      validation:
+        - rule: 权重总和必须为100
+        - rule: RFX类型必须在RFI/RFQ/RFP/RFB
+      completion_rule:
+        pass_when: rfx_required_fields_complete
+      output_contract:
+        - RFX类型
+        - 评估项
+        - 权重
+        - 里程碑
+        - 输出物
+        - 输出格式
+    transitions:
+      - to: supplier-search
+        condition: placeholder_for_next_phase
+      - to: requirement-analysis
+        condition: strategy_needs_rework
+
+placeholders:
+  supplier-search:
+    status: placeholder
+    note: 非首轮范围（后续阶段再实现）
+  quotation:
+    status: placeholder
+    note: 非首轮范围（后续阶段再实现）
+  negotiation:
+    status: placeholder
+    note: 非首轮范围（后续阶段再实现）
+  contract:
+    status: placeholder
+    note: 非首轮范围（后续阶段再实现）
+  delivery:
+    status: placeholder
+    note: 非首轮范围（后续阶段再实现）

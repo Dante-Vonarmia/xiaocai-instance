@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/xiaocai_instance_api/app.py
+src/xiaocai_instance_api/main.py
+src/xiaocai_instance_api/settings.py
+src/xiaocai_instance_api.egg-info/PKG-INFO
+src/xiaocai_instance_api.egg-info/SOURCES.txt
+src/xiaocai_instance_api.egg-info/dependency_links.txt
+src/xiaocai_instance_api.egg-info/requires.txt
+src/xiaocai_instance_api.egg-info/top_level.txt
+tests/test_auth.py
+tests/test_chat.py
+tests/test_kernel_client.py

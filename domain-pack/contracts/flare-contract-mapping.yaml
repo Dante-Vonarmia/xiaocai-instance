@@ -1,0 +1,35 @@
+contract:
+  name: flare-contract-mapping
+  version: '1.0'
+
+mapping:
+  - domain_contract: contracts/procurement-search-sourcing-replace.yaml#search_mapping
+    flare_interface: kernel.chat.context.search_tasks
+    workspace_state_point: requirement_workspace.search_tasks
+    status: pending_flare_validation
+
+  - domain_contract: contracts/procurement-search-sourcing-replace.yaml#replace_history_contract
+    flare_interface: kernel.chat.context.replace_history
+    workspace_state_point: requirement_workspace.replace_history
+    status: pending_flare_validation
+
+  - domain_contract: contracts/procurement-analysis-rfx-templates.yaml#analysis_template
+    flare_interface: kernel.chat.context.analysis_template
+    workspace_state_point: analysis_workspace.template_state
+    status: pending_flare_validation
+
+  - domain_contract: contracts/procurement-analysis-rfx-templates.yaml#rfx_templates
+    flare_interface: kernel.chat.context.rfx_template
+    workspace_state_point: rfx_workspace.template_binding
+    status: pending_flare_validation
+
+  - domain_contract: contracts/scenarios/*.yaml
+    flare_interface: kernel.chat.run_or_stream_assertions
+    workspace_state_point: e2e_acceptance_trace
+    status: pending_flare_validation
+
+gap_policy:
+  when_mapping_missing:
+    - record_in: docs/domain-standards/08-domain-adr-index.md
+    - record_in: docs/domain-standards/09-domain-implementation-backlog.md
+    - action: update_contract_only_no_platform_rewrite

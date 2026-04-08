@@ -1,0 +1,165 @@
+contract:
+  name: procurement-analysis-rfx-templates
+  version: '1.0'
+  field_dictionary_ref: schema/procurement-field-dictionary.yaml
+
+analysis_template:
+  output_name: requirement-analysis-report
+  sections:
+    - id: project-understanding
+      title: 项目理解与核心需求
+      required_fields:
+        - 项目名称
+        - 采购目的
+        - 使用场景
+        - 一级品类
+        - 二级品类
+      optional_fields:
+        - 需求来源
+        - 需求提出人
+      block_on_missing_required: true
+
+    - id: market-analysis
+      title: 市场现状和分析
+      required_fields:
+        - 产品/服务
+        - 一级品类
+        - 二级品类
+      optional_fields:
+        - 行业资料
+        - 历史项目
+      block_on_missing_required: false
+
+    - id: cost-analysis
+      title: 成本结构分析
+      required_fields:
+        - 预算金额
+        - 预算币种
+        - 数量
+        - 单位
+      optional_fields:
+        - 付款条款
+      block_on_missing_required: true
+
+    - id: risk-analysis
+      title: 项目风险分析
+      required_fields:
+        - 风险等级
+        - 风险分析
+      optional_fields:
+        - 风险与诉讼
+      block_on_missing_required: false
+
+    - id: strategy-suggestion
+      title: 采购策略分析
+      required_fields:
+        - 质量标准
+        - 验收口径
+      optional_fields:
+        - 谈判要点
+      block_on_missing_required: true
+
+rfx_templates:
+  allowed_types:
+    - RFI
+    - RFQ
+    - RFP
+    - RFB
+
+  templates:
+    - type: RFI
+      required_fields:
+        - 项目名称
+        - 采购目的
+        - 一级品类
+        - 二级品类
+        - 产品/服务
+        - 输出物
+        - 输出格式
+      optional_fields:
+        - 技术要求
+        - 质量标准
+      variable_bindings:
+        project_name: 项目名称
+        objective: 采购目的
+        category_l1: 一级品类
+        category_l2: 二级品类
+        item: 产品/服务
+        deliverable: 输出物
+        format: 输出格式
+
+    - type: RFQ
+      required_fields:
+        - 项目名称
+        - 产品/服务
+        - 数量
+        - 单位
+        - 交付时间
+        - 交付地点
+        - 付款条款
+        - 发票类型
+      optional_fields:
+        - 技术要求
+        - 验收口径
+      variable_bindings:
+        project_name: 项目名称
+        item: 产品/服务
+        quantity: 数量
+        unit: 单位
+        delivery_time: 交付时间
+        delivery_place: 交付地点
+        payment_terms: 付款条款
+        invoice_type: 发票类型
+
+    - type: RFP
+      required_fields:
+        - 项目名称
+        - 采购目的
+        - 产品/服务
+        - 技术要求
+        - 质量标准
+        - 验收口径
+        - 评估项
+        - 权重
+      optional_fields:
+        - 风险等级
+        - 风险分析
+      variable_bindings:
+        project_name: 项目名称
+        objective: 采购目的
+        item: 产品/服务
+        tech_requirements: 技术要求
+        quality_standard: 质量标准
+        acceptance_criteria: 验收口径
+        evaluation_items: 评估项
+        weights: 权重
+
+    - type: RFB
+      required_fields:
+        - 项目名称
+        - 产品/服务
+        - 数量
+        - 单位
+        - 交付时间
+        - 交付地点
+        - 里程碑
+        - 决策人
+      optional_fields:
+        - 关键条款
+      variable_bindings:
+        project_name: 项目名称
+        item: 产品/服务
+        quantity: 数量
+        unit: 单位
+        delivery_time: 交付时间
+        delivery_place: 交付地点
+        milestones: 里程碑
+        approver: 决策人
+
+output_state_rules:
+  draft:
+    require_user_confirmation: false
+    allow_missing_optional_fields: true
+  confirmed:
+    require_user_confirmation: true
+    allow_missing_optional_fields: false
