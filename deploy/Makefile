@@ -107,7 +107,7 @@ config-dev: env-check
 	$(DEV_COMPOSE) config
 
 db-migrate: env-check
-	$(INSTANCE_COMPOSE) run --rm --no-deps --build inst-xiaocai-api python -m xiaocai_instance_api.storage.migrate
+	$(INSTANCE_COMPOSE) run --rm --no-deps inst-xiaocai-api python -m xiaocai_instance_api.storage.migrate
 
 backup-db: env-check
 	./scripts/backup-db.sh

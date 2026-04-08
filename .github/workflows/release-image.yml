@@ -1,0 +1,44 @@
+name: Release API Image
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./adapters/http_api
+          file: ./adapters/http_api/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/dante-vonarmia/xiaocai-instance-api:${{ github.ref_name }}
+            ghcr.io/dante-vonarmia/xiaocai-instance-api:latest
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

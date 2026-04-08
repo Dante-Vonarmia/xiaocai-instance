@@ -53,6 +53,7 @@ services:
     restart: unless-stopped
 
   inst-xiaocai-api:
+    image: ${INST_XIAOCAI_API_IMAGE:-inst-xiaocai-test-inst-xiaocai-api:latest}
     build:
       context: ../adapters/http_api
       dockerfile: Dockerfile
