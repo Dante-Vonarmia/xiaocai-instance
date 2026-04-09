@@ -7,9 +7,9 @@ server {
 
     client_max_body_size 20m;
 
-    # 生产首发默认直连 API（IP + HTTP）
+    # 同源路径 /api/* 反代到后端 API 上游
     location /api/ {
-        proxy_pass __API_BASE_URL__/;
+        proxy_pass __API_UPSTREAM__/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

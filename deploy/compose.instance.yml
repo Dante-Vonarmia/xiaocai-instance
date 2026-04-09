@@ -63,6 +63,7 @@ services:
     environment:
       - API_HOST=0.0.0.0
       - API_PORT=8001
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3001"]}
       - INSTANCE_JWT_SECRET=${INSTANCE_JWT_SECRET}
       - KERNEL_RUNTIME_MODE=${KERNEL_RUNTIME_MODE:-http}
       - KERNEL_BASE_URL=${KERNEL_BASE_URL}

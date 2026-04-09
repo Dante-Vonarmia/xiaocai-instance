@@ -3,21 +3,18 @@ set -euo pipefail
 
 # 一键串联：上传代码 -> 远端 instance 部署 -> 前端独立部署
 # 用法:
-#   API_BASE_URL=http://47.101.138.75:8001 \
+#   FRONTEND_API_BASE_URL=/api \
+#   API_UPSTREAM_URL=http://127.0.0.1:8001 \
 #   ROOT_DIR=/Users/xxx/Development/procurement-agents \
 #   ./deploy/scripts/release-to-aliyun-xiaocai.sh
 
 ROOT_DIR=${ROOT_DIR:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"}
 REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
 REMOTE_DIR=${REMOTE_DIR:-/opt/xiaocai-instance}
-API_BASE_URL=${API_BASE_URL:-}
+FRONTEND_API_BASE_URL=${FRONTEND_API_BASE_URL:-/api}
+API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:8001}
 SERVER_NAME=${SERVER_NAME:-_}
 COPY_PROD_ENV=${COPY_PROD_ENV:-false}
-
-if [ -z "$API_BASE_URL" ]; then
-  echo "API_BASE_URL is required, e.g. http://47.101.138.75:8001"
-  exit 1
-fi
 
 cd "$ROOT_DIR"
 
@@ -38,11 +35,11 @@ ssh "$REMOTE_HOST" "REPO_DIR='$REMOTE_DIR' bash '$REMOTE_DIR/deploy/scripts/remo
 
 echo "[release] 3/5 build standalone frontend"
 cd "$ROOT_DIR/frame/web"
-API_BASE_URL="$API_BASE_URL" ./scripts/build-standalone.sh
+API_BASE_URL="$FRONTEND_API_BASE_URL" ./scripts/build-standalone.sh
 
 echo "[release] 4/5 deploy standalone frontend"
 cd "$ROOT_DIR"
-REMOTE_HOST="$REMOTE_HOST" API_BASE_URL="$API_BASE_URL" SERVER_NAME="$SERVER_NAME" \
+REMOTE_HOST="$REMOTE_HOST" API_UPSTREAM_URL="$API_UPSTREAM_URL" SERVER_NAME="$SERVER_NAME" \
   ./deploy/scripts/deploy-frontend-standalone-to-aliyun-xiaocai.sh
 
 echo "[release] 5/5 done"

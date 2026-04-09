@@ -18,6 +18,9 @@ from xiaocai_instance_api.chat.router import router as chat_router
 from xiaocai_instance_api.projects.router import router as projects_router
 from xiaocai_instance_api.sessions.router import router as sessions_router
 from xiaocai_instance_api.sources.router import router as sources_router
+from xiaocai_instance_api.conversations.router import router as conversations_router
+from xiaocai_instance_api.artifacts.router import router as artifacts_router
+from xiaocai_instance_api.retrieval.router import router as retrieval_router
 from xiaocai_instance_api.storage.migrations import run_storage_migrations
 
 
@@ -60,6 +63,9 @@ def create_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(sessions_router)
     app.include_router(sources_router)
+    app.include_router(conversations_router)
+    app.include_router(artifacts_router)
+    app.include_router(retrieval_router)
 
     # 健康检查端点
     @app.get("/health")

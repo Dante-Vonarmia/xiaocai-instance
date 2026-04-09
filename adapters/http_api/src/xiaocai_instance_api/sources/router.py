@@ -9,24 +9,16 @@ import os
 import tempfile
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 
-from xiaocai_instance_api.security.dependencies import get_current_user_id
+from xiaocai_instance_api.security.auth_claims import AuthClaims
+from xiaocai_instance_api.security.dependencies import get_current_auth_claims
+from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.settings import get_settings
-from xiaocai_instance_api.storage.ownership_store import get_ownership_store
 from xiaocai_instance_api.storage.source_store import get_source_store
 
 
 router = APIRouter(prefix="/sources", tags=["sources"])
-
-
-async def _ensure_project_access(user_id: str, project_id: str) -> None:
-    ownership_store = get_ownership_store()
-    has_access = await ownership_store.check_project_access(user_id=user_id, project_id=project_id)
-    if not has_access:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Project access denied: {project_id}",
-        )
 
 
 @router.get("")
@@ -34,13 +26,14 @@ async def list_project_sources(
     project_id: str,
     q: str | None = None,
     folder_name: str | None = None,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
-    await _ensure_project_access(user_id=user_id, project_id=project_id)
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=project_id)
     settings = get_settings()
     store = get_source_store(upload_root=settings.upload_root)
     sources = await store.list_project_sources(
-        user_id=user_id,
+        user_id=claims.user_id,
         project_id=project_id,
         query=q,
         folder_name=folder_name,
@@ -54,6 +47,8 @@ async def list_project_sources(
                 "source_id": item.source_id,
                 "project_id": item.project_id,
                 "user_id": item.user_id,
+                "owner_user_id": item.owner_user_id,
+                "visibility": item.visibility,
                 "session_id": item.session_id,
                 "folder_name": item.folder_name,
                 "file_name": item.file_name,
@@ -70,12 +65,13 @@ async def list_project_sources(
 @router.get("/folders")
 async def list_project_source_folders(
     project_id: str,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
-    await _ensure_project_access(user_id=user_id, project_id=project_id)
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=project_id)
     settings = get_settings()
     store = get_source_store(upload_root=settings.upload_root)
-    folders = await store.list_project_folders(user_id=user_id, project_id=project_id)
+    folders = await store.list_project_folders(user_id=claims.user_id, project_id=project_id)
     return {
         "project_id": project_id,
         "folders": [
@@ -95,9 +91,10 @@ async def upload_source_file(
     session_id: str | None = Form(default=None),
     folder_name: str = Form(default="默认文件夹"),
     file: UploadFile = File(...),
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
-    await _ensure_project_access(user_id=user_id, project_id=project_id)
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=project_id)
     settings = get_settings()
     store = get_source_store(upload_root=settings.upload_root)
 
@@ -124,7 +121,7 @@ async def upload_source_file(
 
     try:
         record = await store.save_source_file(
-            user_id=user_id,
+            user_id=claims.user_id,
             project_id=project_id,
             session_id=session_id,
             folder_name=folder_name.strip() or "默认文件夹",
@@ -141,6 +138,8 @@ async def upload_source_file(
         "source_id": record.source_id,
         "project_id": record.project_id,
         "user_id": record.user_id,
+        "owner_user_id": record.owner_user_id,
+        "visibility": record.visibility,
         "session_id": record.session_id,
         "folder_name": record.folder_name,
         "file_name": record.file_name,
@@ -155,13 +154,18 @@ async def upload_source_file(
 async def delete_project_source(
     source_id: str,
     project_id: str,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
-    await _ensure_project_access(user_id=user_id, project_id=project_id)
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=project_id)
+    await authz.require_file_write(claims=claims, source_id=source_id)
     settings = get_settings()
     store = get_source_store(upload_root=settings.upload_root)
+    record = await store.get_source_for_user(user_id=claims.user_id, source_id=source_id)
+    if record is None or record.project_id != project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     deleted = await store.delete_project_source(
-        user_id=user_id,
+        user_id=claims.user_id,
         project_id=project_id,
         source_id=source_id,
     )
@@ -174,16 +178,43 @@ async def delete_project_source(
 async def mark_project_source_referenced(
     source_id: str,
     project_id: str,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
-    await _ensure_project_access(user_id=user_id, project_id=project_id)
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=project_id)
+    await authz.require_file_write(claims=claims, source_id=source_id)
     settings = get_settings()
     store = get_source_store(upload_root=settings.upload_root)
+    record = await store.get_source_for_user(user_id=claims.user_id, source_id=source_id)
+    if record is None or record.project_id != project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     marked = await store.mark_source_referenced(
-        user_id=user_id,
+        user_id=claims.user_id,
         project_id=project_id,
         source_id=source_id,
     )
     if not marked:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     return {"marked": True, "source_id": source_id, "status": "referenced"}
+
+
+@router.get("/{source_id}/download")
+async def download_project_source(
+    source_id: str,
+    project_id: str | None = None,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> FileResponse:
+    authz = get_authorization_service()
+    await authz.require_file_access(claims=claims, source_id=source_id)
+    settings = get_settings()
+    store = get_source_store(upload_root=settings.upload_root)
+    record = await store.get_source_for_user(user_id=claims.user_id, source_id=source_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    if project_id and record.project_id != project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    return FileResponse(
+        path=record.storage_path,
+        filename=record.file_name,
+        media_type=record.mime_type,
+    )

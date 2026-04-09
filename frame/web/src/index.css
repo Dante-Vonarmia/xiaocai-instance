@@ -107,10 +107,57 @@ body {
   opacity: 0.6;
 }
 
-/* 强制移除上方说明型卡片区 */
-.flare-ui-card,
-.flare-ui-card.ant-card,
-.flare-field-progress-card,
-.flare-canvas-panel {
-  display: none !important;
+.xiaocai-chat-page .flare-composer::before {
+  color: var(--flare-text-secondary);
+  content: '描述你的采购目标、用途、预算或约束，小采会先帮你判断下一步。';
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 auto 8px;
+  max-width: 980px;
+}
+
+/* 保留过程信息，但去除容器化视觉（无底色/边框/阴影） */
+.xiaocai-chat-page .flare-thinking-card.ant-card,
+.xiaocai-chat-page .flare-meta-card.ant-card,
+.xiaocai-chat-page .flare-process-meta-card.ant-card,
+.xiaocai-chat-page .flare-error-compact-card.ant-card,
+.xiaocai-chat-page .flare-ui-card.ant-card,
+.xiaocai-chat-page .flare-field-progress-card.ant-card {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.xiaocai-chat-page .flare-thinking-card.ant-card .ant-card-body,
+.xiaocai-chat-page .flare-meta-card.ant-card .ant-card-body,
+.xiaocai-chat-page .flare-process-meta-card.ant-card .ant-card-body,
+.xiaocai-chat-page .flare-error-compact-card.ant-card .ant-card-body,
+.xiaocai-chat-page .flare-ui-card.ant-card .ant-card-body,
+.xiaocai-chat-page .flare-field-progress-card.ant-card .ant-card-body {
+  padding: 6px 0 !important;
+}
+
+.xiaocai-chat-page .flare-markdown-content {
+  counter-reset: flare-ordered-item;
+}
+
+.xiaocai-chat-page .flare-markdown-content ol.flare-markdown-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.xiaocai-chat-page .flare-markdown-content ol.flare-markdown-list > li {
+  counter-increment: flare-ordered-item;
+  margin-left: 2em;
+  position: relative;
+}
+
+.xiaocai-chat-page .flare-markdown-content ol.flare-markdown-list > li::before {
+  content: counter(flare-ordered-item) ".";
+  left: -2em;
+  position: absolute;
+  text-align: right;
+  width: 1.6em;
 }

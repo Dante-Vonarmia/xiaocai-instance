@@ -9,7 +9,8 @@
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from xiaocai_instance_api.security.token_codec import decode_access_token
+from xiaocai_instance_api.security.auth_claims import AuthClaims, claims_from_payload
+from xiaocai_instance_api.security.token_codec import decode_access_token, decode_access_token_claims
 import jwt
 
 
@@ -54,6 +55,33 @@ async def get_current_user_id(
             headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token validation failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+async def get_current_auth_claims(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> AuthClaims:
+    token = credentials.credentials
+    try:
+        payload = decode_access_token_claims(token)
+        return claims_from_payload(payload)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except (jwt.InvalidTokenError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",

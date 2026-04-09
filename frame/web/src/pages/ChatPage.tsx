@@ -13,8 +13,20 @@ const FLARE_VERSION = '0.2.0'
 
 type StreamHandlers = {
   onAgentStatus?: (payload: unknown) => void
+  onThinkingTrace?: (payload: { trace: unknown }) => void
+  onExecutionTrace?: (payload: unknown) => void
   onContent?: (chunk: string) => void
+  onWorkspaceActivation?: (payload: unknown) => void
   onUICards?: (payload: { cards: Record<string, unknown>[] }) => void
+  onFieldProgress?: (payload: unknown) => void
+  onRequirementDraft?: (payload: unknown) => void
+  onNextActions?: (payload: unknown) => void
+  onSourcingCandidates?: (payload: unknown) => void
+  onRiskSummary?: (payload: unknown) => void
+  onShortlistUpdated?: (payload: unknown) => void
+  onEvaluationReportReady?: (payload: unknown) => void
+  onDoc?: (payload: { doc: unknown }) => void
+  onInstanceProfile?: (payload: unknown) => void
   onComplete?: (finalContent: string) => void
   onError?: (payload: { message: string }) => void
 }
@@ -48,13 +60,41 @@ const CANVAS_UI_LABELS = {
   project_title: '采购项目',
   session_list_title: '会话历史',
   new_session_button: '新会话',
-  empty_state_title: '开始一个采购对话',
-  empty_state_description: '输入采购需求并获取流式响应。',
+  empty_state_title: '欢迎来到小采',
+  empty_state_description: '小采在手，采购不愁。',
   canvas_workspace_title: '需求文档工作区',
   canvas_tab_result: '文档与结果',
   canvas_empty_result: '发送后在这里生成需求文档草稿，结构化结果会同步展示。',
   canvas_status_title: '文档进度',
+  scenario_title: '起步入口',
 } as const
+
+const DEFAULT_STARTER_PROMPTS: StarterPrompt[] = [
+  {
+    key: 'starter-test-server',
+    label: '我要采购一批测试服务器',
+    description: '需求梳理：先补齐预算、用途、配置和交付约束。',
+    prompt: '我要采购一批测试服务器，请先帮我梳理采购需求并列出还缺的关键信息。',
+  },
+  {
+    key: 'starter-gpu-requirement',
+    label: '帮我梳理 GPU 采购需求',
+    description: '参数检索与对比：明确显卡型号、显存、功耗、兼容性。',
+    prompt: '帮我梳理 GPU 采购需求，按参数检索与对比视角列出必填项和对比维度。',
+  },
+  {
+    key: 'starter-analysis-generation',
+    label: '根据资料生成需求分析',
+    description: '需求分析生成：沉淀目标、范围、风险与验收要点。',
+    prompt: '根据我已有资料生成一版采购需求分析，包含目标、范围、关键参数、风险和验收建议。',
+  },
+  {
+    key: 'starter-procurement-direction',
+    label: '给我一个采购建议方向',
+    description: '供应商寻源（按需启用）：在需求明确后进入候选筛选。',
+    prompt: '给我一个采购建议方向：先判断我的需求成熟度，再给出下一步行动建议。',
+  },
+]
 function toText(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
     return value.trim()
@@ -172,6 +212,58 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
         },
         {
           signal: controller.signal,
+          onEvent: (event) => {
+            const eventType = typeof event.type === 'string' ? event.type.trim().toLowerCase() : ''
+            const payload = event.data
+
+            if (eventType === 'thinking_trace') {
+              handlers.onThinkingTrace?.({ trace: payload })
+              return
+            }
+            if (eventType === 'execution_trace') {
+              handlers.onExecutionTrace?.(payload)
+              return
+            }
+            if (eventType === 'workspace_activation') {
+              handlers.onWorkspaceActivation?.(payload)
+              return
+            }
+            if (eventType === 'field_progress') {
+              handlers.onFieldProgress?.(payload)
+              return
+            }
+            if (eventType === 'requirement_draft') {
+              handlers.onRequirementDraft?.(payload)
+              return
+            }
+            if (eventType === 'next_actions') {
+              handlers.onNextActions?.(payload)
+              return
+            }
+            if (eventType === 'sourcing_candidates') {
+              handlers.onSourcingCandidates?.(payload)
+              return
+            }
+            if (eventType === 'risk_summary') {
+              handlers.onRiskSummary?.(payload)
+              return
+            }
+            if (eventType === 'shortlist_updated') {
+              handlers.onShortlistUpdated?.(payload)
+              return
+            }
+            if (eventType === 'evaluation_report_ready') {
+              handlers.onEvaluationReportReady?.(payload)
+              return
+            }
+            if (eventType === 'doc') {
+              handlers.onDoc?.({ doc: payload })
+              return
+            }
+            if (eventType === 'instance_profile') {
+              handlers.onInstanceProfile?.(payload)
+            }
+          },
           onChunk: (chunk) => {
             streamedContent += chunk
             handlers.onContent?.(chunk)
@@ -271,7 +363,7 @@ function ChatPage({ onLogout }: ChatPageProps) {
         }
         const candidate = payload.ui?.chat?.starterPrompts
         if (!Array.isArray(candidate) || cancelled) {
-          setStarterPrompts([])
+          setStarterPrompts(DEFAULT_STARTER_PROMPTS)
           return
         }
         const next = candidate.filter((item): item is StarterPrompt => (
@@ -282,10 +374,10 @@ function ChatPage({ onLogout }: ChatPageProps) {
           && typeof (item as { description?: unknown }).description === 'string'
           && typeof (item as { prompt?: unknown }).prompt === 'string'
         ))
-        setStarterPrompts(next)
+        setStarterPrompts(next.length > 0 ? next : DEFAULT_STARTER_PROMPTS)
       } catch {
         if (!cancelled) {
-          setStarterPrompts([])
+          setStarterPrompts(DEFAULT_STARTER_PROMPTS)
         }
       }
     }
@@ -296,7 +388,7 @@ function ChatPage({ onLogout }: ChatPageProps) {
   }, [])
 
   return (
-    <div style={{ height: '100vh', display: 'flex', background: '#f6f8fc' }}>
+    <div className="xiaocai-chat-page" style={{ height: '100vh', display: 'flex', background: '#f6f8fc' }}>
       <aside
         style={{
           width: '80px',

@@ -8,11 +8,17 @@ JWT Token 编解码器
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 import jwt
 from xiaocai_instance_api.settings import get_settings
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(
+    user_id: str,
+    tenant_id: str | None = None,
+    org_id: str | None = None,
+    roles: list[str] | tuple[str, ...] | None = None,
+) -> str:
     """
     生成 JWT access token
 
@@ -32,16 +38,29 @@ def create_access_token(user_id: str) -> str:
     now = datetime.now(timezone.utc)
     expire = now + timedelta(minutes=settings.jwt_expire_minutes)
 
-    payload = {
+    payload: dict[str, Any] = {
         "sub": user_id,  # subject = user_id
         "exp": expire,
         "iat": now,
+        "roles": list(roles) if roles else ["user"],
     }
+    if tenant_id:
+        payload["tenant_id"] = tenant_id
+    if org_id:
+        payload["org_id"] = org_id
 
     # 2. 编码
     token = jwt.encode(payload, settings.instance_jwt_secret, algorithm=settings.jwt_algorithm)
 
     return token
+
+
+def decode_access_token_claims(token: str) -> dict[str, Any]:
+    settings = get_settings()
+    payload = jwt.decode(token, settings.instance_jwt_secret, algorithms=[settings.jwt_algorithm])
+    if not payload.get("sub"):
+        raise jwt.InvalidTokenError("Missing user_id in token")
+    return payload
 
 
 def decode_access_token(token: str) -> str:
@@ -63,15 +82,8 @@ def decode_access_token(token: str) -> str:
         - 检查过期时间
         - 提取 user_id
     """
-    settings = get_settings()
-
-    try:
-        payload = jwt.decode(token, settings.instance_jwt_secret, algorithms=[settings.jwt_algorithm])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise jwt.InvalidTokenError("Missing user_id in token")
-        return user_id
-    except jwt.ExpiredSignatureError:
-        raise
-    except jwt.InvalidTokenError:
-        raise
+    payload = decode_access_token_claims(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise jwt.InvalidTokenError("Missing user_id in token")
+    return str(user_id)

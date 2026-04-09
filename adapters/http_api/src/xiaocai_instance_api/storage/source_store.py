@@ -24,11 +24,48 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
+def _source_access_clause(alias: str = "ps") -> str:
+    return f"""
+        (
+            {alias}.owner_user_id = ?
+            OR (
+                {alias}.visibility = 'project_shared'
+                AND EXISTS (
+                    SELECT 1 FROM project_members pm
+                    WHERE pm.project_id = {alias}.project_id
+                      AND pm.user_id = ?
+                      AND pm.status = 'active'
+                )
+            )
+        )
+    """
+
+
+def _source_write_clause(alias: str = "ps") -> str:
+    return f"""
+        (
+            {alias}.owner_user_id = ?
+            OR (
+                {alias}.visibility = 'project_shared'
+                AND EXISTS (
+                    SELECT 1 FROM project_members pm
+                    WHERE pm.project_id = {alias}.project_id
+                      AND pm.user_id = ?
+                      AND pm.status = 'active'
+                      AND pm.role IN ('owner', 'editor')
+                )
+            )
+        )
+    """
+
+
 @dataclass
 class SourceRecord:
     source_id: str
     project_id: str
     user_id: str
+    owner_user_id: str
+    visibility: str
     session_id: str | None
     folder_name: str
     file_name: str
@@ -58,10 +95,25 @@ class SourceStore:
     def _init_schema(self) -> None:
         self._runtime.execute(
             """
+            CREATE TABLE IF NOT EXISTS project_members (
+                project_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'owner',
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (project_id, user_id)
+            )
+            """
+        )
+        self._runtime.execute(
+            """
             CREATE TABLE IF NOT EXISTS project_sources (
                 source_id TEXT PRIMARY KEY,
                 project_id TEXT NOT NULL,
                 user_id TEXT NOT NULL,
+                owner_user_id TEXT NOT NULL,
+                visibility TEXT NOT NULL DEFAULT 'private',
                 session_id TEXT NULL,
                 folder_name TEXT NOT NULL,
                 file_name TEXT NOT NULL,
@@ -73,18 +125,38 @@ class SourceStore:
             )
             """
         )
+        self._sync_legacy_columns()
+        self._runtime.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_project_sources_project_owner
+            ON project_sources (project_id, owner_user_id, created_at DESC)
+            """
+        )
+        self._runtime.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_project_sources_project_visibility
+            ON project_sources (project_id, visibility, created_at DESC)
+            """
+        )
+        self._runtime.commit()
+
+    def _sync_legacy_columns(self) -> None:
         column_names = self._get_column_names()
         if "status" not in column_names:
             self._runtime.execute("ALTER TABLE project_sources ADD COLUMN status TEXT NOT NULL DEFAULT 'available'")
         if "folder_name" not in column_names:
             self._runtime.execute("ALTER TABLE project_sources ADD COLUMN folder_name TEXT NOT NULL DEFAULT '默认文件夹'")
+        if "owner_user_id" not in column_names:
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN owner_user_id TEXT NULL")
+        if "visibility" not in column_names:
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'")
         self._runtime.execute(
             """
-            CREATE INDEX IF NOT EXISTS idx_project_sources_project_user
-            ON project_sources (project_id, user_id, created_at DESC)
+            UPDATE project_sources
+            SET owner_user_id = COALESCE(owner_user_id, user_id)
+            WHERE owner_user_id IS NULL OR owner_user_id = ''
             """
         )
-        self._runtime.commit()
 
     def _get_column_names(self) -> set[str]:
         if self._runtime.backend == "sqlite":
@@ -102,10 +174,13 @@ class SourceStore:
 
     @staticmethod
     def _row_to_record(row: dict) -> SourceRecord:
+        owner_user_id = str(row.get("owner_user_id") or row.get("user_id") or "")
         return SourceRecord(
             source_id=str(row["source_id"]),
             project_id=str(row["project_id"]),
-            user_id=str(row["user_id"]),
+            user_id=owner_user_id,  # 兼容旧响应字段
+            owner_user_id=owner_user_id,
+            visibility=str(row.get("visibility") or "private"),
             session_id=row["session_id"],
             folder_name=str(row.get("folder_name") or "默认文件夹"),
             file_name=str(row["file_name"]),
@@ -124,38 +199,37 @@ class SourceStore:
         folder_name: str | None = None,
     ) -> List[SourceRecord]:
         async with self._lock:
-            sql = """
-                SELECT * FROM project_sources
-                WHERE project_id = ? AND user_id = ?
+            sql = f"""
+                SELECT ps.* FROM project_sources ps
+                WHERE ps.project_id = ?
+                  AND {_source_access_clause("ps")}
             """
-            params: list[str] = [project_id, user_id]
+            params: list[str | int] = [project_id, user_id, user_id]
             if folder_name and folder_name.strip():
-                sql += " AND folder_name = ?"
+                sql += " AND ps.folder_name = ?"
                 params.append(folder_name.strip())
             if query and query.strip():
-                sql += " AND LOWER(file_name) LIKE LOWER(?)"
+                sql += " AND LOWER(ps.file_name) LIKE LOWER(?)"
                 params.append(f"%{query.strip()}%")
-            sql += " ORDER BY created_at DESC"
-            rows = self._runtime.fetchall(
-                sql,
-                tuple(params),
-            )
+            sql += " ORDER BY ps.created_at DESC"
+            rows = self._runtime.fetchall(sql, tuple(params))
             return [self._row_to_record(row) for row in rows]
 
     async def list_project_folders(self, user_id: str, project_id: str) -> List[SourceFolderSummary]:
         async with self._lock:
             rows = self._runtime.fetchall(
-                """
+                f"""
                 SELECT
-                    folder_name,
+                    ps.folder_name,
                     COUNT(*) AS file_count,
-                    SUM(CASE WHEN status = 'referenced' THEN 1 ELSE 0 END) AS referenced_count
-                FROM project_sources
-                WHERE project_id = ? AND user_id = ?
-                GROUP BY folder_name
-                ORDER BY folder_name ASC
+                    SUM(CASE WHEN ps.status = 'referenced' THEN 1 ELSE 0 END) AS referenced_count
+                FROM project_sources ps
+                WHERE ps.project_id = ?
+                  AND {_source_access_clause("ps")}
+                GROUP BY ps.folder_name
+                ORDER BY ps.folder_name ASC
                 """,
-                (project_id, user_id),
+                (project_id, user_id, user_id),
             )
             return [
                 SourceFolderSummary(
@@ -165,6 +239,34 @@ class SourceStore:
                 )
                 for row in rows
             ]
+
+    async def get_source_for_user(self, user_id: str, source_id: str) -> SourceRecord | None:
+        async with self._lock:
+            row = self._runtime.fetchone(
+                f"""
+                SELECT ps.* FROM project_sources ps
+                WHERE ps.source_id = ?
+                  AND {_source_access_clause("ps")}
+                LIMIT 1
+                """,
+                (source_id, user_id, user_id),
+            )
+            if row is None:
+                return None
+            return self._row_to_record(row)
+
+    async def can_write_source(self, user_id: str, source_id: str) -> bool:
+        async with self._lock:
+            row = self._runtime.fetchone(
+                f"""
+                SELECT 1 FROM project_sources ps
+                WHERE ps.source_id = ?
+                  AND {_source_write_clause("ps")}
+                LIMIT 1
+                """,
+                (source_id, user_id, user_id),
+            )
+            return row is not None
 
     async def save_source_file(
         self,
@@ -176,6 +278,7 @@ class SourceStore:
         file_size: int,
         mime_type: str,
         source_file_path: Path,
+        visibility: str = "private",
     ) -> SourceRecord:
         async with self._lock:
             source_id = _new_id("src")
@@ -188,6 +291,8 @@ class SourceStore:
                 source_id=source_id,
                 project_id=project_id,
                 user_id=user_id,
+                owner_user_id=user_id,
+                visibility=visibility,
                 session_id=session_id,
                 folder_name=folder_name,
                 file_name=file_name,
@@ -200,13 +305,15 @@ class SourceStore:
             self._runtime.execute(
                 """
                 INSERT INTO project_sources
-                (source_id, project_id, user_id, session_id, folder_name, file_name, file_size, mime_type, storage_path, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (source_id, project_id, user_id, owner_user_id, visibility, session_id, folder_name, file_name, file_size, mime_type, storage_path, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.source_id,
                     record.project_id,
                     record.user_id,
+                    record.owner_user_id,
+                    record.visibility,
                     record.session_id,
                     record.folder_name,
                     record.file_name,
@@ -223,12 +330,13 @@ class SourceStore:
     async def mark_source_referenced(self, user_id: str, project_id: str, source_id: str) -> bool:
         async with self._lock:
             row = self._runtime.fetchone(
-                """
-                SELECT source_id FROM project_sources
-                WHERE source_id = ? AND project_id = ? AND user_id = ?
+                f"""
+                SELECT ps.source_id FROM project_sources ps
+                WHERE ps.source_id = ? AND ps.project_id = ?
+                  AND {_source_write_clause("ps")}
                 LIMIT 1
                 """,
-                (source_id, project_id, user_id),
+                (source_id, project_id, user_id, user_id),
             )
             if row is None:
                 return False
@@ -236,9 +344,9 @@ class SourceStore:
                 """
                 UPDATE project_sources
                 SET status = 'referenced'
-                WHERE source_id = ? AND project_id = ? AND user_id = ?
+                WHERE source_id = ? AND project_id = ?
                 """,
-                (source_id, project_id, user_id),
+                (source_id, project_id),
             )
             self._runtime.commit()
             return True
@@ -246,12 +354,13 @@ class SourceStore:
     async def delete_project_source(self, user_id: str, project_id: str, source_id: str) -> bool:
         async with self._lock:
             row = self._runtime.fetchone(
-                """
-                SELECT storage_path FROM project_sources
-                WHERE source_id = ? AND project_id = ? AND user_id = ?
+                f"""
+                SELECT ps.storage_path FROM project_sources ps
+                WHERE ps.source_id = ? AND ps.project_id = ?
+                  AND {_source_write_clause("ps")}
                 LIMIT 1
                 """,
-                (source_id, project_id, user_id),
+                (source_id, project_id, user_id, user_id),
             )
             if row is None:
                 return False
@@ -261,9 +370,9 @@ class SourceStore:
             self._runtime.execute(
                 """
                 DELETE FROM project_sources
-                WHERE source_id = ? AND project_id = ? AND user_id = ?
+                WHERE source_id = ? AND project_id = ?
                 """,
-                (source_id, project_id, user_id),
+                (source_id, project_id),
             )
             self._runtime.commit()
             return True

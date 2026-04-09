@@ -47,25 +47,31 @@
         "user": "/assets/avatar-default.svg"
       },
       "placeholder": "请告诉我您的采购需求...",
-      "welcomeMessage": "你好！我是小采，您的采购助手。我可以帮助您梳理采购需求，并为您寻找合适的供应商。",
+      "welcomeMessage": "小采在手，采购不愁。",
       "starterPrompts": [
         {
-          "key": "starter-office-laptop",
-          "label": "办公笔记本采购",
-          "description": "明确预算、配置、数量与交付周期。",
-          "prompt": "请帮我梳理一份办公笔记本采购需求，包含预算范围、CPU/内存/硬盘配置、数量和交付时间。"
+          "key": "starter-test-server",
+          "label": "我要采购一批测试服务器",
+          "description": "需求梳理：先补齐预算、用途、配置和交付约束。",
+          "prompt": "我要采购一批测试服务器，请先帮我梳理采购需求并列出还缺的关键信息。"
         },
         {
-          "key": "starter-lab-equipment",
-          "label": "实验设备采购",
-          "description": "补齐技术参数、验收标准和风险点。",
-          "prompt": "我需要采购实验室设备，请先按需求梳理模式帮我补齐技术参数、验收标准和关键风险。"
+          "key": "starter-gpu-requirement",
+          "label": "帮我梳理 GPU 采购需求",
+          "description": "参数检索与对比：明确显卡型号、显存、功耗、兼容性。",
+          "prompt": "帮我梳理 GPU 采购需求，按参数检索与对比视角列出必填项和对比维度。"
         },
         {
-          "key": "starter-it-service",
-          "label": "IT 服务外包",
-          "description": "定义服务范围、SLA 和评估维度。",
-          "prompt": "请生成 IT 服务外包采购需求模板，包含服务范围、SLA 指标、报价结构和供应商评估标准。"
+          "key": "starter-analysis-generation",
+          "label": "根据资料生成需求分析",
+          "description": "需求分析生成：沉淀目标、范围、风险与验收要点。",
+          "prompt": "根据我已有资料生成一版采购需求分析，包含目标、范围、关键参数、风险和验收建议。"
+        },
+        {
+          "key": "starter-procurement-direction",
+          "label": "给我一个采购建议方向",
+          "description": "供应商寻源（按需启用）：在需求明确后进入候选筛选。",
+          "prompt": "给我一个采购建议方向：先判断我的需求成熟度，再给出下一步行动建议。"
         }
       ]
     }

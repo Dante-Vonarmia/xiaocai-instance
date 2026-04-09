@@ -14,22 +14,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta, timezone
 
-from xiaocai_instance_api.security.dependencies import get_current_user_id
+from xiaocai_instance_api.security.auth_claims import AuthClaims
+from xiaocai_instance_api.security.dependencies import get_current_auth_claims
+from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
-from xiaocai_instance_api.storage.ownership_store import get_ownership_store
 
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
-
-
-async def _ensure_project_access(user_id: str, project_id: str) -> None:
-    ownership_store = get_ownership_store()
-    has_access = await ownership_store.check_project_access(user_id=user_id, project_id=project_id)
-    if not has_access:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Project access denied: {project_id}",
-        )
 
 
 class SessionListResponse(BaseModel):
@@ -86,20 +77,21 @@ async def list_sessions(
     page: int = 1,
     page_size: int = 20,
     group_by_time: bool = False,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> SessionListResponse:
+    authz = get_authorization_service()
     if project_id:
-        await _ensure_project_access(user_id=user_id, project_id=project_id)
+        await authz.require_project_access(claims=claims, project_id=project_id)
     store = get_conversation_store()
     safe_page = max(page, 1)
     safe_page_size = max(1, min(page_size, 100))
     total = await store.count_sessions(
-        user_id=user_id,
+        user_id=claims.user_id,
         function_type=function_type,
         project_id=project_id,
     )
     sessions = await store.list_sessions(
-        user_id=user_id,
+        user_id=claims.user_id,
         function_type=function_type,
         project_id=project_id,
         offset=(safe_page - 1) * safe_page_size,
@@ -110,6 +102,8 @@ async def list_sessions(
             "sessionId": item.session_id,
             "project_id": item.project_id,
             "user_id": item.user_id,
+            "owner_user_id": item.owner_user_id,
+            "visibility": item.visibility,
             "mode": item.mode,
             "title": item.title,
             "status": item.status,
@@ -153,10 +147,12 @@ async def list_sessions(
 @router.get("/{session_id}")
 async def get_session(
     session_id: str,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
+    authz = get_authorization_service()
+    await authz.require_conversation_access(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
-    session = await store.get_session(user_id=user_id, session_id=session_id)
+    session = await store.get_session_for_user(user_id=claims.user_id, session_id=session_id)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
@@ -164,6 +160,8 @@ async def get_session(
         "sessionId": session.session_id,
         "project_id": session.project_id,
         "user_id": session.user_id,
+        "owner_user_id": session.owner_user_id,
+        "visibility": session.visibility,
         "mode": session.mode,
         "function_type": session.function_type,
         "title": session.title,
@@ -174,17 +172,19 @@ async def get_session(
 @router.post("", response_model=SessionCreateResponse)
 async def create_session(
     request: SessionCreateRequest,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> SessionCreateResponse:
+    authz = get_authorization_service()
     if request.project_id:
-        await _ensure_project_access(user_id=user_id, project_id=request.project_id)
+        await authz.require_project_access(claims=claims, project_id=request.project_id)
     store = get_conversation_store()
     session = await store.create_session(
-        user_id=user_id,
+        user_id=claims.user_id,
         function_type=request.function_type,
         title=request.title,
         project_id=request.project_id,
         mode=request.mode,
+        visibility="private",
     )
     return SessionCreateResponse(
         sessionId=session.session_id,
@@ -199,11 +199,13 @@ async def create_session(
 async def update_session(
     session_id: str,
     request: SessionUpdateRequest,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> SessionUpdateResponse:
+    authz = get_authorization_service()
+    await authz.require_conversation_write(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
     session = await store.update_session_title(
-        user_id=user_id,
+        user_id=claims.user_id,
         session_id=session_id,
         title=request.title,
     )
@@ -219,10 +221,12 @@ async def update_session(
 @router.get("/{session_id}/messages", response_model=MessageListResponse)
 async def list_messages(
     session_id: str,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> MessageListResponse:
+    authz = get_authorization_service()
+    await authz.require_conversation_access(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
-    messages = await store.list_messages(user_id=user_id, session_id=session_id)
+    messages = await store.list_messages(user_id=claims.user_id, session_id=session_id)
     return MessageListResponse(
         messages=[
             {
@@ -240,11 +244,13 @@ async def list_messages(
 async def append_exchange(
     session_id: str,
     request: AppendExchangeRequest,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> AppendExchangeResponse:
+    authz = get_authorization_service()
+    await authz.require_conversation_write(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
     success = await store.append_exchange(
-        user_id=user_id,
+        user_id=claims.user_id,
         session_id=session_id,
         user_message=request.user_message,
         assistant_message=request.assistant_message,
@@ -257,10 +263,12 @@ async def append_exchange(
 @router.delete("/{session_id}", response_model=SessionDeleteResponse)
 async def delete_session(
     session_id: str,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> SessionDeleteResponse:
+    authz = get_authorization_service()
+    await authz.require_conversation_write(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
-    deleted = await store.delete_session(user_id=user_id, session_id=session_id)
+    deleted = await store.delete_session(user_id=claims.user_id, session_id=session_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return SessionDeleteResponse(deleted=True)

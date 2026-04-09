@@ -14,52 +14,68 @@ from xiaocai_instance_api.contracts.chat_contract import (
     ChatRunResponse,
     ChatStreamRequest,
 )
-from xiaocai_instance_api.security.dependencies import get_current_user_id
+from xiaocai_instance_api.security.auth_claims import AuthClaims
+from xiaocai_instance_api.security.dependencies import get_current_auth_claims
+from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
-from xiaocai_instance_api.storage.ownership_store import get_ownership_store
 import json
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-async def _check_project_access(user_id: str, context: dict | None) -> None:
+def _extract_project_id(context: dict | None) -> str | None:
     if not isinstance(context, dict):
-        return
+        return None
     project_id = context.get("project_id")
+    if isinstance(project_id, str) and project_id.strip():
+        return project_id.strip()
+    return None
+
+
+async def _check_project_access(claims: AuthClaims, context: dict | None) -> None:
+    project_id = _extract_project_id(context)
     if not project_id:
         return
-    store = get_ownership_store()
-    has_access = await store.check_project_access(user_id=user_id, project_id=project_id)
-    if not has_access:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Project access denied: {project_id}",
-        )
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=project_id)
 
 
-async def _ensure_session_exists(user_id: str, request: ChatRunRequest | ChatStreamRequest):
+async def _ensure_session_exists(claims: AuthClaims, request: ChatRunRequest | ChatStreamRequest):
     store = get_conversation_store()
-    existing = await store.get_session(user_id=user_id, session_id=request.session_id)
+    authz = get_authorization_service()
+    existing = await store.get_session_for_user(user_id=claims.user_id, session_id=request.session_id)
     if existing:
+        requested_project_id = _extract_project_id(request.context)
+        if requested_project_id and existing.project_id and requested_project_id != existing.project_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Session project mismatch: {request.session_id}",
+            )
+        if existing.project_id:
+            await authz.require_project_access(claims=claims, project_id=existing.project_id)
         return existing
     session_owner = await store.get_session_owner(session_id=request.session_id)
-    if session_owner and session_owner != user_id:
+    if session_owner and session_owner != claims.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Session access denied: {request.session_id}",
         )
     context = request.context if isinstance(request.context, dict) else {}
+    project_id = _extract_project_id(context)
+    if project_id:
+        await authz.require_project_access(claims=claims, project_id=project_id)
     mode = _extract_mode(context)
     return await store.create_session(
-        user_id=user_id,
+        user_id=claims.user_id,
         function_type="requirement_canvas",
         title="新会话",
-        project_id=context.get("project_id"),
+        project_id=project_id,
         mode=mode,
         session_id=request.session_id,
+        visibility="private",
     )
 
 
@@ -134,7 +150,7 @@ async def _check_daily_limit(user_id: str, context: dict | None = None) -> None:
 @router.post("/run", response_model=ChatRunResponse)
 async def chat_run(
     request: ChatRunRequest,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> ChatRunResponse:
     """
     同步对话 - 等待 FLARE kernel 返回完整响应
@@ -153,16 +169,24 @@ async def chat_run(
           需求梳理流程、智能寻源流程、意图识别
     """
     try:
-        await _check_project_access(user_id=user_id, context=request.context)
+        authz = get_authorization_service()
+        await _check_project_access(claims=claims, context=request.context)
         await _check_mode_allowed(context=request.context)
-        await _check_daily_limit(user_id=user_id, context=request.context)
-        session = await _ensure_session_exists(user_id=user_id, request=request)
+        await _check_daily_limit(user_id=claims.user_id, context=request.context)
+        session = await _ensure_session_exists(claims=claims, request=request)
         mode = _extract_mode(request.context)
         kernel_context = dict(request.context) if isinstance(request.context, dict) else {}
+        if session.project_id and not kernel_context.get("project_id"):
+            kernel_context["project_id"] = session.project_id
+        retrieval_scope = await authz.build_retrieval_scope(
+            claims=claims,
+            project_id=_extract_project_id(kernel_context),
+        )
+        kernel_context["auth_scope"] = retrieval_scope.to_dict()
         kernel_context.setdefault("function_type", session.function_type)
         kernel_client = get_kernel_client()
         result = await kernel_client.chat_run(
-            user_id=user_id,
+            user_id=claims.user_id,
             message=request.message,
             session_id=request.session_id,
             context=kernel_context,
@@ -181,7 +205,7 @@ async def chat_run(
         )
         conversation_store = get_conversation_store()
         await conversation_store.append_exchange(
-            user_id=user_id,
+            user_id=claims.user_id,
             session_id=request.session_id,
             user_message=request.message,
             assistant_message=response.message,
@@ -199,7 +223,7 @@ async def chat_run(
 @router.post("/stream")
 async def chat_stream(
     request: ChatStreamRequest,
-    user_id: str = Depends(get_current_user_id),
+    claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> StreamingResponse:
     """
     流式对话 - 使用 Server-Sent Events (SSE) 实时返回响应
@@ -223,17 +247,25 @@ async def chat_stream(
     async def event_generator():
         """SSE 事件生成器"""
         try:
-            await _check_project_access(user_id=user_id, context=request.context)
+            authz = get_authorization_service()
+            await _check_project_access(claims=claims, context=request.context)
             await _check_mode_allowed(context=request.context)
-            await _check_daily_limit(user_id=user_id, context=request.context)
-            session = await _ensure_session_exists(user_id=user_id, request=request)
+            await _check_daily_limit(user_id=claims.user_id, context=request.context)
+            session = await _ensure_session_exists(claims=claims, request=request)
             kernel_context = dict(request.context) if isinstance(request.context, dict) else {}
+            if session.project_id and not kernel_context.get("project_id"):
+                kernel_context["project_id"] = session.project_id
+            retrieval_scope = await authz.build_retrieval_scope(
+                claims=claims,
+                project_id=_extract_project_id(kernel_context),
+            )
+            kernel_context["auth_scope"] = retrieval_scope.to_dict()
             kernel_context.setdefault("function_type", session.function_type)
             kernel_client = get_kernel_client()
             final_message_chunks: list[str] = []
             done_message: str | None = None
             async for event in kernel_client.chat_stream(
-                user_id=user_id,
+                user_id=claims.user_id,
                 message=request.message,
                 session_id=request.session_id,
                 context=kernel_context,
@@ -251,7 +283,7 @@ async def chat_stream(
             if final_message:
                 conversation_store = get_conversation_store()
                 await conversation_store.append_exchange(
-                    user_id=user_id,
+                    user_id=claims.user_id,
                     session_id=request.session_id,
                     user_message=request.message,
                     assistant_message=final_message,

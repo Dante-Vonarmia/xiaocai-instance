@@ -36,6 +36,52 @@ class KernelClient:
         return f"{self.kernel_base_url}{normalized_path}"
 
     @staticmethod
+    def _build_request_body(
+        user_id: str,
+        message: str,
+        session_id: str,
+        context: Dict[str, Any] | None,
+    ) -> Dict[str, Any]:
+        context_dict = dict(context) if isinstance(context, dict) else {}
+        payload = dict(context_dict)
+        payload["message"] = message
+
+        request_body: Dict[str, Any] = {
+            "user_id": user_id,
+            "message": message,
+            "session_id": session_id,
+            "context": context_dict,
+            "payload": payload,
+        }
+
+        # 兼容真实 FLARE kernel 的 KernelRequest 字段
+        for field in (
+            "tenant_id",
+            "instance_id",
+            "domain_pack_version",
+            "intent",
+            "intent_override",
+            "mode",
+            "manual_mode",
+            "current_mode",
+            "project_id",
+            "action_key",
+            "target_mode",
+            "action_status",
+            "action_reason",
+            "trace_id",
+        ):
+            value = context_dict.get(field)
+            if value is not None:
+                request_body[field] = value
+
+        # 如果未显式提供 intent，默认沿用 function_type
+        if "intent" not in request_body and isinstance(context_dict.get("function_type"), str):
+            request_body["intent"] = context_dict.get("function_type")
+
+        return request_body
+
+    @staticmethod
     def _parse_sse_event(event_name: str | None, data_lines: list[str]) -> Dict[str, Any]:
         raw_data = "\n".join(data_lines).strip()
         payload: Any = raw_data
@@ -87,17 +133,21 @@ class KernelClient:
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 self._build_kernel_url(self.settings.kernel_run_path),
-                json={
-                    "user_id": user_id,
-                    "message": message,
-                    "session_id": session_id,
-                    "context": context or {},
-                },
+                json=self._build_request_body(
+                    user_id=user_id,
+                    message=message,
+                    session_id=session_id,
+                    context=context,
+                ),
                 timeout=30.0,
             )
             response.raise_for_status()
             result = response.json()
             if isinstance(result, dict):
+                result_payload = result.get("result", {})
+                if not isinstance(result_payload, dict):
+                    result_payload = {}
+
                 metadata = result.get("metadata", {})
                 if not isinstance(metadata, dict):
                     metadata = {}
@@ -112,10 +162,40 @@ class KernelClient:
                     metadata["observability"] = dict(metadata.get("observability", {})) if isinstance(metadata.get("observability"), dict) else {}
                     metadata["observability"]["recovery"] = observability.get("recovery")
 
+                next_actions = result.get("next_actions")
+                if not isinstance(next_actions, list):
+                    next_actions = result_payload.get("next_actions")
+                if isinstance(next_actions, list) and next_actions:
+                    metadata["next_actions"] = next_actions
+
+                cards = result.get("cards")
+                if not isinstance(cards, list):
+                    cards = result_payload.get("cards", [])
+                if not isinstance(cards, list):
+                    cards = []
+
+                if not cards and isinstance(next_actions, list) and next_actions:
+                    cards = [
+                        {
+                            "type": "next_actions",
+                            "actions": next_actions,
+                            "next_actions": next_actions,
+                            "render_hint": "next_actions",
+                        }
+                    ]
+
                 normalized = dict(result)
-                normalized["message"] = result.get("message") or result.get("reply", "")
-                normalized["cards"] = result.get("cards", [])
-                normalized["session_id"] = result.get("session_id", session_id)
+                normalized["message"] = (
+                    result.get("message")
+                    or result.get("reply")
+                    or result_payload.get("message", "")
+                )
+                normalized["cards"] = cards
+                normalized["session_id"] = (
+                    result.get("session_id")
+                    or result_payload.get("session_id")
+                    or session_id
+                )
                 normalized["metadata"] = metadata
                 return normalized
             raise ValueError("Kernel response must be a JSON object")
@@ -155,12 +235,12 @@ class KernelClient:
             async with client.stream(
                 "POST",
                 self._build_kernel_url(self.settings.kernel_stream_path),
-                json={
-                    "user_id": user_id,
-                    "message": message,
-                    "session_id": session_id,
-                    "context": context or {},
-                },
+                json=self._build_request_body(
+                    user_id=user_id,
+                    message=message,
+                    session_id=session_id,
+                    context=context,
+                ),
                 timeout=60.0,
             ) as response:
                 response.raise_for_status()
