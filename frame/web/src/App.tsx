@@ -13,7 +13,6 @@ import {
 
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
 const DEFAULT_PROJECT_ID = 'project-local-1'
-const FLARE_VERSION = '0.2.0'
 type AuthStage = 'idle' | 'loading' | 'error'
 type AuthMode = 'host_token' | 'wechat_code' | 'mock'
 type AuthEntryMode = 'host_token' | 'wechat_code' | 'select'
@@ -221,9 +220,6 @@ function App() {
                 </button>
               </div>
             ) : null}
-            <p style={{ fontSize: '12px', opacity: 0.5, marginTop: '8px' }}>
-              FLARE {FLARE_VERSION}
-            </p>
           </section>
         </main>
       )}

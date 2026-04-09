@@ -9,6 +9,8 @@ type ChatPageProps = {
   onLogout?: () => void
 }
 
+const FLARE_VERSION = '0.2.0'
+
 type StreamHandlers = {
   onAgentStatus?: (payload: unknown) => void
   onContent?: (chunk: string) => void
@@ -340,6 +342,9 @@ function ChatPage({ onLogout }: ChatPageProps) {
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#667eea', marginTop: '-8px' }} />
 
         <div style={{ marginTop: 'auto', width: '100%' }}>
+          <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginBottom: '8px' }}>
+            FLARE {FLARE_VERSION}
+          </div>
           <button
             type="button"
             title="个人信息"
