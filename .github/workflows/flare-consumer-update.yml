@@ -1,0 +1,325 @@
+name: Consume FLARE Release
+
+on:
+  repository_dispatch:
+    types: [flare.package.released]
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: "registry (npm|pypi)"
+        required: true
+        type: string
+      package_name:
+        description: "package name"
+        required: true
+        type: string
+      version:
+        description: "target version"
+        required: true
+        type: string
+      package_path:
+        description: "package path"
+        required: false
+        type: string
+      release_commit:
+        description: "release commit"
+        required: false
+        type: string
+      release_run_url:
+        description: "release run url"
+        required: false
+        type: string
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve inputs
+        id: inputs
+        shell: bash
+        run: |
+          REGISTRY="${{ github.event.client_payload.registry }}"
+          PACKAGE_NAME="${{ github.event.client_payload.package_name }}"
+          VERSION="${{ github.event.client_payload.version }}"
+          PACKAGE_PATH="${{ github.event.client_payload.package_path }}"
+          RELEASE_COMMIT="${{ github.event.client_payload.release_commit }}"
+          RELEASE_RUN_URL="${{ github.event.client_payload.release_run_url }}"
+
+          if [ -z "$REGISTRY" ]; then REGISTRY="${{ inputs.registry }}"; fi
+          if [ -z "$PACKAGE_NAME" ]; then PACKAGE_NAME="${{ inputs.package_name }}"; fi
+          if [ -z "$VERSION" ]; then VERSION="${{ inputs.version }}"; fi
+          if [ -z "$PACKAGE_PATH" ]; then PACKAGE_PATH="${{ inputs.package_path }}"; fi
+          if [ -z "$RELEASE_COMMIT" ]; then RELEASE_COMMIT="${{ inputs.release_commit }}"; fi
+          if [ -z "$RELEASE_RUN_URL" ]; then RELEASE_RUN_URL="${{ inputs.release_run_url }}"; fi
+
+          if [ -z "$REGISTRY" ] || [ -z "$PACKAGE_NAME" ] || [ -z "$VERSION" ]; then
+            echo "Missing required inputs: registry/package_name/version"
+            exit 1
+          fi
+
+          echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "package_path=$PACKAGE_PATH" >> "$GITHUB_OUTPUT"
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "release_run_url=$RELEASE_RUN_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Update npm dependency
+        id: update_npm
+        if: steps.inputs.outputs.registry == 'npm'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          package_name = os.environ["PACKAGE_NAME"]
+          version = os.environ["VERSION"]
+          pkg_path = Path("frame/web/package.json")
+          data = json.loads(pkg_path.read_text())
+
+          changed = False
+          found = False
+
+          def set_dep(section: str) -> bool:
+            nonlocal changed, found
+            deps = data.get(section, {})
+            if package_name in deps:
+              found = True
+              if deps[package_name] != version:
+                deps[package_name] = version
+                changed = True
+              return True
+            return False
+
+          if set_dep("dependencies") or set_dep("devDependencies"):
+            found = True
+
+          # Handle npm alias values like "npm:flare-chat-core@0.1.1"
+          def update_aliases(section: str) -> None:
+            nonlocal changed
+            nonlocal found
+            deps = data.get(section, {})
+            for key, value in list(deps.items()):
+              if isinstance(value, str) and value.startswith("npm:"):
+                if f"npm:{package_name}@" in value or f"npm:{package_name}" == value:
+                  new_value = f"npm:{package_name}@{version}"
+                  if new_value != value:
+                    deps[key] = new_value
+                    changed = True
+                  found = True
+
+          update_aliases("dependencies")
+          update_aliases("devDependencies")
+
+          # Update overrides
+          overrides = data.get("overrides", {})
+          def update_override(obj):
+            nonlocal changed
+            nonlocal found
+            if isinstance(obj, dict):
+              for k, v in list(obj.items()):
+                if k == package_name and isinstance(v, str):
+                  if v != version:
+                    obj[k] = version
+                    changed = True
+                  found = True
+                elif isinstance(v, dict):
+                  update_override(v)
+          update_override(overrides)
+
+          if not found:
+            raise SystemExit(f"Package not found in package.json: {package_name}")
+
+          if changed:
+            pkg_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+
+          result = {
+            "changed": "true" if changed else "false",
+            "reason": "version updated" if changed else "target version already present"
+          }
+          print(result["changed"])
+          print(result["reason"])
+          PY
+          CHANGED=$(python - <<'PY'
+          import json, os, sys
+          # re-check diff as final source of truth
+          import subprocess
+          diff = subprocess.run(["git","diff","--quiet"], check=False)
+          print("false" if diff.returncode == 0 else "true")
+          PY
+          )
+          if [ "$CHANGED" = "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=version updated" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=target version already present" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          PACKAGE_NAME: ${{ steps.inputs.outputs.package_name }}
+          VERSION: ${{ steps.inputs.outputs.version }}
+
+      - name: Update pypi dependency
+        id: update_pypi
+        if: steps.inputs.outputs.registry == 'pypi'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          package_name = os.environ["PACKAGE_NAME"]
+          version = os.environ["VERSION"]
+          path = Path("adapters/http_api/pyproject.toml")
+          text = path.read_text()
+
+          pattern = re.compile(r'(^\\s*")' + re.escape(package_name) + r'[^"]*(".*$)', re.MULTILINE)
+          changed = False
+
+          def repl(match):
+            nonlocal changed
+            current = match.group(0)
+            desired = f'{match.group(1)}{package_name}=={version}{match.group(2)}'
+            if current != desired:
+              changed = True
+              return desired
+            return current
+
+          new_text, count = pattern.subn(repl, text)
+          if count == 0:
+            raise SystemExit(f"Package not found in pyproject.toml: {package_name}")
+
+          if changed:
+            path.write_text(new_text)
+
+          print("changed=" + ("true" if changed else "false"))
+          print("reason=" + ("version updated" if changed else "target version already present"))
+          PY
+          CHANGED=$(python - <<'PY'
+          import subprocess
+          diff = subprocess.run(["git","diff","--quiet"], check=False)
+          print("false" if diff.returncode == 0 else "true")
+          PY
+          )
+          if [ "$CHANGED" = "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=version updated" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=target version already present" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          PACKAGE_NAME: ${{ steps.inputs.outputs.package_name }}
+          VERSION: ${{ steps.inputs.outputs.version }}
+
+      - name: Resolve change status
+        id: change
+        shell: bash
+        run: |
+          if [ "${{ steps.inputs.outputs.registry }}" = "npm" ]; then
+            CHANGED="${{ steps.update_npm.outputs.changed }}"
+            REASON="${{ steps.update_npm.outputs.reason }}"
+          else
+            CHANGED="${{ steps.update_pypi.outputs.changed }}"
+            REASON="${{ steps.update_pypi.outputs.reason }}"
+          fi
+          if [ -z "$CHANGED" ]; then CHANGED="false"; fi
+          if [ -z "$REASON" ]; then REASON="target version already present"; fi
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+
+      - name: Sanitize branch name
+        id: sanitize
+        if: steps.change.outputs.changed == 'true'
+        shell: bash
+        run: |
+          RAW="${{ steps.inputs.outputs.package_name }}"
+          SAFE=$(printf '%s' "$RAW" | tr '/@' '-' | tr -cd 'A-Za-z0-9._-')
+          if [ -z "$SAFE" ]; then SAFE="package"; fi
+          echo "name=$SAFE" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        if: steps.change.outputs.changed == 'true' && steps.inputs.outputs.registry == 'npm'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frame/web/package-lock.json
+
+      - name: Update npm lockfile
+        if: steps.change.outputs.changed == 'true' && steps.inputs.outputs.registry == 'npm'
+        shell: bash
+        run: |
+          cd frame/web
+          npm install --package-lock-only
+
+      - name: Validate npm
+        id: validate_npm
+        if: steps.change.outputs.changed == 'true' && steps.inputs.outputs.registry == 'npm'
+        shell: bash
+        run: |
+          cd frame/web
+          npm ci
+          npm run build
+
+      - name: Setup Python
+        if: steps.change.outputs.changed == 'true' && steps.inputs.outputs.registry == 'pypi'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate pypi
+        id: validate_pypi
+        if: steps.change.outputs.changed == 'true' && steps.inputs.outputs.registry == 'pypi'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e adapters/http_api
+          python -m pytest -q adapters/http_api/tests
+
+      - name: Validation summary
+        id: validation
+        if: steps.change.outputs.changed == 'true'
+        shell: bash
+        run: |
+          if [ "${{ steps.inputs.outputs.registry }}" = "npm" ]; then
+            RESULT="${{ steps.validate_npm.outcome }}"
+            SUMMARY="npm build: ${RESULT}"
+          else
+            RESULT="${{ steps.validate_pypi.outcome }}"
+            SUMMARY="pytest: ${RESULT}"
+          fi
+          echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        if: steps.change.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/flare-upgrade-${{ steps.sanitize.outputs.name }}-${{ steps.inputs.outputs.version }}
+          title: chore(deps): upgrade ${{ steps.inputs.outputs.package_name }} to ${{ steps.inputs.outputs.version }}
+          commit-message: chore(deps): upgrade ${{ steps.inputs.outputs.package_name }} to ${{ steps.inputs.outputs.version }}
+          body: |
+            package: ${{ steps.inputs.outputs.package_name }}
+            version: ${{ steps.inputs.outputs.version }}
+            registry: ${{ steps.inputs.outputs.registry }}
+
+            release_run_url: ${{ steps.inputs.outputs.release_run_url }}
+            release_commit: ${{ steps.inputs.outputs.release_commit }}
+
+            validation: ${{ steps.validation.outputs.summary }}
+
+      - name: No changes
+        if: steps.change.outputs.changed == 'false'
+        run: |
+          echo "No changes required. Target version already present."
