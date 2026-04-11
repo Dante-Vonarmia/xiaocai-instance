@@ -1,0 +1,17 @@
+version: "1.0.0"
+tenant_id: "example-tenant"
+
+bindings:
+  supplier_master:
+    kind: "postgres_table"
+    ref: "postgresql://<redacted>/supplier_master"
+  project_history:
+    kind: "postgres_table"
+    ref: "postgresql://<redacted>/project_history"
+  risk_index:
+    kind: "http_api"
+    ref: "https://<redacted>/risk-index"
+
+constraints:
+  private_data_in_repo: false
+  require_runtime_auth_scope: true

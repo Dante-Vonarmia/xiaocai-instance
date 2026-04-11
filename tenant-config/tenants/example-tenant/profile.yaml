@@ -1,0 +1,12 @@
+version: "1.0.0"
+tenant_id: "example-tenant"
+base_profile_id: "procurement-base"
+profile_version: "1.0.0"
+
+overrides:
+  files:
+    - "tenant-config/tenants/example-tenant/branding.override.json"
+    - "tenant-config/tenants/example-tenant/terminology.override.yaml"
+  merge_mode: "yaml-deep-merge"
+
+bindings_ref: "bindings/tenant-private-bindings.example.yaml"

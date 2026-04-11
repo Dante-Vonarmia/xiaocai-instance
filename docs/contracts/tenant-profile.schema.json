@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tenant-profile.schema.json",
+  "title": "Tenant Profile",
+  "description": "Tenant profile contract: binds a tenant to one base profile plus overrides and private-data bindings.",
+  "type": "object",
+  "required": [
+    "version",
+    "tenant_id",
+    "base_profile_id",
+    "profile_version",
+    "overrides",
+    "bindings_ref"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "overrides": {
+      "type": "object",
+      "required": ["files", "merge_mode"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "merge_mode": {
+          "type": "string",
+          "enum": [
+            "yaml-deep-merge",
+            "json-merge-patch"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "bindings_ref": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "not": {
+        "required": ["private_data"]
+      }
+    }
+  ]
+}

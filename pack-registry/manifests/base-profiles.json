@@ -1,0 +1,26 @@
+{
+  "$schema": "../../docs/contracts/base-profile.manifest.schema.json",
+  "registry_version": "1.0.0",
+  "profiles": [
+    {
+      "profile_id": "procurement-base",
+      "domain": "procurement",
+      "version": "1.0.0",
+      "status": "active",
+      "entrypoints": {
+        "schema": "domain-pack/schema/procurement.yaml",
+        "field_dictionary": "domain-pack/schema/procurement-field-dictionary.yaml",
+        "workflow": "domain-pack/workflows/procurement-workflow-nodes.yaml",
+        "terminology": "domain-pack/terminology/procurement.yaml",
+        "category_fields": "domain-pack/category-fields/procurement-category-fields.yaml",
+        "cards": "domain-pack/cards/procurement-ui-cards.yaml",
+        "contracts": [
+          "domain-pack/contracts/procurement-search-sourcing-replace.yaml",
+          "domain-pack/contracts/procurement-analysis-rfx-templates.yaml"
+        ],
+        "scenarios": "domain-pack/contracts/scenarios"
+      },
+      "notes": "Compatibility phase: entrypoints still point to domain-pack until resolver cutover."
+    }
+  ]
+}

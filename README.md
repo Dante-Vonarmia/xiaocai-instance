@@ -53,6 +53,29 @@ procurement-agents/  (Local workspace, NOT a Git repository)
 
 ---
 
+## Standard Profile vs Tenant Override vs Private Data
+
+For procurement product scaling, this repository now follows a three-layer model:
+
+1. **Standard product profiles**:
+- Stored in `pack-registry/`.
+- Maintained as a small, versioned set (`profile_id + version`).
+- Count should remain far smaller than tenant count.
+
+2. **Tenant overrides**:
+- Stored in `tenant-config/`.
+- Each tenant must reference `base_profile_id` and only carry overrides.
+- Do not copy a full profile per tenant.
+
+3. **Tenant private data bindings**:
+- Descriptors stored in `bindings/`.
+- Private data body must stay in data layer systems (DB/object store/external service), not in repo config files.
+
+Compatibility note:
+- Existing `domain-pack/` remains as compatibility source during migration to pack registry.
+
+---
+
 ## Quick Start
 
 ### Prerequisites

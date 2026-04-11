@@ -12,7 +12,7 @@ DEV_COMPOSE := $(COMPOSE) -p $(INSTANCE_PROJECT) -f $(INSTANCE_COMPOSE_FILE) -f 
 	start stop restart \
 	up-instance down-instance build-instance ps-instance logs-instance \
 	up-dev down-dev build-dev ps-dev logs-dev logs-devlib \
-	config-instance config-dev db-migrate backup-db restore-db domain-pack-check domain-acceptance health api-smoke acceptance clean-logs
+	config-instance config-dev db-migrate backup-db restore-db domain-pack-check pack-registry-check domain-acceptance health api-smoke acceptance clean-logs
 
 help:
 	@echo "xiaocai deploy targets"
@@ -37,6 +37,7 @@ help:
 	@echo "  make logs-devlib    # devlib flare kernel logs"
 	@echo "  make config-dev     # validate instance + devlib compose"
 	@echo "  make domain-pack-check # validate xiaocai domain-pack consistency"
+	@echo "  make pack-registry-check # validate base profile registry + tenant bindings refs"
 	@echo "  make domain-acceptance # domain-pack-check + api-smoke release gate"
 	@echo "  make db-migrate     # run xiaocai storage migrations"
 	@echo "  make backup-db      # backup PostgreSQL to deploy/backups/"
@@ -121,6 +122,9 @@ restore-db: env-check
 
 domain-pack-check:
 	ruby ../domain-pack/scripts/validate_domain_pack.rb
+
+pack-registry-check:
+	bash ../scripts/pack-registry-check.sh
 
 domain-acceptance: env-check
 	@$(MAKE) domain-pack-check
