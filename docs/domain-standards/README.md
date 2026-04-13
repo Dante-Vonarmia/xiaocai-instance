@@ -1,6 +1,6 @@
 # Xiaocai Domain Standards（可交付基线）
 
-最后更新: 2026-04-08
+最后更新: 2026-04-13
 
 ## 使用原则
 
@@ -19,3 +19,4 @@
 7. [07-domain-delivery-readiness-checklist.md](./07-domain-delivery-readiness-checklist.md)
 8. [08-domain-adr-index.md](./08-domain-adr-index.md)
 9. [09-domain-implementation-backlog.md](./09-domain-implementation-backlog.md)
+10. [10-business-capability-acceptance-baseline.md](./10-business-capability-acceptance-baseline.md)
