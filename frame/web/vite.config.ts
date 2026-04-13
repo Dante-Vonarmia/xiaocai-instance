@@ -20,7 +20,8 @@ export default defineConfig({
   plugins: [react()],
 
   optimizeDeps: {
-    include: ['style-to-js', 'hast-util-to-jsx-runtime'],
+    include: ['style-to-js', 'hast-util-to-jsx-runtime', 'debug'],
+    needsInterop: ['debug'],
   },
 
   resolve: {

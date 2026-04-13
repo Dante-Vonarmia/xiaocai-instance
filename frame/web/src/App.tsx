@@ -40,15 +40,7 @@ const MOCK_USERS = [
 
 function App() {
   const [accessToken, setAccessTokenState] = useState(() => {
-    const searchParams = new URLSearchParams(window.location.search)
-    const hasExternalAuthParam = Boolean(
-      (searchParams.get('host_token') || '').trim()
-      || (searchParams.get('wechat_code') || '').trim(),
-    )
-    if (hasExternalAuthParam) {
-      return ''
-    }
-    return getAccessToken()
+    return ''
   })
   const [authStage, setAuthStage] = useState<AuthStage>('idle')
   const [authError, setAuthError] = useState('')
