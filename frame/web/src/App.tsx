@@ -39,7 +39,17 @@ const MOCK_USERS = [
 ]
 
 function App() {
-  const [accessToken, setAccessTokenState] = useState(() => getAccessToken())
+  const [accessToken, setAccessTokenState] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const hasExternalAuthParam = Boolean(
+      (searchParams.get('host_token') || '').trim()
+      || (searchParams.get('wechat_code') || '').trim(),
+    )
+    if (hasExternalAuthParam) {
+      return ''
+    }
+    return getAccessToken()
+  })
   const [authStage, setAuthStage] = useState<AuthStage>('idle')
   const [authError, setAuthError] = useState('')
   const [selectedMockUserId, setSelectedMockUserId] = useState(MOCK_USERS[0].user_id)
@@ -65,7 +75,7 @@ function App() {
   )
 
   const authenticate = useCallback(async (manualMode?: AuthMode, manualValue?: string) => {
-    if (getAccessToken().trim()) {
+    if (!manualMode && authParams.mode === 'select' && getAccessToken().trim()) {
       return
     }
     const mode: AuthMode = manualMode || (authParams.mode === 'select' ? 'mock' : authParams.mode)
@@ -106,6 +116,17 @@ function App() {
       setAuthStage('error')
     }
   }, [authParams])
+
+  useEffect(() => {
+    if (authParams.mode === 'select') {
+      return
+    }
+    clearAccessToken()
+    clearCurrentUserId()
+    setAccessTokenState('')
+    setAuthError('')
+    setAuthStage('idle')
+  }, [authParams.mode])
 
   useEffect(() => {
     if (authParams.mode !== 'select') {

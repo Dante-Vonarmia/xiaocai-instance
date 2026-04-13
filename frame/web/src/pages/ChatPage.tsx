@@ -37,7 +37,7 @@ type StreamOptions = {
 }
 
 type Runtime = BackendRuntime
-type InteractionMode = 'auto' | 'intelligent_sourcing'
+type InteractionMode = 'auto' | 'requirement_canvas' | 'intelligent_sourcing'
 type StarterPrompt = {
   key: string
   label: string
@@ -45,9 +45,9 @@ type StarterPrompt = {
   prompt: string
 }
 
-const DEFAULT_FUNCTION_TYPE = 'intelligent_sourcing'
+const DEFAULT_FUNCTION_TYPE = 'requirement_canvas'
 const DEFAULT_SESSION_TITLE = '新会话'
-const DEFAULT_INTERACTION_MODE: InteractionMode = 'auto'
+const DEFAULT_INTERACTION_MODE: InteractionMode = 'requirement_canvas'
 const DEFAULT_PROJECT_SLOT = {
   key: 'project-local-1',
   project_id: 'project-local-1',
@@ -119,6 +119,106 @@ function toUiCards(payload: Record<string, unknown> | null | undefined) {
     .filter((item) => hasUsefulCardContent(item))
 }
 
+function toOptionText(option: unknown) {
+  if (typeof option === 'string' && option.trim()) {
+    return option.trim()
+  }
+  if (option && typeof option === 'object') {
+    const candidate = option as Record<string, unknown>
+    const value = candidate.label ?? candidate.text ?? candidate.value
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+function toPendingPatchPayload(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null
+  }
+
+  const source = payload as Record<string, unknown>
+  const question = source.question && typeof source.question === 'object' && !Array.isArray(source.question)
+    ? source.question as Record<string, unknown>
+    : null
+  const chooser = source.chooser && typeof source.chooser === 'object' && !Array.isArray(source.chooser)
+    ? source.chooser as Record<string, unknown>
+    : null
+  const interactionNode = source.interaction_node && typeof source.interaction_node === 'object' && !Array.isArray(source.interaction_node)
+    ? source.interaction_node as Record<string, unknown>
+    : null
+  const gate = source.gate && typeof source.gate === 'object' && !Array.isArray(source.gate)
+    ? source.gate as Record<string, unknown>
+    : null
+
+  const fieldKey = toText(
+    question?.field_key
+    ?? chooser?.field_key
+    ?? interactionNode?.field_key
+    ?? interactionNode?.id
+    ?? 'pending'
+  )
+  const optionSource = Array.isArray(question?.options)
+    ? question.options
+    : (Array.isArray(chooser?.options) ? chooser.options : [])
+  const options = optionSource
+    .map((item) => toOptionText(item))
+    .filter(Boolean)
+  const questionText = toText(
+    question?.question_text
+    ?? question?.text
+    ?? chooser?.question_text
+    ?? interactionNode?.title
+    ?? interactionNode?.text
+    ?? '请补充当前问题'
+  )
+  const flowState = source.summary_confirmed === true ? 'completed' : 'collecting'
+  const rawActions = Array.isArray(source.next_actions)
+    ? source.next_actions
+    : (Array.isArray(source.actions) ? source.actions : [])
+  const nextActions = rawActions.length > 0
+    ? rawActions
+    : [
+      {
+        action_key: 'continue_collection',
+        label: '继续补充',
+        status: 'available',
+        target_mode: 'requirement_canvas',
+      },
+    ]
+
+  return {
+    ...source,
+    mode_key: toText(source.mode_key) || 'requirement_canvas',
+    flow_state: toText(source.flow_state) || flowState,
+    collection_phase: toText(source.collection_phase) || flowState,
+    current_question: (
+      source.current_question
+      && typeof source.current_question === 'object'
+      && !Array.isArray(source.current_question)
+    )
+      ? source.current_question
+      : {
+        field_key: fieldKey,
+        field_label: toText(question?.field_label) || fieldKey,
+        question_text: questionText,
+        options,
+        step_index: Number(question?.step_index ?? 1) || 1,
+        step_total: Number(question?.step_total ?? 1) || 1,
+      },
+    required_missing: Array.isArray(source.required_missing)
+      ? source.required_missing
+      : (source.summary_confirmed === true ? [] : [fieldKey]),
+    next_actions: nextActions,
+    actions: nextActions,
+    chooser_required: source.chooser_required === true || Boolean(question || chooser || interactionNode),
+    blocking: source.blocking && typeof source.blocking === 'object' && !Array.isArray(source.blocking)
+      ? source.blocking
+      : gate,
+  } as Record<string, unknown>
+}
+
 function hasUsefulCardContent(card: Record<string, unknown>): boolean {
   const cardType = typeof card.type === 'string' ? card.type.trim().toLowerCase() : ''
   if (!cardType) {
@@ -159,6 +259,39 @@ function hasUsefulCardContent(card: Record<string, unknown>): boolean {
   return false
 }
 
+function isPendingCollectionPayload(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return false
+  }
+  const source = payload as Record<string, unknown>
+  const gate = source.gate && typeof source.gate === 'object' && !Array.isArray(source.gate)
+    ? source.gate as Record<string, unknown>
+    : null
+  const gateStatus = toText(gate?.status).toLowerCase()
+  const commandType = toText(source.command_type).toLowerCase()
+  const hasInteraction = Boolean(
+    source.interaction_node
+    || source.chooser
+    || source.question
+    || source.current_question,
+  )
+  return hasInteraction || commandType === 'continue_collection' || gateStatus === 'blocked' || gateStatus === 'collecting' || gateStatus === 'pending'
+}
+
+function extractPendingQuestionText(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return ''
+  }
+  const source = payload as Record<string, unknown>
+  const question = source.question && typeof source.question === 'object' && !Array.isArray(source.question)
+    ? source.question as Record<string, unknown>
+    : null
+  const currentQuestion = source.current_question && typeof source.current_question === 'object' && !Array.isArray(source.current_question)
+    ? source.current_question as Record<string, unknown>
+    : null
+  return toText(question?.question_text ?? question?.text ?? currentQuestion?.question_text)
+}
+
 function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: InteractionMode) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<{ message: string; type: string } | null>(null)
@@ -195,8 +328,11 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
     })
 
     let streamedContent = ''
+    let hasStreamedText = false
 
     try {
+      let hasPendingContract = false
+      let pendingQuestionText = ''
       const response = await chatApi.stream(
         {
           message: trimmedContent,
@@ -237,7 +373,23 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
               return
             }
             if (eventType === 'next_actions') {
-              handlers.onNextActions?.(payload)
+              const bridgedPayload = toPendingPatchPayload(payload) || payload
+              if (isPendingCollectionPayload(bridgedPayload)) {
+                hasPendingContract = true
+                pendingQuestionText = extractPendingQuestionText(bridgedPayload) || pendingQuestionText
+              }
+              handlers.onNextActions?.(bridgedPayload)
+              return
+            }
+            if (eventType === 'early_patch' || eventType === 'final_patch') {
+              const bridgedPayload = toPendingPatchPayload(payload)
+              if (bridgedPayload) {
+                if (isPendingCollectionPayload(bridgedPayload)) {
+                  hasPendingContract = true
+                  pendingQuestionText = extractPendingQuestionText(bridgedPayload) || pendingQuestionText
+                }
+                handlers.onNextActions?.(bridgedPayload)
+              }
               return
             }
             if (eventType === 'sourcing_candidates') {
@@ -266,6 +418,9 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
           },
           onChunk: (chunk) => {
             streamedContent += chunk
+            if (chunk) {
+              hasStreamedText = true
+            }
             handlers.onContent?.(chunk)
           },
           onCard: (card) => {
@@ -292,7 +447,12 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
         status: 'completed',
         label: '完成',
       })
-      handlers.onComplete?.(finalContent)
+      if (hasPendingContract) {
+        handlers.onComplete?.(pendingQuestionText || '')
+      } else {
+        // 避免重复：已通过 onContent 流式输出正文时，不再在 onComplete 重发整段文本
+        handlers.onComplete?.(hasStreamedText ? '' : finalContent)
+      }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return

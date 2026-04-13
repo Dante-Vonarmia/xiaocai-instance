@@ -257,7 +257,7 @@ def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token
 
 
 def test_kernel_error_handling(client, auth_token):
-    """测试 kernel 错误处理"""
+    """测试 kernel 错误处理（本地编排兜底）"""
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.side_effect = Exception("Kernel service unavailable")
 
@@ -270,8 +270,33 @@ def test_kernel_error_handling(client, auth_token):
             }
         )
 
-        assert response.status_code == 500
-        assert "Kernel service unavailable" in response.json()["detail"]
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"]
+        assert data["metadata"]["fallback"] == "local_orchestration"
+        pending_contract = data["metadata"].get("pending_contract", {})
+        assert isinstance(pending_contract.get("missing_fields"), list)
+        assert len(pending_contract.get("missing_fields", [])) > 0
+
+
+def test_chat_run_local_fallback_produces_rfx_output_when_kernel_fails(client, auth_token):
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.side_effect = Exception("Kernel timeout")
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "帮我做RFX策略，预算50万，上海交付，500份礼盒",
+                "session_id": "sess-rfx-fallback",
+                "context": {"mode": "requirement_canvas"},
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "RFX策略" in data["message"]
+        assert data["metadata"]["fallback"] == "local_orchestration"
 
 
 def test_chat_mode_not_allowed(monkeypatch):
@@ -496,6 +521,148 @@ def test_chat_run_auto_creates_session_with_default_function_type(client, auth_t
     assert session_data["project_id"] == "proj-auto-create"
 
 
+def test_chat_run_keeps_intake_mode_sticky_across_turns(client, auth_token):
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"project_id": "proj-sticky-mode"},
+    )
+    assert bind_response.status_code == 200
+
+    session_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "project_id": "proj-sticky-mode",
+            "title": "sticky mode",
+            "mode": "requirement_canvas",
+        },
+    )
+    assert session_response.status_code == 200
+    session_id = session_response.json()["sessionId"]
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "ok",
+            "cards": [],
+            "session_id": session_id,
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "继续补充",
+                "session_id": session_id,
+                "context": {
+                    "project_id": "proj-sticky-mode",
+                    "mode": "auto",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    call_args = mock_chat.call_args[1]
+    assert call_args["context"]["mode"] == "requirement_canvas"
+
+
+def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_token):
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"project_id": "proj-pending-run"},
+    )
+    assert bind_response.status_code == 200
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "这是一段普通长回答，不应该在字段收集回合抢答",
+            "session_id": "sess-pending-run",
+            "cards": [],
+            "current_stage": "collecting",
+            "command_type": "continue_collection",
+            "missing_fields": ["category"],
+            "question": {"question_text": "请先确认采购类别"},
+            "chooser": {"field_key": "category", "options": ["活动执行", "服务器"]},
+            "interaction_node": {"id": "category"},
+            "gate": {"status": "blocked", "reason": "missing_required_fields"},
+            "summary_confirmed": False,
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "我需要开始购买一批服务器",
+                "session_id": "sess-pending-run",
+                "context": {"project_id": "proj-pending-run", "mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["message"] == "请先确认采购类别"
+    pending_contract = body["metadata"]["pending_contract"]
+    assert pending_contract["current_stage"] == "collecting"
+    assert pending_contract["command_type"] == "continue_collection"
+    assert pending_contract["missing_fields"] == ["category"]
+    assert pending_contract["intake_session_id"] == "sess-pending-run"
+    for required_key in (
+        "current_question",
+        "question",
+        "chooser",
+        "interaction_node",
+        "next_actions",
+        "gate",
+        "summary_confirmed",
+    ):
+        assert required_key in pending_contract
+
+
+def test_chat_stream_intake_filters_text_and_emits_next_actions_contract(client, auth_token):
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"project_id": "proj-pending-stream"},
+    )
+    assert bind_response.status_code == 200
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def mock_generator():
+            yield {"type": "token", "content": "这段 token 不应在 intake 收集态输出"}
+            yield {
+                "type": "early_patch",
+                "question": {"question_text": "请先确认采购类别"},
+                "chooser": {"field_key": "category", "options": ["活动执行", "服务器"]},
+                "interaction_node": {"id": "category"},
+                "missing_fields": ["category"],
+                "command_type": "continue_collection",
+                "gate": {"status": "blocked", "reason": "missing_required_fields"},
+                "summary_confirmed": False,
+            }
+            yield {"type": "done", "session_id": "sess-pending-stream"}
+
+        mock_stream.return_value = mock_generator()
+
+        response = client.post(
+            "/chat/stream",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "我想做一个活动采购项目，你能帮我什么？",
+                "session_id": "sess-pending-stream",
+                "context": {"project_id": "proj-pending-stream", "mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    assert "event: token" not in response.text
+    assert "event: early_patch" in response.text
+    assert "\"intake_session_id\": \"sess-pending-stream\"" in response.text
+    assert "\"current_stage\": \"collecting\"" in response.text
+
+
 def test_chat_run_forbidden_when_project_not_bound(client, auth_token):
     response = client.post(
         "/chat/run",
@@ -607,7 +774,7 @@ def test_chat_stream_appends_exchange_to_session_messages(client, auth_token):
     assert messages[1]["content"] == "hello stream"
 
 
-def test_chat_stream_emits_error_event_when_kernel_fails(client, auth_token):
+def test_chat_stream_falls_back_to_local_orchestration_when_kernel_fails(client, auth_token):
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -633,5 +800,6 @@ def test_chat_stream_emits_error_event_when_kernel_fails(client, auth_token):
         )
 
         assert response.status_code == 200
-        assert "event: error" in response.text
-        assert "kernel stream unavailable" in response.text
+        assert "event: content" in response.text
+        assert "event: done" in response.text
+        assert "已进入需求梳理" in response.text

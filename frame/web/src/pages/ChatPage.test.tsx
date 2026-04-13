@@ -7,6 +7,7 @@ import { chatApi } from '@/services/api'
 
 const streamSendSpy = vi.fn()
 let streamSent = false
+let streamHandlers: Record<string, unknown> = {}
 
 vi.mock('@/services/backendRuntime', () => ({
   createBackendRuntime: () => ({
@@ -40,7 +41,7 @@ vi.mock('@flare/chat-ui', () => ({
         send?: (content: string, handlers?: Record<string, unknown>, options?: Record<string, unknown>) => Promise<unknown>
       }
       if (streamAPI?.send) {
-        void streamAPI.send('test message', {}, { sessionIdOverride: 'sess-chatpage-1' })
+        void streamAPI.send('test message', streamHandlers, { sessionIdOverride: 'sess-chatpage-1' })
       }
     }, [props])
 
@@ -53,6 +54,7 @@ describe('ChatPage', () => {
     vi.clearAllMocks()
     streamSendSpy.mockClear()
     streamSent = false
+    streamHandlers = {}
 
     vi.mocked(chatApi.stream).mockResolvedValue({
       message: 'ok',
@@ -85,9 +87,61 @@ describe('ChatPage', () => {
       session_id: 'sess-chatpage-1',
       context: {
         project_id: 'project-local-1',
-        mode: 'auto',
-        function_type: 'intelligent_sourcing',
+        mode: 'requirement_canvas',
+        function_type: 'requirement_canvas',
       },
     })
+  })
+
+  it('将 early_patch 桥接为 next_actions payload 供 chooser 链消费', async () => {
+    const onNextActions = vi.fn()
+    streamHandlers = { onNextActions }
+
+    vi.mocked(chatApi.stream).mockImplementationOnce(async (_payload, callbacks) => {
+      callbacks?.onEvent?.({
+        type: 'early_patch',
+        data: {
+          type: 'early_patch',
+          question: { text: '请先确认采购类别' },
+          chooser: { options: ['服务器', '网络设备'] },
+          interaction_node: { id: 'category' },
+          next_actions: [{ action_key: 'continue_collection', label: '继续补充' }],
+          gate: { status: 'blocked', reason: 'missing_required_fields' },
+          summary_confirmed: false,
+        },
+        raw: '',
+      })
+      return {
+        message: '',
+        cards: [],
+        session_id: 'sess-chatpage-1',
+        metadata: {},
+      }
+    })
+
+    render(<ChatPage />)
+
+    await waitFor(() => {
+      expect(onNextActions).toHaveBeenCalledTimes(1)
+    })
+
+    const [bridged] = onNextActions.mock.calls[0] || []
+    expect(bridged).toMatchObject({
+      question: { text: '请先确认采购类别' },
+      chooser: { options: ['服务器', '网络设备'] },
+      interaction_node: { id: 'category' },
+      gate: { status: 'blocked', reason: 'missing_required_fields' },
+      summary_confirmed: false,
+      mode_key: 'requirement_canvas',
+      flow_state: 'collecting',
+      collection_phase: 'collecting',
+      chooser_required: true,
+    })
+    expect(bridged.current_question).toMatchObject({
+      field_key: 'category',
+      question_text: '请先确认采购类别',
+    })
+    expect(bridged.required_missing).toEqual(['category'])
+    expect(Array.isArray(bridged.next_actions)).toBe(true)
   })
 })

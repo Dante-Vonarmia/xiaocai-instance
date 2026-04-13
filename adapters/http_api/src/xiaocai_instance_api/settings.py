@@ -75,6 +75,10 @@ class Settings(BaseSettings):
         default=["auto", "requirement_canvas", "intelligent_sourcing"],
         description="允许的业务模式",
     )
+    enable_local_orchestration_fallback: bool = Field(
+        default=True,
+        description="当 kernel 不可用或未返回编排结构时，启用 xiaocai 本地会话编排兜底",
+    )
     daily_message_limit: int = Field(default=0, description="每日消息上限，0 表示不限制")
     daily_project_message_limit: int = Field(default=0, description="每日单项目消息上限，0 表示不限制")
 

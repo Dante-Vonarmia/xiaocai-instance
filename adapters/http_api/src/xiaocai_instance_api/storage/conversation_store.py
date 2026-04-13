@@ -496,6 +496,44 @@ class ConversationStore:
             )
             return self._row_to_session(row) if row else None
 
+    async def update_session_mode(
+        self,
+        user_id: str,
+        session_id: str,
+        mode: str,
+    ) -> SessionRecord | None:
+        async with self._lock:
+            row = self._runtime.fetchone(
+                f"""
+                SELECT s.* FROM sessions s
+                WHERE s.session_id = ?
+                  AND {_session_write_clause("s")}
+                LIMIT 1
+                """,
+                (session_id, user_id, user_id),
+            )
+            if row is None:
+                return None
+            updated_at = _now_iso()
+            self._runtime.execute(
+                """
+                UPDATE sessions
+                SET mode = ?, updated_at = ?
+                WHERE session_id = ?
+                """,
+                (mode, updated_at, session_id),
+            )
+            self._runtime.commit()
+            updated = self._runtime.fetchone(
+                """
+                SELECT * FROM sessions
+                WHERE session_id = ?
+                LIMIT 1
+                """,
+                (session_id,),
+            )
+            return self._row_to_session(updated) if updated else None
+
     async def list_messages(self, user_id: str, session_id: str) -> List[MessageRecord]:
         async with self._lock:
             session = self._runtime.fetchone(
