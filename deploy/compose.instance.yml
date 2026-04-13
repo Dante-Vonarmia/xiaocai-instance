@@ -67,7 +67,7 @@ services:
       - API_PORT=8001
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3001"]}
       - INSTANCE_JWT_SECRET=${INSTANCE_JWT_SECRET}
-      - KERNEL_RUNTIME_MODE=${KERNEL_RUNTIME_MODE:-http}
+      - KERNEL_RUNTIME_MODE=${KERNEL_RUNTIME_MODE:-local}
       - KERNEL_BASE_URL=${KERNEL_BASE_URL}
       - KERNEL_HOST=${KERNEL_HOST:-host.docker.internal}
       - KERNEL_PORT=${KERNEL_PORT:-8000}
@@ -82,6 +82,9 @@ services:
       - UPLOAD_ROOT=${UPLOAD_ROOT:-/data/uploads}
       - REDIS_URL=${REDIS_URL:-redis://inst-xiaocai-redis:6379/0}
       - QDRANT_URL=${QDRANT_URL:-http://inst-xiaocai-qdrant:6333}
+      - FLARE_POSTGRES_DSN=${FLARE_POSTGRES_DSN:-postgresql://xiaocai:xiaocai_dev_password@inst-xiaocai-postgres:5432/xiaocai}
+      - FLARE_REDIS_URL=${FLARE_REDIS_URL:-redis://inst-xiaocai-redis:6379/0}
+      - FLARE_QDRANT_URL=${FLARE_QDRANT_URL:-http://inst-xiaocai-qdrant:6333}
       - UPLOAD_MAX_SIZE_BYTES=${UPLOAD_MAX_SIZE_BYTES:-20971520}
       - UPLOAD_ALLOWED_EXTENSIONS=${UPLOAD_ALLOWED_EXTENSIONS:-["pdf","doc","docx","xls","xlsx","txt"]}
       - ENABLED_MODES=${ENABLED_MODES:-["auto","requirement_canvas","intelligent_sourcing"]}

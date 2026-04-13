@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=60*24*7, description="JWT 过期时间（分钟）")
 
     # FLARE Kernel 配置
-    kernel_runtime_mode: str = Field(default="http", description="Kernel 调用模式: http")
+    kernel_runtime_mode: str = Field(default="http", description="Kernel 调用模式: http | local")
     kernel_base_url_override: str = Field(
         default="",
         alias="KERNEL_BASE_URL",
