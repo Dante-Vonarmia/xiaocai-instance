@@ -3,7 +3,8 @@ FROM python:3.11-slim
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DEFAULT_TIMEOUT=120
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
@@ -12,8 +13,7 @@ RUN apt-get update \
 COPY pyproject.toml README.md ./
 COPY src ./src
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir . "httpx>=0.24"
+RUN pip install --no-cache-dir . "httpx>=0.24"
 
 EXPOSE 8001
 
