@@ -9,7 +9,7 @@ type ChatPageProps = {
   onLogout?: () => void
 }
 
-const FLARE_VERSION = '0.2.1'
+const FLARE_VERSION = '0.2.3'
 
 type StreamHandlers = {
   onAgentStatus?: (payload: unknown) => void
