@@ -499,7 +499,7 @@ function ChatPage({ onLogout }: ChatPageProps) {
     () => createBackendRuntime(),
     [],
   )
-  const interactionMode: InteractionMode = DEFAULT_INTERACTION_MODE
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>(DEFAULT_INTERACTION_MODE)
   const [starterPrompts, setStarterPrompts] = useState<StarterPrompt[]>([])
   const projectSlot = useMemo(() => ({ ...DEFAULT_PROJECT_SLOT }), [])
   const streamAPI = useRuntimeStream(runtime, projectSlot.project_id, interactionMode)
@@ -650,6 +650,7 @@ function ChatPage({ onLogout }: ChatPageProps) {
             }}
           >
             <ChatWorkspace
+              activeModeKey={interactionMode}
               composerPlaceholder="请输入采购需求"
               defaultTitle={DEFAULT_SESSION_TITLE}
               functionType={DEFAULT_FUNCTION_TYPE}
@@ -667,6 +668,13 @@ function ChatPage({ onLogout }: ChatPageProps) {
               sessionListTitle="会话列表"
               streamAPI={streamAPI}
               uiLabels={CANVAS_UI_LABELS}
+              onModeChange={(nextModeKey: string) => {
+                const normalized = String(nextModeKey || '').trim() as InteractionMode
+                if (!normalized) {
+                  return
+                }
+                setInteractionMode(normalized)
+              }}
             />
           </ConfigProvider>
         </div>
