@@ -264,12 +264,10 @@ def _build_pending_contract(
 
 
 def _should_suppress_assistant_message(pending_contract: dict | None) -> bool:
-    if not isinstance(pending_contract, dict):
-        return False
-    command_type = _to_text(pending_contract.get("command_type"))
-    gate = _as_object(pending_contract.get("gate")) or {}
-    gate_status = _to_text(gate.get("status")).lower()
-    return command_type == "continue_collection" or gate_status in {"blocked", "collecting", "pending"}
+    _ = pending_contract
+    # 占位策略：实例层不再压制 assistant 正文，优先透传 FLARE 的建议内容。
+    # 结构化收集信息仍通过 pending_contract / next_actions 保留。
+    return False
 
 
 def _ensure_response_cards(
@@ -558,8 +556,6 @@ async def chat_stream(
                     if pending_contract:
                         latest_pending_contract = pending_contract
                         event = {**event, **pending_contract}
-                    if _is_intake_mode(mode) and str(event_type).lower() in ("token", "chunk", "content", "message"):
-                        continue
                     chunk = _extract_event_chunk(event)
                     if chunk:
                         final_message_chunks.append(chunk)

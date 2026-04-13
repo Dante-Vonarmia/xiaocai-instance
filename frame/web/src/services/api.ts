@@ -359,6 +359,13 @@ function normalizeStreamEvent(
 ) {
   const eventType = resolveStreamEventType(payload, fallbackType)
   const normalizedType = eventType.toLowerCase()
+  const isTerminalEvent = (
+    normalizedType === 'done'
+    || normalizedType === 'complete'
+    || normalizedType === 'completed'
+    || normalizedType === 'final'
+    || normalizedType === 'finished'
+  )
 
   if (normalizedType === 'chunk' || normalizedType === 'token' || normalizedType === 'content') {
     const chunk = extractTextField(payload, ['delta', 'chunk', 'content', 'text'])
@@ -395,8 +402,8 @@ function normalizeStreamEvent(
     }
   }
 
-  if (normalizedType === 'done' || normalizedType === 'complete') {
-    const finalMessage = extractTextField(payload, ['final_message', 'message'])
+  if (isTerminalEvent) {
+    const finalMessage = extractTextField(payload, ['final_message', 'message', 'content', 'text'])
     const sessionId = extractTextField(payload, ['session_id'])
     const metadata = extractRecordField(payload, ['metadata'])
 

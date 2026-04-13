@@ -603,7 +603,7 @@ def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_
 
     assert response.status_code == 200
     body = response.json()
-    assert body["message"] == "请先确认采购类别"
+    assert body["message"] == "这是一段普通长回答，不应该在字段收集回合抢答"
     pending_contract = body["metadata"]["pending_contract"]
     assert pending_contract["current_stage"] == "collecting"
     assert pending_contract["command_type"] == "continue_collection"
@@ -657,7 +657,7 @@ def test_chat_stream_intake_filters_text_and_emits_next_actions_contract(client,
         )
 
     assert response.status_code == 200
-    assert "event: token" not in response.text
+    assert "event: token" in response.text
     assert "event: early_patch" in response.text
     assert "\"intake_session_id\": \"sess-pending-stream\"" in response.text
     assert "\"current_stage\": \"collecting\"" in response.text
