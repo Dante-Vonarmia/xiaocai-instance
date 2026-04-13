@@ -296,6 +296,7 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<{ message: string; type: string } | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const lastSessionIdRef = useRef('')
   const lastRequestRef = useRef<{
     content: string
     handlers: StreamHandlers
@@ -307,12 +308,38 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
     handlers: StreamHandlers = {},
     options: StreamOptions = {},
   ) => {
-    const sessionId = toText(options.sessionIdOverride)
     const trimmedContent = toText(content)
 
-    if (!sessionId || !trimmedContent) {
+    if (!trimmedContent) {
       return
     }
+
+    let sessionId = toText(options.sessionIdOverride)
+    if (!sessionId) {
+      sessionId = toText(lastSessionIdRef.current)
+    }
+    if (!sessionId) {
+      try {
+        const created = await runtime.sessionAPI.create({
+          function_type: DEFAULT_FUNCTION_TYPE,
+          title: DEFAULT_SESSION_TITLE,
+          project_id: projectId,
+        })
+        sessionId = toText(created?.sessionId)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '会话创建失败，请重试'
+        setError({ message, type: 'api' })
+        handlers.onError?.({ message })
+        return
+      }
+    }
+    if (!sessionId) {
+      const message = '会话未就绪，无法发送，请刷新后重试'
+      setError({ message, type: 'api' })
+      handlers.onError?.({ message })
+      return
+    }
+    lastSessionIdRef.current = sessionId
 
     abortControllerRef.current?.abort()
     const controller = new AbortController()
@@ -433,6 +460,9 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
         },
       )
 
+      if (toText(response.session_id)) {
+        lastSessionIdRef.current = toText(response.session_id)
+      }
       const finalContent = toText(response.message) || streamedContent
       const finalCards = response.cards
         .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')

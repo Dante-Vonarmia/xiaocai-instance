@@ -8,10 +8,14 @@ import { chatApi } from '@/services/api'
 const streamSendSpy = vi.fn()
 let streamSent = false
 let streamHandlers: Record<string, unknown> = {}
+let streamSendOptions: Record<string, unknown> | undefined = { sessionIdOverride: 'sess-chatpage-1' }
+const createSessionSpy = vi.fn()
 
 vi.mock('@/services/backendRuntime', () => ({
   createBackendRuntime: () => ({
-    sessionAPI: {},
+    sessionAPI: {
+      create: createSessionSpy,
+    },
     messageAPI: {},
   }),
 }))
@@ -41,7 +45,7 @@ vi.mock('@flare/chat-ui', () => ({
         send?: (content: string, handlers?: Record<string, unknown>, options?: Record<string, unknown>) => Promise<unknown>
       }
       if (streamAPI?.send) {
-        void streamAPI.send('test message', streamHandlers, { sessionIdOverride: 'sess-chatpage-1' })
+        void streamAPI.send('test message', streamHandlers, streamSendOptions)
       }
     }, [props])
 
@@ -55,6 +59,14 @@ describe('ChatPage', () => {
     streamSendSpy.mockClear()
     streamSent = false
     streamHandlers = {}
+    streamSendOptions = { sessionIdOverride: 'sess-chatpage-1' }
+    createSessionSpy.mockReset()
+    createSessionSpy.mockResolvedValue({
+      sessionId: 'sess-created-1',
+      project_id: 'project-local-1',
+      user_id: 'u-test',
+      status: 'active',
+    })
 
     vi.mocked(chatApi.stream).mockResolvedValue({
       message: 'ok',
@@ -143,5 +155,29 @@ describe('ChatPage', () => {
     })
     expect(bridged.required_missing).toEqual(['category'])
     expect(Array.isArray(bridged.next_actions)).toBe(true)
+  })
+
+  it('缺少 sessionIdOverride 时自动创建会话再调用 chatApi.stream', async () => {
+    streamSendOptions = undefined
+
+    render(<ChatPage />)
+
+    await waitFor(() => {
+      expect(createSessionSpy).toHaveBeenCalledTimes(1)
+    })
+    await waitFor(() => {
+      expect(chatApi.stream).toHaveBeenCalledTimes(1)
+    })
+
+    const [payload] = vi.mocked(chatApi.stream).mock.calls[0] || []
+    expect(payload).toMatchObject({
+      message: 'test message',
+      session_id: 'sess-created-1',
+      context: {
+        project_id: 'project-local-1',
+        mode: 'requirement_canvas',
+        function_type: 'requirement_canvas',
+      },
+    })
   })
 })
