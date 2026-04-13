@@ -57,6 +57,8 @@ services:
     build:
       context: ../adapters/http_api
       dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     container_name: inst-xiaocai-api
     ports:
       - "${API_PORT:-8001}:8001"
