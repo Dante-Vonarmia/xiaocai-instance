@@ -45,9 +45,9 @@ type StarterPrompt = {
   prompt: string
 }
 
-const DEFAULT_FUNCTION_TYPE = 'requirement_canvas'
+const DEFAULT_FUNCTION_TYPE = 'auto'
 const DEFAULT_SESSION_TITLE = '新会话'
-const DEFAULT_INTERACTION_MODE: InteractionMode = 'requirement_canvas'
+const DEFAULT_INTERACTION_MODE: InteractionMode = 'auto'
 const DEFAULT_PROJECT_SLOT = {
   key: 'project-local-1',
   project_id: 'project-local-1',

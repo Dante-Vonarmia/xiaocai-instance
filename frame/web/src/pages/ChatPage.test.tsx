@@ -99,8 +99,8 @@ describe('ChatPage', () => {
       session_id: 'sess-chatpage-1',
       context: {
         project_id: 'project-local-1',
-        mode: 'requirement_canvas',
-        function_type: 'requirement_canvas',
+        mode: 'auto',
+        function_type: 'auto',
       },
     })
   })
@@ -175,8 +175,8 @@ describe('ChatPage', () => {
       session_id: 'sess-created-1',
       context: {
         project_id: 'project-local-1',
-        mode: 'requirement_canvas',
-        function_type: 'requirement_canvas',
+        mode: 'auto',
+        function_type: 'auto',
       },
     })
   })
