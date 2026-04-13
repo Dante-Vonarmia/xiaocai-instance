@@ -19,6 +19,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
 
+  optimizeDeps: {
+    include: ['style-to-js', 'hast-util-to-jsx-runtime'],
+  },
+
   resolve: {
     preserveSymlinks: true,
     dedupe: ['react', 'react-dom', 'antd', '@ant-design/icons'],
