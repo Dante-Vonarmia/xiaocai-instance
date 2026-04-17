@@ -18,9 +18,7 @@ class OrchestrationContracts:
 
 @dataclass(frozen=True)
 class PackMountSnapshot:
-    legacy_domain_pack_root: str
-    new_domain_packs_root: str | None
-    new_domain_packs_detected: bool
+    domain_packs_root: str
 
 
 def _line_indent(line: str) -> int:
@@ -119,47 +117,32 @@ def _extract_rfx_template_required(text: str) -> dict[str, list[str]]:
     return mapping
 
 
-def _resolve_domain_pack_root() -> Path:
-    settings = get_settings()
-    raw_root = Path(settings.flare_domain_pack_root).expanduser()
-    candidates = [raw_root, raw_root / "domain-pack"]
-    for candidate in candidates:
-        if (candidate / "schema" / "procurement.yaml").exists():
-            return candidate
-    return candidates[0]
-
-
-def _resolve_new_domain_packs_root() -> Path | None:
+def _resolve_domain_packs_root() -> Path:
     settings = get_settings()
     raw_root = Path(settings.flare_domain_pack_root).expanduser()
     candidates = [
+        raw_root,
         raw_root / "domain-packs",
         raw_root.parent / "domain-packs",
     ]
     for candidate in candidates:
-        if (candidate / "shared").exists() and (candidate / "activity_procurement").exists() and (candidate / "gift_customization").exists():
+        if (candidate / "schema" / "procurement.yaml").exists():
             return candidate
-    return None
+    return raw_root / "domain-packs"
 
 
 @lru_cache(maxsize=1)
 def load_pack_mount_snapshot() -> PackMountSnapshot:
-    legacy_root = _resolve_domain_pack_root()
-    new_root = _resolve_new_domain_packs_root()
-    return PackMountSnapshot(
-        legacy_domain_pack_root=str(legacy_root),
-        new_domain_packs_root=str(new_root) if new_root else None,
-        new_domain_packs_detected=new_root is not None,
-    )
+    root = _resolve_domain_packs_root()
+    return PackMountSnapshot(domain_packs_root=str(root))
 
 
 @lru_cache(maxsize=1)
 def load_contracts() -> OrchestrationContracts:
-    # 当前运行继续基于 legacy domain-pack contract，保证主流程兼容。
-    # 同时加载 mount snapshot，用于识别新 domain-packs 是否已就绪（不改变现有执行路径）。
+    # 当前运行统一基于 domain-packs contract。
     _ = load_pack_mount_snapshot()
 
-    root = _resolve_domain_pack_root()
+    root = _resolve_domain_packs_root()
     schema_text = (root / "schema" / "procurement.yaml").read_text(encoding="utf-8")
     workflow_text = (root / "workflows" / "procurement-workflow-nodes.yaml").read_text(encoding="utf-8")
     sourcing_text = (root / "contracts" / "procurement-search-sourcing-replace.yaml").read_text(encoding="utf-8")

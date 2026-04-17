@@ -13,9 +13,9 @@ services:
       - KERNEL_PORT=8000
       - KERNEL_RUN_PATH=/chat/run
       - KERNEL_STREAM_PATH=/chat/stream
-      - DOMAIN_PACK_ROOT=/domain-pack
+      - DOMAIN_PACK_ROOT=/domain-packs
     volumes:
-      - ../domain-pack:/domain-pack:ro
+      - ../domain-packs:/domain-packs:ro
     networks:
       - inst-xiaocai-net
     restart: unless-stopped

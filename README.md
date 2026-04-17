@@ -18,7 +18,6 @@ procurement-agents/  (Local workspace, NOT a Git repository)
 ├── xiaocai-engagement/       → git@github.com:Dante-Vonarmia/xiaocai-engagement.git (Private)
 ├── xiaocai-platform/         → git@github.com:Dante-Vonarmia/xiaocai-platform.git (Private)
 ├── domain-packs/             (Active instance domain assets: workflows/prompts/knowledge)
-├── domain-pack/              (Legacy compatibility source; frozen)
 ├── docs/                     (Project documentation)
 └── README.md
 ```
@@ -47,7 +46,7 @@ procurement-agents/  (Local workspace, NOT a Git repository)
 | Directory | Description |
 |-----------|-------------|
 | **frame (logical)** | Merged into `xiaocai-app` + `xiaocai-api` + `xiaocai-kernel` |
-| **xiaocai-domain-pack/** | Domain workflows, prompts, knowledge, subagents |
+| **domain-packs/** | Domain workflows, prompts, knowledge, subagents |
 | **xiaocai-platform/deploy/** | Single source of release/rollback artifacts |
 | **docs/templates/** | Reserved templates (non-runtime placeholders) |
 | **docs/** | Governance, delivery, project execution documents |
@@ -57,7 +56,6 @@ procurement-agents/  (Local workspace, NOT a Git repository)
 ## Directory Ownership Baseline (Authoritative)
 
 - `domain-packs/`: instance domain assets 主源（新增只允许放这里）
-- `domain-pack/`: 兼容层（冻结，不再新增）
 - `pack-registry/`: base profile 清单与入口索引（registry only）
 - `tenant-config/`: tenant overrides only
 - `bindings/`: tenant private data bindings descriptor only
@@ -80,9 +78,8 @@ For procurement product scaling, this repository now follows a three-layer model
 - Descriptors stored in `bindings/`.
 - Private data body must stay in data layer systems (DB/object store/external service), not in repo config files.
 
-Compatibility note:
-- Existing `domain-pack/` remains as frozen compatibility source during migration.
-- New domain assets must go to `domain-packs/`.
+Source of truth note:
+- Domain assets are stored in `domain-packs/`.
 
 ---
 
@@ -190,7 +187,7 @@ cd xiaocai-platform && git pull origin main && cd ..
 
 - **docs/** - Architecture and design documents
 - **frame (logical)** - implemented by xiaocai-app / xiaocai-api / xiaocai-kernel
-- **xiaocai-domain-pack/** - Standard domain-pack assets
+- **domain-packs/** - Standard domain-pack assets
 - **xiaocai-platform/deploy/** - Manifest/version-lock/runbooks (single source)
 - **docs/templates/** - Optional templates, not production runtime
 

@@ -30,14 +30,10 @@ def _resolve_shared_root() -> Path:
     settings = get_settings()
     raw_root = Path(settings.flare_domain_pack_root).expanduser()
     candidates = [
-        # active source of truth
         raw_root / "domain-packs" / "shared",
         raw_root.parent / "domain-packs" / "shared",
+        raw_root / "shared",
         Path("domain-packs") / "shared",
-        # legacy compatibility fallback
-        raw_root / "domain-pack" / "shared",
-        raw_root.parent / "domain-pack" / "shared",
-        Path("domain-pack") / "shared",
     ]
     for candidate in candidates:
         if candidate.exists():

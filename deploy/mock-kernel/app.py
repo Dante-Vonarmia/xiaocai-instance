@@ -39,7 +39,7 @@ def _build_run_response(request: ChatRequest) -> dict[str, Any]:
         ],
         "metadata": {
             "service": "flare-kernel-mock",
-            "domain_pack_root": os.getenv("DOMAIN_PACK_ROOT", "/domain-pack"),
+            "domain_pack_root": os.getenv("DOMAIN_PACK_ROOT", "/domain-packs"),
         },
     }
 

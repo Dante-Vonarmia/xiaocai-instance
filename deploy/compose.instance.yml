@@ -76,7 +76,7 @@ services:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL}
       - LLM_PROVIDER_BACKEND=${LLM_PROVIDER_BACKEND:-dashscope}
-      - FLARE_DOMAIN_PACK_ROOT=/domain-pack
+      - FLARE_DOMAIN_PACK_ROOT=/domain-packs
       - STORAGE_DB_URL=${STORAGE_DB_URL:-postgresql://xiaocai:xiaocai_dev_password@inst-xiaocai-postgres:5432/xiaocai}
       - STORAGE_DB_PATH=${STORAGE_DB_PATH:-/data/xiaocai-instance.db}
       - UPLOAD_ROOT=${UPLOAD_ROOT:-/data/uploads}
@@ -95,7 +95,7 @@ services:
       - ROOT_AUTH_TOKEN=${ROOT_AUTH_TOKEN}
       - ROOT_USER_ID=${ROOT_USER_ID:-root}
     volumes:
-      - ../domain-pack:/domain-pack:ro
+      - ../domain-packs:/domain-packs:ro
       - inst-xiaocai-api-data:/data
     depends_on:
       - inst-xiaocai-postgres
@@ -121,7 +121,7 @@ services:
     environment:
       - VITE_API_BASE_URL=/api
     volumes:
-      - ../domain-pack:/usr/share/nginx/html/domain-pack:ro
+      - ../domain-packs:/usr/share/nginx/html/domain-packs:ro
     depends_on:
       - inst-xiaocai-api
     networks:

@@ -115,7 +115,7 @@ def build_rfx_result(
     lines = [
         "RFX策略（会话内编排）",
         f"- 建议RFX类型: {rfx_type}",
-        "- 依据: domain-pack/contracts/procurement-analysis-rfx-templates.yaml",
+        "- 依据: domain-packs/contracts/procurement-analysis-rfx-templates.yaml",
         "- 当前字段摘要：",
         *format_summary_lines(slots, required),
         "- RFX缺口字段：",

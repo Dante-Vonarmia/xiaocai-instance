@@ -42,7 +42,7 @@ requirement-form:
       label: 预算范围
       type: text
       required: false
-      placeholder: 例如: 10万-20万
+      placeholder: "例如: 10万-20万"
 
     - name: deadline
       label: 期望交付时间

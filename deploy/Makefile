@@ -12,7 +12,7 @@ DEV_COMPOSE := $(COMPOSE) -p $(INSTANCE_PROJECT) -f $(INSTANCE_COMPOSE_FILE) -f 
 	start stop restart \
 	up-instance down-instance build-instance ps-instance logs-instance \
 	up-dev down-dev build-dev ps-dev logs-dev logs-devlib \
-	config-instance config-dev db-migrate backup-db restore-db domain-pack-check pack-registry-check domain-acceptance health api-smoke acceptance clean-logs
+	config-instance config-dev db-migrate backup-db restore-db domain-packs-check pack-registry-check domain-acceptance health api-smoke acceptance clean-logs
 
 help:
 	@echo "xiaocai deploy targets"
@@ -36,9 +36,9 @@ help:
 	@echo "  make logs-dev       # instance + devlib logs"
 	@echo "  make logs-devlib    # devlib flare kernel logs"
 	@echo "  make config-dev     # validate instance + devlib compose"
-	@echo "  make domain-pack-check # validate xiaocai domain-pack consistency"
+	@echo "  make domain-packs-check # validate xiaocai domain-packs consistency"
 	@echo "  make pack-registry-check # validate base profile registry + tenant bindings refs"
-	@echo "  make domain-acceptance # domain-pack-check + api-smoke release gate"
+	@echo "  make domain-acceptance # domain-packs-check + api-smoke release gate"
 	@echo "  make db-migrate     # run xiaocai storage migrations"
 	@echo "  make backup-db      # backup PostgreSQL to deploy/backups/"
 	@echo "  make restore-db FILE=... # restore PostgreSQL from sql file"
@@ -120,14 +120,14 @@ restore-db: env-check
 	fi
 	./scripts/restore-db.sh "$(FILE)"
 
-domain-pack-check:
-	ruby ../domain-pack/scripts/validate_domain_pack.rb
+domain-packs-check:
+	python3 ../scripts/validate_domain_packs.py --root ../domain-packs
 
 pack-registry-check:
 	bash ../scripts/pack-registry-check.sh
 
 domain-acceptance: env-check
-	@$(MAKE) domain-pack-check
+	@$(MAKE) domain-packs-check
 	@$(MAKE) api-smoke
 	@if ! grep -q '"access_token":"' auth-test.log; then \
 		echo "domain acceptance failed: auth-test.log missing access_token"; \
@@ -141,7 +141,7 @@ domain-acceptance: env-check
 		echo "domain acceptance failed: chat-stream-test.log missing done event"; \
 		exit 1; \
 	fi
-	@echo "domain acceptance passed: domain-pack-check + api-smoke assertions"
+	@echo "domain acceptance passed: domain-packs-check + api-smoke assertions"
 
 health:
 	./scripts/health-check.sh

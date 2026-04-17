@@ -27,9 +27,9 @@
     },
 
     "domain_pack": {
-      "path": "../domain-pack",
+      "path": "../domain-packs",
       "type": "config",
-      "description": "采购领域配置包",
+      "description": "采购领域配置包（domain-packs）",
       "includes": [
         "branding/",
         "cards/",

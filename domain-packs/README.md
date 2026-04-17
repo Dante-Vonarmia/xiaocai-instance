@@ -8,7 +8,6 @@
 状态：
 - **Active / Source of Truth for new domain assets**
 - 新增或演进领域资产统一进入 `domain-packs/`
-- `domain-pack/` 仅保留兼容，不再新增
 
 约束：
 - 仅承载 instance 领域资产

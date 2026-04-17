@@ -7,7 +7,7 @@ xiaocai 前端壳 - 基于 React + TypeScript + FLARE packages
 这是一个 **前端壳（Frame）**，职责是：
 
 1. **集成 FLARE chat UI**: 不重新实现 chat，直接使用 FLARE 的 `flare-chat-ui` 组件
-2. **配置 xiaocai 特定内容**: 品牌、domain-pack、UI 卡片等
+2. **配置 xiaocai 特定内容**: 品牌、domain-packs、UI 卡片等
 3. **管理认证**: 处理宿主应用 token 换取和状态管理
 
 **重要**:
@@ -153,12 +153,12 @@ import { ChatWorkspace } from '@flare/chat-ui'
 ## 开发注意事项
 
 1. **不要重新实现 chat UI** - 使用 FLARE 的 ChatWorkspace
-2. **domain-pack 配置** - UI 卡片、术语等从 domain-pack/ 读取
+2. **domain-packs 配置** - UI 卡片、术语等从 domain-packs/ 读取
 3. **Token 管理** - 使用 localStorage 存储，注意安全性
 4. **SSE 流式响应** - 使用 `fetch` 读取 `text/event-stream`
 
 ## 参考文档
 
 - 业务需求: `../../docs/discussions/phase-1-*.md`
-- UI 卡片配置: `../../domain-pack/cards/procurement-ui-cards.yaml`
+- UI 卡片配置: `../../domain-packs/cards/procurement-ui-cards.yaml`
 - FLARE 文档: `/Users/dantevonalcatraz/Development/F.L.A.R.E/`
