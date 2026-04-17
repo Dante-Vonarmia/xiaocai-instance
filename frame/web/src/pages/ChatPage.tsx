@@ -540,16 +540,33 @@ function ChatPage({ onLogout }: ChatPageProps) {
     let cancelled = false
     const loadStarterPrompts = async () => {
       try {
-        const response = await fetch('/domain-pack/branding/instance-branding.json', { cache: 'no-store' })
-        if (!response.ok || cancelled) {
-          return
-        }
-        const payload = await response.json() as {
+        const brandingPaths = [
+          '/domain-packs/branding/instance-branding.json',
+          '/domain-pack/branding/instance-branding.json',
+        ]
+        let payload: {
           ui?: {
             chat?: {
               starterPrompts?: unknown[]
             }
           }
+        } | null = null
+        for (const path of brandingPaths) {
+          const response = await fetch(path, { cache: 'no-store' })
+          if (!response.ok || cancelled) {
+            continue
+          }
+          payload = await response.json() as {
+            ui?: {
+              chat?: {
+                starterPrompts?: unknown[]
+              }
+            }
+          }
+          break
+        }
+        if (!payload || cancelled) {
+          return
         }
         const candidate = payload.ui?.chat?.starterPrompts
         if (!Array.isArray(candidate) || cancelled) {

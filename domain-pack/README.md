@@ -1,6 +1,11 @@
-# xiaocai Domain Pack
+# xiaocai Domain Pack (Legacy Compatibility Only)
 
-xiaocai 采购领域配置包（Sheet1 + Sheet3 首轮基线）- 定义采购领域契约与编排配置。
+> 状态：**Frozen / Legacy Compatibility**
+>
+> `domain-pack/` 仅用于兼容存量读取路径。  
+> 新增或演进领域资产，必须进入 `domain-packs/`，禁止继续向 `domain-pack/` 扩展。
+
+xiaocai 采购领域配置包（Sheet1 + Sheet3 首轮基线）- 定义采购领域契约与编排配置（历史兼容来源）。
 
 ## 什么是 Domain Pack？
 

@@ -12,7 +12,7 @@
 - INSTANCE_JWT_SECRET: JWT 签名密钥
 - KERNEL_HOST: FLARE kernel 地址
 - KERNEL_PORT: FLARE kernel 端口
-- FLARE_DOMAIN_PACK_ROOT: domain-pack 根目录
+- FLARE_DOMAIN_PACK_ROOT: 资产根目录（优先读取 domain-packs，保留 domain-pack 兼容回退）
 """
 
 from functools import lru_cache
@@ -61,8 +61,8 @@ class Settings(BaseSettings):
     kernel_run_path: str = Field(default="/chat/run", description="Kernel 同步对话路径")
     kernel_stream_path: str = Field(default="/chat/stream", description="Kernel 流式对话路径")
 
-    # Domain Pack 配置
-    flare_domain_pack_root: str = Field(default=".", description="domain-pack 根目录")
+    # Domain Pack 配置（优先 domain-packs，兼容回退 domain-pack）
+    flare_domain_pack_root: str = Field(default=".", description="领域资产根目录（domain-packs 优先）")
     upload_root: str = Field(default="/tmp/xiaocai-instance-uploads", description="上传文件存储根目录")
     storage_db_path: str = Field(default="/tmp/xiaocai-instance.db", description="SQLite 存储路径")
     storage_db_url: str = Field(default="", description="数据库连接串（优先，支持 postgresql://）")

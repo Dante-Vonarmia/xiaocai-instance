@@ -2,6 +2,12 @@
 
 本目录用于维护“少量标准领域模板（base profiles）”，不再采用“一客户一套完整 pack”。
 
+职责边界（强约束）：
+- `pack-registry/` 只维护 profile 索引与入口清单（manifest/metadata）
+- 不承载 tenant overrides
+- 不承载 tenant private data
+- 不直接承载具体业务领域资产正文（资产正文位于 `domain-packs/`，当前迁移期可临时指向 legacy `domain-pack/`）
+
 ## 目标
 
 1. 标准 profile 数量应显著小于 tenant 数量。

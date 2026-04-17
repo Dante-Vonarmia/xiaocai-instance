@@ -76,4 +76,14 @@ done < <(find "$ROOT_DIR/tenant-config/tenants" -type f \( -name "*.yml" -o -nam
 echo "[4/4] run existing domain-pack consistency check"
 ruby "$ROOT_DIR/domain-pack/scripts/validate_domain_pack.rb"
 
+if git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  touched_legacy_paths=$(git -C "$ROOT_DIR" diff --name-only --cached -- domain-pack || true)
+  touched_legacy_paths+=$'\n'
+  touched_legacy_paths+=$(git -C "$ROOT_DIR" diff --name-only -- domain-pack || true)
+  touched_legacy_paths=$(echo "$touched_legacy_paths" | sed '/^$/d' | sort -u)
+  if [ -n "$touched_legacy_paths" ]; then
+    echo "[pack-registry-check][WARN] detected changes under legacy domain-pack/; new domain assets should go to domain-packs/ first."
+  fi
+fi
+
 echo "pack-registry-check passed"
