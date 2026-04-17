@@ -1,0 +1,59 @@
+pack_id: gift_customization
+version: v1
+
+shared_gate_ref: shared.suppliers.common_supplier_gate
+
+hard_gates:
+  - gate_id: GIFT-GATE-001
+    check: 主体合法且证照有效
+  - gate_id: GIFT-GATE-002
+    check: 具备目标定制深度能力
+  - gate_id: GIFT-GATE-003
+    check: 交期内产能可证明
+  - gate_id: GIFT-GATE-004
+    check: 无重大红线风险
+
+bonus_items:
+  - 打样响应快且一次通过率高
+  - 量产一致性稳定
+  - 环保材料能力成熟
+  - 包装与物流协同经验丰富
+
+score_dimensions:
+  - key: compliance_and_qualification
+    label: 合规与资质
+    weight: 20
+    score_range: [0, 20]
+  - key: customization_and_sampling
+    label: 定制与打样能力
+    weight: 25
+    score_range: [0, 25]
+  - key: mass_production_and_delivery
+    label: 量产质量与交付能力
+    weight: 25
+    score_range: [0, 25]
+  - key: commercial_terms
+    label: 商务条件
+    weight: 20
+    score_range: [0, 20]
+  - key: case_and_service_collab
+    label: 案例与服务协同
+    weight: 10
+    score_range: [0, 10]
+
+scoring_algorithm:
+  total_score_formula: "sum(dimensions)"
+  max_score: 100
+
+veto_items:
+  - 资质造假
+  - 关键合规材料拒绝提供
+  - 拒绝承诺关键交付条款（交期/质量/赔付）
+
+recommendation_levels:
+  - level: 推荐
+    condition: "hard_gates_passed and total_score >= 80"
+  - level: 谨慎
+    condition: "hard_gates_passed and total_score >= 60 and total_score < 80"
+  - level: 淘汰
+    condition: "not hard_gates_passed or total_score < 60 or veto_hit"

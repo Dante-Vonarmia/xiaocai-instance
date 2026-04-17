@@ -16,6 +16,13 @@ class OrchestrationContracts:
     rfx_template_required: dict[str, list[str]]
 
 
+@dataclass(frozen=True)
+class PackMountSnapshot:
+    legacy_domain_pack_root: str
+    new_domain_packs_root: str | None
+    new_domain_packs_detected: bool
+
+
 def _line_indent(line: str) -> int:
     return len(line) - len(line.lstrip(" "))
 
@@ -122,8 +129,36 @@ def _resolve_domain_pack_root() -> Path:
     return candidates[0]
 
 
+def _resolve_new_domain_packs_root() -> Path | None:
+    settings = get_settings()
+    raw_root = Path(settings.flare_domain_pack_root).expanduser()
+    candidates = [
+        raw_root / "domain-packs",
+        raw_root.parent / "domain-packs",
+    ]
+    for candidate in candidates:
+        if (candidate / "shared").exists() and (candidate / "activity_procurement").exists() and (candidate / "gift_customization").exists():
+            return candidate
+    return None
+
+
+@lru_cache(maxsize=1)
+def load_pack_mount_snapshot() -> PackMountSnapshot:
+    legacy_root = _resolve_domain_pack_root()
+    new_root = _resolve_new_domain_packs_root()
+    return PackMountSnapshot(
+        legacy_domain_pack_root=str(legacy_root),
+        new_domain_packs_root=str(new_root) if new_root else None,
+        new_domain_packs_detected=new_root is not None,
+    )
+
+
 @lru_cache(maxsize=1)
 def load_contracts() -> OrchestrationContracts:
+    # 当前运行继续基于 legacy domain-pack contract，保证主流程兼容。
+    # 同时加载 mount snapshot，用于识别新 domain-packs 是否已就绪（不改变现有执行路径）。
+    _ = load_pack_mount_snapshot()
+
     root = _resolve_domain_pack_root()
     schema_text = (root / "schema" / "procurement.yaml").read_text(encoding="utf-8")
     workflow_text = (root / "workflows" / "procurement-workflow-nodes.yaml").read_text(encoding="utf-8")

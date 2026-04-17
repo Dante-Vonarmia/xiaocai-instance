@@ -1,0 +1,54 @@
+pack_id: shared_template_recommendation_rules
+version: v1
+scope: p0
+
+rules:
+  - rule_id: REC-ACT-001
+    scenario: activity_procurement
+    stage: requirement_collection
+    trigger_conditions:
+      readiness_score_gte: 0.7
+      required_fields_present:
+        - budget
+        - delivery_time
+        - delivery_location
+        - activity_type
+      block_if_missing_any:
+        - technical_requirements
+        - setup_requirements
+    weighted_candidates:
+      - template_key: activity_analysis_standard
+        weight: 0.55
+      - template_key: activity_sourcing_fast_track
+        weight: 0.30
+      - template_key: activity_risk_first
+        weight: 0.15
+    disable_conditions:
+      - condition: risk_level == critical and compliance_requirements missing
+        reason: 合规约束不完整，禁止给出完整推荐
+    fallback_template: clarification_questions_first
+
+  - rule_id: REC-GIFT-001
+    scenario: gift_customization
+    stage: requirement_collection
+    trigger_conditions:
+      readiness_score_gte: 0.7
+      required_fields_present:
+        - budget
+        - quantity
+        - delivery_time
+        - customization_depth
+      block_if_missing_any:
+        - design_requirements
+        - packaging_requirements
+    weighted_candidates:
+      - template_key: gift_standard_quote_compare
+        weight: 0.50
+      - template_key: gift_deep_customization_strategy
+        weight: 0.35
+      - template_key: gift_risk_control_first
+        weight: 0.15
+    disable_conditions:
+      - condition: customization_depth == 深度定制 and sampling_requirements missing
+        reason: 深度定制缺打样要求，禁止推荐执行模板
+    fallback_template: clarification_questions_first

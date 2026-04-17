@@ -1,316 +1,198 @@
-# xiaocai Backlog (Post-Alignment)
+# xiaocai Backlog（Reprioritized for Domain-Pack First）
 
-## Scope
+更新时间: 2026-04-16
 
-- 目标: 支撑客户最终流程开发，不越界到 FLARE 基座改造。
-- 原则: 先文档与契约闭环，再最小实现闭环。
-
----
-
-## Priority Legend
-
-- P0: 阻断项，必须先做
-- P1: 主链路能力项
-- P2: 体验与扩展项
-- P3: 延后项
+## 本次重排结论
+- 当前 P0 主线统一为：**domain pack 资产化 + 校验测试 + 最小挂载**。
+- 不进入 UI 先行、不进入平台泛化、不扩展 P0 无关场景、不触碰 FLARE Core 主流程。
 
 ---
 
-## Task 0 (P0-0) - TO_CONFIRM Freeze Matrix
+## 冻结 / 延后任务（旧主线）
 
-- Title: 冻结 TO_CONFIRM 决策矩阵
-- Why: 未冻结的字段与判定规则会直接导致 orch policy 返工
-- Goal: 给每个 TO_CONFIRM 项定义 blocking level/default/owner/deadline
-- Scope:
-  - 冻结 11 项关键 TO_CONFIRM
-  - 定义 BLOCKER/NON-BLOCKER/DEFERABLE
-- Out of Scope:
-  - orch policy 代码实现
-- Affected Areas:
-  - `docs/domain-standards/xiaocai-instance-alignment/xiaocai-to-confirm-freeze-matrix.md`
-- Dependencies:
-  - 客户流程最终口径同步
-- Acceptance Criteria:
-  - 每项都有默认策略和责任人
-  - BLOCKER 项有明确截止日期
-- Risk:
-  - 跨角色未按时确认
-- Priority: P0
-- Suggested Order: 0
-- Type: `preparation / governance`
+以下任务在本轮统一标记为 `Deferred/Frozen`（以 `docs/discussions/task_board.csv` 为准）：
+
+1. UI 先行与工作台扩展类
+   - 代表任务: TASK-006, TASK-007, TASK-007A, TASK-009, TASK-010, TASK-013, TASK-017~019, TASK-021, TASK-024~026, TASK-029~033, TASK-035
+2. 平台与账户泛化类（非当前 P0 主线）
+   - 代表任务: TASK-002~004, TASK-014~016, TASK-020, TASK-026~032, TASK-038, TASK-048~053
+3. 过早管理页/运营类
+   - 代表任务: TASK-054
+4. 可能触及 FLARE Core 主流程或非必要耦合改造类
+   - 代表任务: TASK-005, TASK-008, TASK-040, TASK-056（全部延后到 domain pack 资产闭合后再评估）
+5. P0 无关场景扩展与泛化测试包
+   - 代表任务: TASK-036~037, TASK-041~047（保留历史参考，当前不作为执行入口）
+
+> 说明：历史 `Done` 项保留为历史事实，不纳入当前执行主线。
 
 ---
 
-## Task 1 (P0-2) - Field Mapping Closure Prep
+## 新的 P0 主线任务（执行顺序）
 
-- Title: 字段映射收口准备（Field Mapping Closure Prep）
-- Why: 客户新增字段映射未稳，直接做 policy 会返工
-- Goal: 形成字段映射闭包（reuse/alias/new/derived/defer）与影响面清单
-- Scope:
-  - 完成 mapping closure table
-  - 输出“可立即开发/必须确认/可占位/defer”分组
-- Out of Scope:
-  - orch policy 实现
-- Affected Areas:
-  - `docs/domain-standards/xiaocai-instance-alignment/xiaocai-field-mapping-closure-spec.md`
-  - `docs/domain-standards/xiaocai-instance-alignment/xiaocai-field-taxonomy.md`
-  - `docs/domain-standards/xiaocai-instance-alignment/*`
-- Dependencies:
-  - Task 0
-- Acceptance Criteria:
-  - 新增字段均有 mapping type
-  - 明确是否影响 core/sourcing/analysis/template/flare mapping
-- Risk:
-  - 别名与新增字段混用造成后续漂移
-- Priority: P0
-- Suggested Order: 1
-- Type: `field taxonomy / schema`
+## Task DP-001：建立 P0 资产目录结构
+- 目标：创建 shared + activity_procurement + gift_customization 的运行时资产目录骨架。
+- 输入文件：
+  - `docs/domain-assets-map.md`
+  - `docs/domain-scope.md`
+- 输出文件：
+  - `domain-packs/shared/**`
+  - `domain-packs/activity_procurement/**`
+  - `domain-packs/gift_customization/**`
+- 验收标准：目录与占位文件齐全，命名与文档一致，可被后续校验脚本扫描。
+- 不做什么：不改 FLARE Core；不做 UI。
 
----
+## Task DP-002：activity pack 配置化
+- 目标：把活动采购文档转成机器可读配置（fields/question_flow/analysis/sourcing/scorecard/artifact_mapping）。
+- 输入文件：
+  - `docs/activity-procurement-pack.md`
+  - `docs/supplier-evaluation-framework.md`
+  - `docs/artifact-output-spec.md`
+- 输出文件：
+  - `domain-packs/activity_procurement/fields.yaml`
+  - `domain-packs/activity_procurement/question_flow.yaml`
+  - `domain-packs/activity_procurement/analysis_template.md`
+  - `domain-packs/activity_procurement/sourcing_rules.yaml`
+  - `domain-packs/activity_procurement/supplier_scorecard.yaml`
+  - `domain-packs/activity_procurement/artifact_mapping.yaml`
+- 验收标准：字段分层、补问顺序、七段式分析、筛选规则、评分规则、产物映射均可解析且字段引用闭合。
+- 不做什么：不新增活动外场景规则。
 
-## Task 2 (P0-1) - xiaocai Orch Policy Pack v1
+## Task DP-003：gift pack 配置化
+- 目标：把礼品定制文档转成机器可读配置（fields/question_flow/analysis/sourcing/scorecard/artifact_mapping）。
+- 输入文件：
+  - `docs/gift-customization-pack.md`
+  - `docs/supplier-evaluation-framework.md`
+  - `docs/artifact-output-spec.md`
+- 输出文件：
+  - `domain-packs/gift_customization/fields.yaml`
+  - `domain-packs/gift_customization/question_flow.yaml`
+  - `domain-packs/gift_customization/analysis_template.md`
+  - `domain-packs/gift_customization/sourcing_rules.yaml`
+  - `domain-packs/gift_customization/supplier_scorecard.yaml`
+  - `domain-packs/gift_customization/artifact_mapping.yaml`
+- 验收标准：浅/深定制分流、决策因子、寻源 red flags、评分与产物映射可解析且闭合。
+- 不做什么：不扩展礼品以外场景。
 
-- Title: 定义并落盘 xiaocai orchestration policy 配置
-- Why: 需要把 gate/transition/readiness 变为可执行 policy
-- Goal: 形成 entry/intent/gate/transition/readiness/output-profile 的统一 policy 文件
-- Scope:
-  - 定义 entry rules
-  - 定义 intent bias
-  - 定义 mode suggestion rules
-  - 定义 analysis/sourcing readiness rules
-- Out of Scope:
-  - kernel 内部状态机改造
-  - FLARE contract 变更
-- Affected Areas:
-  - `domain-pack/workflows/*`（新 policy 配置文件或扩展）
-  - `docs/domain-standards/xiaocai-instance-alignment/*`
-- Dependencies:
-  - Task 0 与 Task 1 完成
-- Acceptance Criteria:
-  - policy 文件可读、可校验、可映射到现有 workflow 节点
-  - 每条 transition 都有进入条件与回退条件
-- Risk:
-  - 规则过强导致误阻断
-- Priority: P0
-- Suggested Order: 2
-- Type: `orch policy`
+## Task DP-004：shared 规则抽取
+- 目标：抽取共用字段、阻断规则、RFX 路由、通用产物规格、通用供应商门槛。
+- 输入文件：
+  - `docs/domain-assets-map.md`
+  - `docs/rfx-routing-spec.md`
+  - `docs/artifact-output-spec.md`
+  - `docs/supplier-evaluation-framework.md`
+- 输出文件：
+  - `domain-packs/shared/fields/common_fields.yaml`
+  - `domain-packs/shared/rules/common_blocking_rules.yaml`
+  - `domain-packs/shared/rules/rfx_rules.yaml`
+  - `domain-packs/shared/artifacts/artifact_specs.yaml`
+  - `domain-packs/shared/suppliers/common_supplier_gate.yaml`
+- 验收标准：shared 规则被两个 pack 引用；RFX 四动作覆盖齐全；无重复字段漂移。
+- 不做什么：不做通用平台规则引擎。
 
----
+## Task DP-005：examples / fixtures
+- 目标：补齐每场景 3 个最小样例（正常路径 / 缺字段路径 / 强约束路径）。
+- 输入文件：
+  - `docs/activity-procurement-pack.md`
+  - `docs/gift-customization-pack.md`
+- 输出文件：
+  - `domain-packs/activity_procurement/examples/*.yaml`（3个）
+  - `domain-packs/gift_customization/examples/*.yaml`（3个）
+- 验收标准：样例可被校验脚本读取，能触发补问、阻断、RFX 建议与评分分支。
+- 不做什么：不做 Prompt 演示稿。
 
-## Task 3 (P0) - FLARE Mapping Validation Plan
+## Task DP-006：validate 脚本
+- 目标：建立 domain packs 最小静态校验器。
+- 输入文件：
+  - `domain-packs/**`
+- 输出文件：
+  - `scripts/validate_domain_packs.py`
+- 验收标准：至少校验 YAML 可解析、必填键、字段不重复、question_flow 引用闭合、artifact 映射闭合、scorecard 维度完整、RFX 四动作覆盖。
+- 不做什么：不做线上运行态质量评估。
 
-- Title: 合同映射验证计划（不改 FLARE）
-- Why: 当前 `flare-contract-mapping.yaml` 全部 pending
-- Goal: 明确每个 mapping 的验证路径、fallback 与责任边界
-- Scope:
-  - 对 `search_tasks` / `replace_history` / `analysis_template` / `rfx_template` 做映射验收计划
-  - 产出 gap 记录模板
-- Out of Scope:
-  - 改写 kernel contract
-- Affected Areas:
-  - `domain-pack/contracts/flare-contract-mapping.yaml`
-  - `docs/domain-standards/08-domain-adr-index.md`
-  - `docs/domain-standards/09-domain-implementation-backlog.md`
-- Dependencies:
-  - 可访问 FLARE contract 文档
-- Acceptance Criteria:
-  - 每个映射项都有“已验证/待验证/不可达”状态
-  - 发现 gap 时仅更新 contract 与 ADR，不发起平台重写
-- Risk:
-  - 跨仓信息不完整导致误判
-- Priority: P0
-- Suggested Order: 3
-- Type: `data mapping / ingestion`
+## Task DP-007：最小测试
+- 目标：建立 domain packs 可回归测试。
+- 输入文件：
+  - `scripts/validate_domain_packs.py`
+  - `domain-packs/**`
+- 输出文件：
+  - `tests/domain_packs/test_activity_pack.py`
+  - `tests/domain_packs/test_gift_pack.py`
+  - `tests/domain_packs/test_rfx_rules.py`
+  - `tests/domain_packs/test_supplier_scorecard.py`
+- 验收标准：activity/gift 校验通过；缺字段阻断生效；RFX 输出为四类动作之一；scorecard 输出为推荐/谨慎/淘汰之一。
+- 不做什么：不做 UI E2E。
 
----
-
-## Task 4 (P1) - Target Flow Profiles Formalization
-
-- Title: 输出 profile 正式化（search/collection/analysis/sourcing/RFX）
-- Why: 客户流程要求按阶段输出，不是统一自由文本
-- Goal: 形成 profile 配置与最小输出契约
-- Scope:
-  - 定义 profile 触发条件
-  - 定义每个 profile 最小输出字段
-  - 绑定模板变量
-- Out of Scope:
-  - 文档渲染 UI 大改
-- Affected Areas:
-  - `domain-pack/contracts/procurement-analysis-rfx-templates.yaml`
-  - `domain-pack/contracts/procurement-search-sourcing-replace.yaml`
-- Dependencies:
-  - Task 1/2
-- Acceptance Criteria:
-  - 缺关键字段时输出缺口清单而非完整报告
-  - 模板变量零悬空
-- Risk:
-  - profile 过多导致策略冲突
-- Priority: P1
-- Suggested Order: 4
-- Type: `template/output profile`
+## Task DP-008：最小 loader / mount 接入
+- 目标：以最小改动接入新 `domain-packs`，保留旧 `domain-pack` 兼容双读。
+- 输入文件：
+  - `domain-packs/**`
+  - `adapters/http_api/src/xiaocai_instance_api/chat/orchestration/contract_loader.py`
+- 输出文件：
+  - `adapters/http_api/src/xiaocai_instance_api/chat/orchestration/contract_loader.py`（最小挂载改动）
+  - 必要的最小配置路径说明（如有）
+- 验收标准：本地可从新路径读取核心资产；旧路径可回退；不修改 FLARE Core 主流程。
+- 不做什么：不重构 orchestration 主引擎。
 
 ---
 
-## Task 5 (P1) - Sourcing Readiness & Gate Enforcement
-
-- Title: 智能寻源 readiness 最小闭环
-- Why: 客户流程 A 需要“检索->寻源”的明确 gate
-- Goal: 建立可执行的寻源前置字段 gate 与推荐输出结构
-- Scope:
-  - 固化 sourcing required fields
-  - 固化 candidate_pool_policy 与 explainability 结构
-- Out of Scope:
-  - 供应商排名模型优化
-- Affected Areas:
-  - `domain-pack/contracts/procurement-search-sourcing-replace.yaml`
-  - `domain-pack/workflows/procurement-workflow-nodes.yaml`
-- Dependencies:
-  - Task 1/2
-- Acceptance Criteria:
-  - 字段不足时明确阻断并给补齐指引
-  - 推荐输出含理由与风险字段
-- Risk:
-  - 过早放开导致“字段不足即推荐”回归
-- Priority: P1
-- Suggested Order: 5
-- Type: `orch policy` + `domain pack`
+## 执行门禁
+1. 未完成 DP-001~DP-004，不进入任何 UI 任务。
+2. 未完成 DP-006~DP-007，不进入挂载接入与联调。
+3. DP-008 只允许最小接入，不允许扩展到平台改造。
 
 ---
 
-## Task 6 (P1) - Analysis to RFX Chain Alignment
+## 并行硬要求：FLARE 依赖缺口持续输出
 
-- Title: 需求分析 -> RFX 支撑链路对齐
-- Why: 客户流程 B 要求 analysis 补充并支撑 RFX
-- Goal: 强化 analysis 必填和 RFX 支撑关系
-- Scope:
-  - 分析字段依赖矩阵校准
-  - RFX 类型建议前提字段校准
-- Out of Scope:
-  - 法务终版合同生成
-- Affected Areas:
-  - `domain-pack/contracts/procurement-analysis-rfx-templates.yaml`
-  - `domain-pack/workflows/procurement-workflow-nodes.yaml`
-- Dependencies:
-  - Task 1/2/4
-- Acceptance Criteria:
-  - analysis 缺口可解释
-  - RFX 建议可追溯到字段
-- Risk:
-  - 模板与 workflow 条件不一致
-- Priority: P1
-- Suggested Order: 6
-- Type: `template/output profile` + `orch policy`
+1. 每完成一个 `TASK-DP-*`，必须在 `docs/flare-dependency-gap-log.md` 追加该任务更新记录：
+   - 本任务新增了哪些 xiaocai 本地资产
+   - 本任务暴露了哪些 FLARE 缺口
+   - 哪些缺口阻塞当前进度
+   - 哪些缺口可以临时绕过
+   - 是否需要向 FLARE 发起单独任务
+2. 所有临时绕行必须标注 `temporary`，禁止永久硬编码替代平台能力。
+3. 当出现 `xiaocai是否可自行解决 = no` 或 `partial 且不可长期绕行` 的 gap，必须同步更新 `docs/flare-handoff-tasks.md`。
+4. 本要求是 P0 执行门禁的一部分，与 DP-001~DP-008 并行执行。
 
----
+## Task DP-011：推荐策略管理资产化（模板/建议/时机/权重）
+- 目标：把“推荐内容 + 推荐时机 + 推荐权重”做成可管理资产，不做UI。
+- 输入文件：
+  - `docs/activity-procurement-pack.md`
+  - `docs/gift-customization-pack.md`
+  - `docs/rfx-routing-spec.md`
+  - `docs/artifact-output-spec.md`
+- 输出文件：
+  - `domain-packs/shared/rules/template_recommendation_rules.yaml`
+  - `domain-packs/shared/rules/recommendation_policy_registry.yaml`
+  - `domain-packs/shared/artifacts/recommendation_audit_schema.yaml`
+- 验收标准：
+  1) 可配置推荐触发条件、推荐权重、禁用条件、fallback；
+  2) 推荐结果可解释（命中规则/权重/未满足条件）；
+  3) 支持版本化字段（version/effective_at/owner/change_reason）。
+- 不做什么：
+  - 不做管理页面；
+  - 不改 FLARE Core 主流程；
+  - 不扩展 P0 以外新场景。
 
-## Task 7 (P2) - UI/Application Adaptation
+## Task DEV-005：资料优先级更新接口（context_priority）
+- 目标：支持已上传资料的 context_priority 后续可调。
+- 输入文件：
+  - `adapters/http_api/src/xiaocai_instance_api/storage/source_store.py`
+  - `adapters/http_api/src/xiaocai_instance_api/sources/router.py`
+- 输出文件：
+  - `adapters/http_api/src/xiaocai_instance_api/sources/router.py`（新增 `POST /sources/{source_id}/priority`）
+- 验收标准：可按项目更新 source context_priority，权限校验与不存在返回一致。
+- 不做什么：不做 UI 调整；不改 FLARE Core 执行逻辑。
 
-- Title: 实例 UI 配置单源化（减少 drift）
-- Why: 前端默认配置与 domain-pack 双源并存
-- Goal: 将 starter prompts / labels 尽量从 domain-pack 读取，减少硬编码
-- Scope:
-  - 收敛 prompts 来源
-  - 评估 mode 入口提示的配置化
-- Out of Scope:
-  - 重写 ChatWorkspace
-- Affected Areas:
-  - `frame/web/src/pages/ChatPage.tsx`
-  - `domain-pack/branding/instance-branding.json`
-- Dependencies:
-  - Task 1/4
-- Acceptance Criteria:
-  - prompts/labels 单源可追溯
-- Risk:
-  - 兼容历史 fallback 行为
-- Priority: P2
-- Suggested Order: 7
-- Type: `UI/application adaptation`
-
----
-
-## Task 8 (P1) - Domain Tests/Eval Upgrade
-
-- Title: 场景验收与策略断言升级
-- Why: 目前主要是 API 通路测试，不足以证明业务流程对齐
-- Goal: 增加 orch policy 与字段 gate 的可回归断言
-- Scope:
-  - 5 个核心场景补 transition/gate/profile 断言
-  - 补字段映射回归用例
-- Out of Scope:
-  - 大规模性能压测
-- Affected Areas:
-  - `domain-pack/contracts/scenarios/*.yaml`
-  - `adapters/http_api/tests/*`（增加契约级断言）
-- Dependencies:
-  - Task 1/2/4/5/6
-- Acceptance Criteria:
-  - 关键场景可自动判定通过/失败
-- Risk:
-  - mock kernel 与真实 kernel 行为差异
-- Priority: P1
-- Suggested Order: 8
-- Type: `tests / eval`
-
----
-
-## Deferred Items
-
-1. 全品类 category-specific 字段批量填充
-- 标签: `DEFERRED`
-
-2. 供应商排序模型精细化、阈值学习
-- 标签: `DEFERRED`
-
-3. 非首轮流程节点（quotation/negotiation/contract/delivery）实现
-- 标签: `DEFERRED`
-
-4. 任何 FLARE contract / kernel state ownership 改造
-- 标签: `OUT_OF_SCOPE`
-
----
-
-## Suggested Implementation Order (Minimal Closed Loop)
-
-1. Task 0 - TO_CONFIRM freeze
-2. Task 1 - 字段映射收口
-3. Task 2 - orch policy pack v1
-4. Task 3 - flare mapping validation
-5. Task 5 - 检索->寻源 gate 最小闭环
-6. Task 6 - 需求分析->RFX 支撑闭环
-7. Task 8 - 场景回归断言
-8. Task 4 - profile 正式化补强
-9. Task 7 - UI 单源收敛
-
----
-
-## First-Batch Minimal Closed Loop
-
-目标链路:
-
-- `智能检索澄清 -> 需求梳理 ->（字段达标）-> 智能寻源建议`
-
-最小字段:
-
-1. 采购目的
-2. 使用场景
-3. 一级品类
-4. 二级品类
-5. 交付地点
-6. 产品/服务
-7. 预算金额
-8. 交付时间
-
-最小验收:
-
-1. 字段不达标时不会直接寻源
-2. 达标后返回结构化候选与理由
-3. replace history 可追溯
-
----
-
-## As-Is / To-Be / Gap / Next
-
-- As-Is: 已有 backlog 基础条目，但未按客户最终流程进行 P0/P1 精排。
-- To-Be: 形成 `P0-0 -> P0-2 -> P0-1` 的前置顺序，避免 policy 返工。
-- Gap: BLOCKER 级 TO_CONFIRM 未冻结前，无法安全进入 P0-1。
-- Next: 先完成 Task 0/1，再启动 Task 2。
+## Task DEV-006：推荐策略管理接口（模板/时机/权重，无UI）
+- 目标：提供 recommendation policy 的最小管理入口（基线读取 + tenant 覆盖写入）。
+- 输入文件：
+  - `domain-packs/shared/rules/template_recommendation_rules.yaml`
+  - `domain-packs/shared/rules/recommendation_policy_registry.yaml`
+  - `domain-packs/shared/artifacts/recommendation_audit_schema.yaml`
+- 输出文件：
+  - `adapters/http_api/src/xiaocai_instance_api/storage/recommendation_policy_store.py`
+  - `adapters/http_api/src/xiaocai_instance_api/recommendation_policy/router.py`
+  - `adapters/http_api/src/xiaocai_instance_api/app.py`
+- 验收标准：`GET/PUT /recommendation-policy` 可读写策略覆盖配置，保留基线策略信息。
+- 不做什么：不做推荐执行引擎；不做管理页面；不改 FLARE Core 主流程。

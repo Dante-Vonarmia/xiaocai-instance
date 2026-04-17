@@ -1,0 +1,28 @@
+schema_id: recommendation_audit_schema
+version: v1
+scope: p0
+
+required_fields:
+  - recommendation_id
+  - timestamp
+  - user_id
+  - project_id
+  - scenario
+  - stage
+  - selected_template
+  - candidate_weights
+  - matched_conditions
+  - unmet_conditions
+  - confidence_score
+  - fallback_applied
+  - final_action
+
+optional_fields:
+  - operator_override
+  - override_reason
+  - feedback_label
+  - latency_ms
+
+storage_notes:
+  retention_days: 180
+  pii_policy: follow_instance_storage_policy

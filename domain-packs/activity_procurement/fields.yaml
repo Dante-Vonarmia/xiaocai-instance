@@ -1,0 +1,146 @@
+pack_id: activity_procurement
+version: v1
+scope: p0
+inherits:
+  - shared.fields.common_fields
+
+field_groups:
+  required:
+    - key: activity_type
+      label: 活动类型
+      type: enum
+      required_level: required
+      description: 活动形态，用于确定执行与寻源策略
+      affects_stage: [fields, question_flow, sourcing, rfx, artifacts]
+      can_default: false
+      default_rule: ""
+      options: [周年庆, 发布会, 展会, 路演, 会议论坛, 线下沙龙]
+      example_values: [周年庆]
+
+    - key: activity_scale
+      label: 活动规模
+      type: enum
+      required_level: required
+      description: 活动规模等级
+      affects_stage: [fields, sourcing, scorecard, rfx]
+      can_default: false
+      default_rule: ""
+      options: [小型, 中型, 大型]
+      example_values: [中型]
+
+    - key: participant_count
+      label: 参与人数
+      type: number
+      required_level: required
+      description: 预计参与总人数
+      affects_stage: [fields, sourcing, artifacts]
+      can_default: false
+      default_rule: ""
+      example_values: [300]
+
+    - key: venue_info
+      label: 场地信息
+      type: string
+      required_level: required
+      description: 场地名称/类型/可用时段等关键信息
+      affects_stage: [fields, question_flow, sourcing]
+      can_default: false
+      default_rule: ""
+      example_values: [上海市浦东新区某会展中心A馆]
+
+    - key: setup_requirements
+      label: 搭建需求
+      type: string
+      required_level: required
+      description: 舞美搭建、物料搭建、拆装窗口等
+      affects_stage: [fields, analysis, sourcing, risk]
+      can_default: false
+      default_rule: ""
+      example_values: [主舞台+签到区+展台搭建，T-2日进场]
+
+    - key: technical_requirements
+      label: 技术需求
+      type: string
+      required_level: required
+      description: 音视频、灯光、直播、互动技术需求
+      affects_stage: [fields, analysis, sourcing, scorecard]
+      can_default: false
+      default_rule: ""
+      example_values: [双机位直播，LED大屏，现场收音]
+
+    - key: execution_cycle
+      label: 执行周期
+      type: string
+      required_level: required
+      description: 项目筹备到执行的完整周期
+      affects_stage: [fields, question_flow, sourcing, risk, rfx]
+      can_default: false
+      default_rule: ""
+      example_values: [4周]
+
+  recommended:
+    - key: acceptance_criteria
+      label: 验收标准
+      type: string
+      required_level: recommended
+      description: 活动交付验收口径与SLA
+      affects_stage: [analysis, scorecard, artifacts]
+      can_default: false
+      default_rule: ""
+      example_values: [关键区域一次验收通过率>=95%]
+
+    - key: milestone_plan
+      label: 关键里程碑
+      type: string
+      required_level: recommended
+      description: 关键时间节点计划
+      affects_stage: [analysis, artifacts, risk]
+      can_default: true
+      default_rule: "derive_from_delivery_time"
+      example_values: [T-14方案冻结; T-7物料到场; T-1联排]
+
+    - key: supplier_region_preference
+      label: 供应商区域偏好
+      type: string
+      required_level: recommended
+      description: 本地优先/全国可选等
+      affects_stage: [sourcing, scorecard]
+      can_default: true
+      default_rule: "same_city_first"
+      example_values: [活动举办地本地优先]
+
+    - key: risk_preference
+      label: 风险偏好
+      type: enum
+      required_level: recommended
+      description: 稳妥优先或创意优先
+      affects_stage: [analysis, scorecard, rfx]
+      can_default: true
+      default_rule: "stability_first"
+      options: [稳妥优先, 平衡, 创意优先]
+      example_values: [稳妥优先]
+
+  optional:
+    - key: benchmark_events
+      label: 对标活动案例
+      type: string
+      required_level: optional
+      description: 可参考的历史活动案例
+      affects_stage: [analysis, sourcing]
+      can_default: true
+      default_rule: ""
+      example_values: [2025品牌周年庆活动]
+
+    - key: restricted_vendor_list
+      label: 指定合作禁限名单
+      type: string
+      required_level: optional
+      description: 供应商白名单/黑名单
+      affects_stage: [sourcing, scorecard]
+      can_default: true
+      default_rule: ""
+      example_values: ["黑名单:XX文化传播公司"]
+
+metadata:
+  owner: xiaocai-instance
+  consumers: [kernel, operator, sourcing_flow, artifact_builder]

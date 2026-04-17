@@ -1,0 +1,25 @@
+example_id: activity_urgent_event
+pack_id: activity_procurement
+scenario_type: strong_constraints
+expected_behavior:
+  should_block: false
+  expected_rfx_action: RFQ
+  expected_risk_notice: true
+inputs:
+  project_name: 新品发布会紧急执行采购
+  requester: 品牌部-陈某
+  use_case: 新品发布会
+  budget: 300000
+  quantity: 1
+  delivery_location: 深圳南山会议中心
+  delivery_time: 2026-05-08
+  urgency: critical
+  compliance_requirements: 场馆安全与资质齐全
+  activity_type: 发布会
+  activity_scale: 中型
+  participant_count: 180
+  venue_info: 会议中心一层主厅
+  setup_requirements: 主视觉背景+发布台+签到区
+  technical_requirements: 双机位直播+现场收音
+  execution_cycle: 2周
+  risk_preference: 稳妥优先

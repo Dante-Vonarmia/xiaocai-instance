@@ -1,0 +1,48 @@
+pack_id: activity_procurement
+version: v1
+
+focus_points:
+  - 区域履约能力
+  - 活动执行经验
+  - 现场安全与质量保障
+  - 技术与本地化协同能力
+
+longlist_rules:
+  - rule_id: ACT-LONG-001
+    condition: "资质材料齐全且主体合法"
+    action: include
+  - rule_id: ACT-LONG-002
+    condition: "具备同类活动案例>=2"
+    action: include
+  - rule_id: ACT-LONG-003
+    condition: "服务区域覆盖活动举办地"
+    action: include
+
+shortlist_rules:
+  - rule_id: ACT-SHORT-001
+    condition: "通过硬门槛校验"
+    action: keep
+  - rule_id: ACT-SHORT-002
+    condition: "综合评分>=70"
+    action: keep
+  - rule_id: ACT-SHORT-003
+    condition: "存在红线风险"
+    action: drop
+
+red_flags:
+  - 关键资质缺失或无效
+  - 重大诉讼/处罚且无解释
+  - 报价异常偏低且成本结构不清
+  - 无同类活动执行经验却承诺高复杂项目
+
+evidence_requirements:
+  - 营业执照与主体信息
+  - 资质证书与有效期
+  - 同类案例证明
+  - 交付与售后SLA说明
+  - 风险与诉讼信息披露
+
+when_to_stop_searching:
+  stop_when_any:
+    - "shortlist_count >= 3 and all_pass_hard_gates"
+    - "search_rounds >= 3 and no_new_qualified_supplier"

@@ -20,6 +20,20 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _derive_date_bucket(created_at_iso: str) -> str:
+    # ISO 字符串前 10 位即 YYYY-MM-DD
+    return created_at_iso[:10]
+
+
+def _derive_time_bucket() -> str:
+    hour = datetime.now().hour
+    if hour < 12:
+        return "morning"
+    if hour < 18:
+        return "afternoon"
+    return "evening"
+
+
 def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
@@ -71,6 +85,10 @@ class SourceRecord:
     file_name: str
     file_size: int
     mime_type: str
+    source_type: str
+    date_bucket: str
+    time_bucket: str
+    context_priority: int
     storage_path: str
     status: str
     created_at: str
@@ -119,6 +137,10 @@ class SourceStore:
                 file_name TEXT NOT NULL,
                 file_size INTEGER NOT NULL,
                 mime_type TEXT NOT NULL,
+                source_type TEXT NOT NULL DEFAULT 'upload_attachment',
+                date_bucket TEXT NOT NULL DEFAULT '',
+                time_bucket TEXT NOT NULL DEFAULT 'afternoon',
+                context_priority INTEGER NOT NULL DEFAULT 100,
                 storage_path TEXT NOT NULL,
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL
@@ -150,11 +172,28 @@ class SourceStore:
             self._runtime.execute("ALTER TABLE project_sources ADD COLUMN owner_user_id TEXT NULL")
         if "visibility" not in column_names:
             self._runtime.execute("ALTER TABLE project_sources ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'")
+        if "source_type" not in column_names:
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN source_type TEXT NOT NULL DEFAULT 'upload_attachment'")
+        if "date_bucket" not in column_names:
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN date_bucket TEXT NOT NULL DEFAULT ''")
+        if "time_bucket" not in column_names:
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN time_bucket TEXT NOT NULL DEFAULT 'afternoon'")
+        if "context_priority" not in column_names:
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN context_priority INTEGER NOT NULL DEFAULT 100")
         self._runtime.execute(
             """
             UPDATE project_sources
             SET owner_user_id = COALESCE(owner_user_id, user_id)
             WHERE owner_user_id IS NULL OR owner_user_id = ''
+            """
+        )
+        self._runtime.execute(
+            """
+            UPDATE project_sources
+            SET date_bucket = CASE
+                WHEN date_bucket IS NULL OR date_bucket = '' THEN SUBSTR(created_at, 1, 10)
+                ELSE date_bucket
+            END
             """
         )
 
@@ -186,6 +225,10 @@ class SourceStore:
             file_name=str(row["file_name"]),
             file_size=int(row["file_size"]),
             mime_type=str(row["mime_type"]),
+            source_type=str(row.get("source_type") or "upload_attachment"),
+            date_bucket=str(row.get("date_bucket") or "") or str(row["created_at"])[:10],
+            time_bucket=str(row.get("time_bucket") or "afternoon"),
+            context_priority=int(row.get("context_priority") or 100),
             storage_path=str(row["storage_path"]),
             status=str(row["status"]),
             created_at=str(row["created_at"]),
@@ -211,7 +254,7 @@ class SourceStore:
             if query and query.strip():
                 sql += " AND LOWER(ps.file_name) LIKE LOWER(?)"
                 params.append(f"%{query.strip()}%")
-            sql += " ORDER BY ps.created_at DESC"
+            sql += " ORDER BY ps.context_priority ASC, ps.created_at DESC"
             rows = self._runtime.fetchall(sql, tuple(params))
             return [self._row_to_record(row) for row in rows]
 
@@ -279,6 +322,8 @@ class SourceStore:
         mime_type: str,
         source_file_path: Path,
         visibility: str = "private",
+        source_type: str = "upload_attachment",
+        context_priority: int = 100,
     ) -> SourceRecord:
         async with self._lock:
             source_id = _new_id("src")
@@ -286,6 +331,7 @@ class SourceStore:
             target_dir.mkdir(parents=True, exist_ok=True)
             target_path = target_dir / f"{source_id}_{file_name}"
             shutil.move(str(source_file_path), target_path)
+            created_at = _now_iso()
 
             record = SourceRecord(
                 source_id=source_id,
@@ -298,15 +344,19 @@ class SourceStore:
                 file_name=file_name,
                 file_size=file_size,
                 mime_type=mime_type,
+                source_type=source_type,
+                date_bucket=_derive_date_bucket(created_at),
+                time_bucket=_derive_time_bucket(),
+                context_priority=context_priority,
                 storage_path=str(target_path),
                 status="available",
-                created_at=_now_iso(),
+                created_at=created_at,
             )
             self._runtime.execute(
                 """
                 INSERT INTO project_sources
-                (source_id, project_id, user_id, owner_user_id, visibility, session_id, folder_name, file_name, file_size, mime_type, storage_path, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (source_id, project_id, user_id, owner_user_id, visibility, session_id, folder_name, file_name, file_size, mime_type, source_type, date_bucket, time_bucket, context_priority, storage_path, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.source_id,
@@ -319,6 +369,10 @@ class SourceStore:
                     record.file_name,
                     record.file_size,
                     record.mime_type,
+                    record.source_type,
+                    record.date_bucket,
+                    record.time_bucket,
+                    record.context_priority,
                     record.storage_path,
                     record.status,
                     record.created_at,
@@ -347,6 +401,36 @@ class SourceStore:
                 WHERE source_id = ? AND project_id = ?
                 """,
                 (source_id, project_id),
+            )
+            self._runtime.commit()
+            return True
+
+    async def update_source_priority(
+        self,
+        user_id: str,
+        project_id: str,
+        source_id: str,
+        context_priority: int,
+    ) -> bool:
+        async with self._lock:
+            row = self._runtime.fetchone(
+                f"""
+                SELECT ps.source_id FROM project_sources ps
+                WHERE ps.source_id = ? AND ps.project_id = ?
+                  AND {_source_write_clause("ps")}
+                LIMIT 1
+                """,
+                (source_id, project_id, user_id, user_id),
+            )
+            if row is None:
+                return False
+            self._runtime.execute(
+                """
+                UPDATE project_sources
+                SET context_priority = ?
+                WHERE source_id = ? AND project_id = ?
+                """,
+                (context_priority, source_id, project_id),
             )
             self._runtime.commit()
             return True

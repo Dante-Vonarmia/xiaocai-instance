@@ -10,6 +10,7 @@ import tempfile
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
@@ -19,6 +20,11 @@ from xiaocai_instance_api.storage.source_store import get_source_store
 
 
 router = APIRouter(prefix="/sources", tags=["sources"])
+
+
+class SourcePriorityUpdateRequest(BaseModel):
+    project_id: str = Field(...)
+    context_priority: int = Field(..., ge=0)
 
 
 @router.get("")
@@ -54,6 +60,10 @@ async def list_project_sources(
                 "file_name": item.file_name,
                 "file_size": item.file_size,
                 "mime_type": item.mime_type,
+                "source_type": item.source_type,
+                "date_bucket": item.date_bucket,
+                "time_bucket": item.time_bucket,
+                "context_priority": item.context_priority,
                 "status": item.status,
                 "created_at": item.created_at,
             }
@@ -90,6 +100,8 @@ async def upload_source_file(
     project_id: str = Form(...),
     session_id: str | None = Form(default=None),
     folder_name: str = Form(default="默认文件夹"),
+    source_type: str = Form(default="upload_attachment"),
+    context_priority: int = Form(default=100),
     file: UploadFile = File(...),
     claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
@@ -106,6 +118,11 @@ async def upload_source_file(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"file extension not allowed: {suffix}",
+        )
+    if context_priority < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="context_priority must be >= 0",
         )
 
     original_suffix = Path(file.filename).suffix
@@ -129,6 +146,8 @@ async def upload_source_file(
             file_size=len(content),
             mime_type=file.content_type or "application/octet-stream",
             source_file_path=tmp_path,
+            source_type=source_type.strip() or "upload_attachment",
+            context_priority=context_priority,
         )
     finally:
         if tmp_path.exists():
@@ -145,6 +164,10 @@ async def upload_source_file(
         "file_name": record.file_name,
         "file_size": record.file_size,
         "mime_type": record.mime_type,
+        "source_type": record.source_type,
+        "date_bucket": record.date_bucket,
+        "time_bucket": record.time_bucket,
+        "context_priority": record.context_priority,
         "status": record.status,
         "created_at": record.created_at,
     }
@@ -196,6 +219,39 @@ async def mark_project_source_referenced(
     if not marked:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     return {"marked": True, "source_id": source_id, "status": "referenced"}
+
+
+@router.post("/{source_id}/priority")
+async def update_project_source_priority(
+    source_id: str,
+    request: SourcePriorityUpdateRequest,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    authz = get_authorization_service()
+    await authz.require_project_access(claims=claims, project_id=request.project_id)
+    await authz.require_file_write(claims=claims, source_id=source_id)
+    settings = get_settings()
+    store = get_source_store(upload_root=settings.upload_root)
+    record = await store.get_source_for_user(user_id=claims.user_id, source_id=source_id)
+    if record is None or record.project_id != request.project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    updated = await store.update_source_priority(
+        user_id=claims.user_id,
+        project_id=request.project_id,
+        source_id=source_id,
+        context_priority=request.context_priority,
+    )
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    refreshed = await store.get_source_for_user(user_id=claims.user_id, source_id=source_id)
+    if refreshed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    return {
+        "updated": True,
+        "source_id": refreshed.source_id,
+        "project_id": refreshed.project_id,
+        "context_priority": refreshed.context_priority,
+    }
 
 
 @router.get("/{source_id}/download")

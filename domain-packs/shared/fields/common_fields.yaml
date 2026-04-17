@@ -1,0 +1,115 @@
+pack_id: shared_common_fields
+version: v1
+scope: p0
+
+fields:
+  - key: project_name
+    label: 项目名称
+    type: string
+    required_level: required
+    description: 采购项目唯一识别名称
+    affects_stage: [fields, artifacts]
+    can_default: false
+    default_rule: ""
+    example_values: [2026周年庆活动采购]
+
+  - key: requester
+    label: 需求提出人
+    type: string
+    required_level: recommended
+    description: 发起需求的人或角色
+    affects_stage: [fields, artifacts]
+    can_default: true
+    default_rule: "from_session_user"
+    example_values: [市场部-王某]
+
+  - key: use_case
+    label: 使用场景
+    type: string
+    required_level: required
+    description: 采购结果使用场景与业务目标
+    affects_stage: [fields, analysis, rfx, artifacts]
+    can_default: false
+    default_rule: ""
+    example_values: [品牌周年庆线下活动]
+
+  - key: budget
+    label: 预算金额
+    type: number
+    required_level: required
+    description: 本次采购预算上限（含税）
+    affects_stage: [fields, question_flow, analysis, sourcing, scorecard, rfx, artifacts]
+    can_default: false
+    default_rule: ""
+    example_values: [500000]
+
+  - key: quantity
+    label: 采购数量
+    type: number
+    required_level: required
+    description: 采购数量或规模口径
+    affects_stage: [fields, analysis, sourcing, artifacts]
+    can_default: false
+    default_rule: ""
+    example_values: [300]
+
+  - key: delivery_location
+    label: 交付地点
+    type: string
+    required_level: required
+    description: 交付或执行地点
+    affects_stage: [fields, question_flow, sourcing, scorecard, artifacts]
+    can_default: false
+    default_rule: ""
+    example_values: [上海市浦东新区]
+
+  - key: delivery_time
+    label: 交付时间
+    type: date
+    required_level: required
+    description: 最晚交付或执行时间
+    affects_stage: [fields, question_flow, analysis, sourcing, rfx, artifacts]
+    can_default: false
+    default_rule: ""
+    example_values: [2026-06-20]
+
+  - key: special_requirements
+    label: 特殊要求
+    type: string
+    required_level: optional
+    description: 额外约束或偏好
+    affects_stage: [fields, analysis, sourcing, artifacts]
+    can_default: true
+    default_rule: ""
+    example_values: [需支持双语物料]
+
+  - key: target_audience
+    label: 目标对象
+    type: string
+    required_level: recommended
+    description: 主要服务对象群体
+    affects_stage: [fields, analysis, sourcing, artifacts]
+    can_default: true
+    default_rule: "from_use_case"
+    example_values: [客户与合作伙伴]
+
+  - key: urgency
+    label: 紧急程度
+    type: enum
+    required_level: recommended
+    description: 交付紧急程度分级
+    affects_stage: [question_flow, sourcing, rfx, risk]
+    can_default: true
+    default_rule: "normal"
+    options: [low, normal, high, critical]
+    example_values: [high]
+
+  - key: compliance_requirements
+    label: 合规要求
+    type: string
+    required_level: recommended
+    description: 内部制度或外部合规要求
+    affects_stage: [analysis, sourcing, scorecard, rfx, artifacts]
+    can_default: true
+    default_rule: "follow_internal_policy"
+    example_values: [供应商需可开专票并通过合规审查]

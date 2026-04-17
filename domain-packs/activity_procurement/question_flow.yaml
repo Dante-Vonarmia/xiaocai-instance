@@ -1,0 +1,99 @@
+pack_id: activity_procurement
+version: v1
+
+stage: requirement_collection
+
+ask_order:
+  - budget
+  - delivery_time
+  - delivery_location
+  - activity_type
+  - activity_scale
+  - participant_count
+  - venue_info
+  - setup_requirements
+  - technical_requirements
+  - execution_cycle
+  - acceptance_criteria
+  - supplier_region_preference
+  - risk_preference
+
+field_dependencies:
+  participant_count: [activity_scale]
+  venue_info: [delivery_location]
+  setup_requirements: [activity_type, activity_scale]
+  technical_requirements: [activity_type]
+  execution_cycle: [delivery_time]
+  acceptance_criteria: [activity_type, technical_requirements]
+
+blocking_conditions:
+  - condition_id: ACT-BLOCK-001
+    when_missing_any:
+      - budget
+      - delivery_time
+      - delivery_location
+      - activity_type
+      - participant_count
+    block_actions:
+      - requirement_analysis
+      - intelligent_sourcing
+      - rfx_recommendation
+    reason: 缺少核心执行约束字段
+
+  - condition_id: ACT-BLOCK-002
+    when_missing_any:
+      - setup_requirements
+      - technical_requirements
+      - execution_cycle
+    block_actions:
+      - intelligent_sourcing
+    reason: 缺少活动执行关键约束
+
+followup_question_templates:
+  budget: "请确认本次活动采购预算上限（含税）是多少？"
+  delivery_time: "活动最晚交付/执行日期是哪天？"
+  delivery_location: "活动执行地点（城市+场地）是哪里？"
+  activity_type: "本次活动类型是周年庆、发布会、展会还是其他？"
+  activity_scale: "本次活动规模是小型、中型还是大型？"
+  participant_count: "预计参与人数是多少？"
+  venue_info: "场地目前已确定到什么程度（场地名称/面积/进场时段）？"
+  setup_requirements: "请补充搭建需求（舞台、展台、物料、拆装窗口）"
+  technical_requirements: "请补充技术需求（音视频/灯光/直播/互动）"
+  execution_cycle: "从准备到执行的周期大约多久？"
+  acceptance_criteria: "本次活动交付的验收标准是什么？"
+  supplier_region_preference: "供应商区域是否有偏好（本地优先/全国可选）？"
+  risk_preference: "风险偏好更偏向稳妥优先还是创意优先？"
+
+stop_asking_conditions:
+  - condition_id: ACT-STOP-001
+    all_present:
+      - budget
+      - delivery_time
+      - delivery_location
+      - activity_type
+      - activity_scale
+      - participant_count
+      - venue_info
+      - setup_requirements
+      - technical_requirements
+      - execution_cycle
+    effect: stop_requirement_questions
+
+fallback_defaults:
+  - field: supplier_region_preference
+    apply_when: missing
+    value: 活动举办地本地优先
+  - field: risk_preference
+    apply_when: missing
+    value: 稳妥优先
+
+escalation_rules:
+  - escalation_id: ACT-ESC-001
+    trigger: "budget missing after 2 rounds"
+    action: "escalate_to_operator"
+    message: "预算未确认，无法进入分析与寻源，请采购接口人确认。"
+
+  - escalation_id: ACT-ESC-002
+    trigger: "technical_requirements ambiguous"
+    action: "ask_for_attachment_or_reference"
+    message: "技术需求描述不完整，请补充技术清单或参考附件。"

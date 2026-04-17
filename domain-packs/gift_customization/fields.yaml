@@ -1,0 +1,137 @@
+pack_id: gift_customization
+version: v1
+scope: p0
+inherits:
+  - shared.fields.common_fields
+
+field_groups:
+  required:
+    - key: customization_depth
+      label: 定制深度
+      type: enum
+      required_level: required
+      description: 区分浅度定制与深度定制
+      affects_stage: [fields, question_flow, sourcing, scorecard, rfx]
+      can_default: false
+      default_rule: ""
+      options: [浅度定制, 深度定制]
+      example_values: [深度定制]
+
+    - key: target_tier
+      label: 礼品分层对象
+      type: enum
+      required_level: required
+      description: 礼品对象分层（员工/客户/VIP）
+      affects_stage: [fields, analysis, artifacts]
+      can_default: false
+      default_rule: ""
+      options: [员工, 客户, VIP]
+      example_values: [VIP]
+
+    - key: unit_price_range
+      label: 单价区间
+      type: string
+      required_level: required
+      description: 单件预算区间
+      affects_stage: [fields, sourcing, scorecard, rfx]
+      can_default: false
+      default_rule: ""
+      example_values: [80-120元]
+
+    - key: packaging_requirements
+      label: 包装要求
+      type: string
+      required_level: required
+      description: 包装形式、材质、品牌露出、保护等级
+      affects_stage: [fields, analysis, sourcing, scorecard]
+      can_default: false
+      default_rule: ""
+      example_values: [礼盒包装+品牌烫金+防震内衬]
+
+    - key: design_requirements
+      label: 设计要求
+      type: string
+      required_level: required
+      description: 视觉风格、LOGO、文案、IP授权等
+      affects_stage: [fields, analysis, sourcing, risk]
+      can_default: false
+      default_rule: ""
+      example_values: [简约商务风，含周年庆主题元素]
+
+    - key: sampling_requirements
+      label: 打样要求
+      type: string
+      required_level: required
+      description: 是否打样、打样轮次与确认标准
+      affects_stage: [fields, question_flow, sourcing, risk]
+      can_default: true
+      default_rule: "one_round_for_shallow"
+      example_values: [2轮打样，第二轮确认量产]
+
+    - key: distribution_mode
+      label: 分发方式
+      type: enum
+      required_level: required
+      description: 集中发放或分批邮寄
+      affects_stage: [fields, analysis, sourcing, artifacts]
+      can_default: true
+      default_rule: "centralized"
+      options: [集中发放, 分批邮寄, 混合]
+      example_values: [分批邮寄]
+
+  recommended:
+    - key: quality_grade
+      label: 目标品质等级
+      type: enum
+      required_level: recommended
+      description: 品质目标等级
+      affects_stage: [analysis, scorecard, artifacts]
+      can_default: true
+      default_rule: "B"
+      options: [A, B, C]
+      example_values: [A]
+
+    - key: batch_delivery_plan
+      label: 分批交付计划
+      type: string
+      required_level: recommended
+      description: 分批交付节奏与数量
+      affects_stage: [analysis, sourcing, risk]
+      can_default: false
+      default_rule: ""
+      example_values: [T+7 先交付30%，T+14 交付70%]
+
+    - key: eco_compliance_preference
+      label: 环保/合规偏好
+      type: string
+      required_level: recommended
+      description: 环保材料或合规要求
+      affects_stage: [sourcing, scorecard, risk]
+      can_default: true
+      default_rule: "follow_internal_policy"
+      example_values: [优先可降解包装材料]
+
+  optional:
+    - key: material_preference
+      label: 材质/工艺偏好
+      type: string
+      required_level: optional
+      description: 指定材质、工艺、印刷方式
+      affects_stage: [sourcing, scorecard]
+      can_default: true
+      default_rule: ""
+      example_values: [316不锈钢+激光雕刻]
+
+    - key: historical_gift_reference
+      label: 历史礼品复盘
+      type: string
+      required_level: optional
+      description: 过往礼品效果反馈
+      affects_stage: [analysis, sourcing]
+      can_default: true
+      default_rule: ""
+      example_values: [去年VIP礼盒反馈满意度92%]
+
+metadata:
+  owner: xiaocai-instance
+  consumers: [kernel, operator, sourcing_flow, artifact_builder]

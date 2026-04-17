@@ -1,0 +1,21 @@
+example_id: activity_missing_budget
+pack_id: activity_procurement
+scenario_type: missing_field
+expected_behavior:
+  should_block: true
+  blocked_actions: [requirement_analysis, intelligent_sourcing, rfx_recommendation]
+  expected_first_clarification_field: budget
+inputs:
+  project_name: 华东路演活动采购
+  requester: 市场部-赵某
+  use_case: 区域路演活动执行
+  quantity: 1
+  delivery_location: 杭州国际博览中心
+  delivery_time: 2026-07-10
+  activity_type: 路演
+  activity_scale: 中型
+  participant_count: 200
+  venue_info: 主会场B区
+  setup_requirements: 展台+演示区搭建
+  technical_requirements: 基础音视频支持
+  execution_cycle: 4周

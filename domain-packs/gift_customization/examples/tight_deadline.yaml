@@ -1,0 +1,24 @@
+example_id: gift_tight_deadline
+pack_id: gift_customization
+scenario_type: missing_or_risky
+expected_behavior:
+  should_block: false
+  expected_escalation: GIFT-ESC-001
+  expected_risk_notice: true
+inputs:
+  project_name: 客户会前紧急礼品采购
+  requester: 销售运营-孙某
+  use_case: 重点客户会务赠礼
+  budget: 220000
+  quantity: 500
+  delivery_location: 广州会务中心
+  delivery_time: 2026-05-03
+  urgency: critical
+  compliance_requirements: 供应商主体与税务资质齐全
+  customization_depth: 深度定制
+  target_tier: 客户
+  unit_price_range: 300-450元
+  design_requirements: 会务主题视觉+客户logo联合呈现
+  packaging_requirements: 单件防护包装+会务统一外箱
+  sampling_requirements: 1轮打样
+  distribution_mode: 集中发放

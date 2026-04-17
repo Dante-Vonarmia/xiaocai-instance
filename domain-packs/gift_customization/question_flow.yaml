@@ -1,0 +1,95 @@
+pack_id: gift_customization
+version: v1
+
+stage: requirement_collection
+
+ask_order:
+  - budget
+  - quantity
+  - delivery_time
+  - customization_depth
+  - target_tier
+  - unit_price_range
+  - design_requirements
+  - packaging_requirements
+  - sampling_requirements
+  - distribution_mode
+  - quality_grade
+  - eco_compliance_preference
+
+field_dependencies:
+  unit_price_range: [budget, quantity]
+  design_requirements: [customization_depth, target_tier]
+  packaging_requirements: [customization_depth, target_tier]
+  sampling_requirements: [customization_depth]
+  batch_delivery_plan: [delivery_time, distribution_mode]
+
+blocking_conditions:
+  - condition_id: GIFT-BLOCK-001
+    when_missing_any:
+      - budget
+      - quantity
+      - delivery_time
+      - customization_depth
+      - target_tier
+    block_actions:
+      - requirement_analysis
+      - intelligent_sourcing
+      - rfx_recommendation
+    reason: 缺少礼品采购核心决策字段
+
+  - condition_id: GIFT-BLOCK-002
+    when_missing_any:
+      - design_requirements
+      - packaging_requirements
+    block_actions:
+      - intelligent_sourcing
+    reason: 缺少定制执行关键约束
+
+followup_question_templates:
+  budget: "本次礼品采购预算总额（含税）是多少？"
+  quantity: "预计采购数量是多少？"
+  delivery_time: "最晚交付时间是哪天？"
+  customization_depth: "本次是浅度定制还是深度定制？"
+  target_tier: "礼品对象分层是员工、客户还是VIP？"
+  unit_price_range: "可接受的单件价格区间是多少？"
+  design_requirements: "请补充设计要求（风格/品牌元素/文案等）"
+  packaging_requirements: "请补充包装要求（包装形式/材质/防护等级）"
+  sampling_requirements: "是否需要打样？若需要，预计几轮打样？"
+  distribution_mode: "礼品分发方式是集中发放、分批邮寄还是混合？"
+  quality_grade: "目标品质等级是 A/B/C 哪一档？"
+  eco_compliance_preference: "是否有环保或合规偏好要求？"
+
+stop_asking_conditions:
+  - condition_id: GIFT-STOP-001
+    all_present:
+      - budget
+      - quantity
+      - delivery_time
+      - customization_depth
+      - target_tier
+      - unit_price_range
+      - design_requirements
+      - packaging_requirements
+      - sampling_requirements
+      - distribution_mode
+    effect: stop_requirement_questions
+
+fallback_defaults:
+  - field: sampling_requirements
+    apply_when: "customization_depth == 浅度定制 and missing"
+    value: 1轮打样
+  - field: distribution_mode
+    apply_when: missing
+    value: 集中发放
+
+escalation_rules:
+  - escalation_id: GIFT-ESC-001
+    trigger: "delivery_time too tight and deep customization"
+    action: "escalate_to_operator"
+    message: "深度定制且交期紧，需采购经理确认可行性与风险。"
+
+  - escalation_id: GIFT-ESC-002
+    trigger: "design_requirements ambiguous after 2 rounds"
+    action: "ask_for_design_attachment"
+    message: "设计要求仍不清晰，请补充设计稿或参考样图。"

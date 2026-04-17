@@ -1,0 +1,25 @@
+example_id: activity_happy_path
+pack_id: activity_procurement
+scenario_type: happy_path
+expected_behavior:
+  should_block: false
+  expected_rfx_action: RFP
+  expected_next_stage: requirement_analysis
+inputs:
+  project_name: 2026周年庆活动执行采购
+  requester: 市场部-李某
+  use_case: 周年庆品牌活动执行
+  budget: 800000
+  quantity: 1
+  delivery_location: 上海浦东会展中心
+  delivery_time: 2026-06-20
+  urgency: normal
+  compliance_requirements: 需提供合规资质与专票
+  activity_type: 周年庆
+  activity_scale: 大型
+  participant_count: 600
+  venue_info: A馆主会场+外场签到区
+  setup_requirements: 主舞台+签到区+品牌展区搭建
+  technical_requirements: LED大屏+直播导播+现场音响
+  execution_cycle: 6周
+  acceptance_criteria: 一次验收通过率>=95%

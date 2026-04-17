@@ -1,0 +1,48 @@
+pack_id: gift_customization
+version: v1
+
+focus_points:
+  - 定制工艺与打样能力
+  - 量产一致性与交付稳定性
+  - 包装与物流协同能力
+  - 合规与环保能力
+
+longlist_rules:
+  - rule_id: GIFT-LONG-001
+    condition: "主体合法且资质材料齐全"
+    action: include
+  - rule_id: GIFT-LONG-002
+    condition: "具备同类定制案例>=2"
+    action: include
+  - rule_id: GIFT-LONG-003
+    condition: "具备目标交期下的产能证明"
+    action: include
+
+shortlist_rules:
+  - rule_id: GIFT-SHORT-001
+    condition: "通过硬门槛校验"
+    action: keep
+  - rule_id: GIFT-SHORT-002
+    condition: "综合评分>=70"
+    action: keep
+  - rule_id: GIFT-SHORT-003
+    condition: "命中红线风险"
+    action: drop
+
+red_flags:
+  - 无同类定制案例却承诺极短交期
+  - 报价显著偏低且关键条款模糊
+  - 资质/合规材料不完整
+  - 打样能力与量产能力断层
+
+evidence_requirements:
+  - 打样样品与确认记录
+  - 量产产能与排产计划
+  - 质检流程与质保条款
+  - 包装与物流方案说明
+  - 合规/环保证明材料
+
+when_to_stop_searching:
+  stop_when_any:
+    - "shortlist_count >= 3 and all_pass_hard_gates"
+    - "search_rounds >= 3 and no_new_qualified_supplier"

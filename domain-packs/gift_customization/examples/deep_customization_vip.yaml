@@ -1,0 +1,26 @@
+example_id: gift_deep_customization_vip
+pack_id: gift_customization
+scenario_type: strong_constraints
+expected_behavior:
+  should_block: false
+  expected_rfx_action: RFP
+  expected_risk_notice: true
+inputs:
+  project_name: VIP客户深度定制礼盒采购
+  requester: 客户成功部-刘某
+  use_case: VIP客户年度答谢
+  budget: 650000
+  quantity: 400
+  delivery_location: 北京/上海双仓
+  delivery_time: 2026-08-15
+  urgency: high
+  compliance_requirements: 材料环保与品牌授权合规
+  customization_depth: 深度定制
+  target_tier: VIP
+  unit_price_range: 1200-1600元
+  design_requirements: 定制礼盒结构+专属视觉设计
+  packaging_requirements: 高端礼盒+防震内衬+烫金工艺
+  sampling_requirements: 2轮打样
+  distribution_mode: 混合
+  quality_grade: A
+  eco_compliance_preference: 优先环保材料

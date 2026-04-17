@@ -1,0 +1,27 @@
+pack_id: shared_common_supplier_gate
+version: v1
+scope: p0
+
+hard_gates:
+  - gate_id: COM-SUP-001
+    name: 主体合法性
+    rule: 提供有效营业执照与主体信息
+  - gate_id: COM-SUP-002
+    name: 合规资质
+    rule: 提供场景相关资质并在有效期内
+  - gate_id: COM-SUP-003
+    name: 风险底线
+    rule: 无重大红线风险（严重处罚/失信/诉讼不可接受）
+  - gate_id: COM-SUP-004
+    name: 基础履约能力
+    rule: 可证明满足交期与质量底线
+
+common_red_lines:
+  - 资质造假
+  - 关键合规信息隐瞒
+  - 无法承诺关键交付条款（交期/质保/赔付）
+
+recommendation_levels:
+  - 推荐
+  - 谨慎
+  - 淘汰

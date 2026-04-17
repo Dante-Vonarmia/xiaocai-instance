@@ -1,0 +1,29 @@
+policy_id: recommendation_policy_registry
+version: v1
+status: active
+effective_at: 2026-04-16T00:00:00+08:00
+owner: xiaocai-instance
+change_reason: 初始上线推荐策略管理资产（模板/时机/权重）
+
+policy_defaults:
+  confidence_threshold: 0.65
+  max_recommendations: 3
+  allow_fallback: true
+  fallback_strategy: clarification_first
+
+explanation_schema:
+  required_fields:
+    - rule_id
+    - scenario
+    - stage
+    - selected_template
+    - candidate_weights
+    - matched_conditions
+    - unmet_conditions
+    - confidence_score
+    - fallback_applied
+
+rollback:
+  supported: true
+  previous_version_field: previous_version
+  rollback_condition: major_regression_detected

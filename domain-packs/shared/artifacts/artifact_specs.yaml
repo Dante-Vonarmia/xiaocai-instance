@@ -1,0 +1,58 @@
+pack_id: shared_artifact_specs
+version: v1
+scope: p0
+
+artifact_specs:
+  - key: requirement_summary
+    required_inputs: [project_name, use_case, budget, delivery_time, delivery_location]
+    output_sections: [summary, confirmed_fields, missing_fields, next_actions]
+    consumer: [business, operator]
+    business_ready: true
+
+  - key: structured_requirement
+    required_inputs: [project_name, requester, use_case, budget, quantity, delivery_location, delivery_time]
+    output_sections: [required_fields, recommended_fields, optional_fields, completeness]
+    consumer: [kernel, operator, sourcing_flow]
+    business_ready: true
+
+  - key: requirement_analysis
+    required_inputs: [structured_requirement, constraints, references]
+    output_sections: [analysis_sections, risks, strategy_suggestion]
+    consumer: [operator, management]
+    business_ready: true
+
+  - key: supplier_longlist
+    required_inputs: [sourcing_constraints, supplier_pool]
+    output_sections: [candidate_list, include_exclude_reasons]
+    consumer: [sourcing_flow, operator]
+    business_ready: true
+
+  - key: supplier_shortlist
+    required_inputs: [supplier_longlist, supplier_scorecard_output]
+    output_sections: [shortlist, recommendation_reasons, risk_notes]
+    consumer: [operator, management]
+    business_ready: true
+
+  - key: supplier_scorecard_output
+    required_inputs: [score_dimensions, hard_gates, supplier_evidence]
+    output_sections: [dimension_scores, total_score, risk_tags, recommendation_level]
+    consumer: [operator, management]
+    business_ready: true
+
+  - key: rfx_recommendation
+    required_inputs: [requirement_clarity, customization_level, budget_level, urgency, compliance_level, supplier_market_maturity]
+    output_sections: [recommended_action, rationale, missing_prerequisites, fallback_action, next_step]
+    consumer: [operator, decision_maker]
+    business_ready: true
+
+  - key: clarification_questions
+    required_inputs: [missing_fields, blocking_conditions]
+    output_sections: [question_list, priority, impact]
+    consumer: [requester, operator]
+    business_ready: true
+
+  - key: risk_notice
+    required_inputs: [analysis_result, supplier_risk, constraint_conflicts]
+    output_sections: [risk_items, severity, mitigation_actions]
+    consumer: [operator, management]
+    business_ready: true

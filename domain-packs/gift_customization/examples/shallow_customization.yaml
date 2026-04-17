@@ -1,0 +1,25 @@
+example_id: gift_shallow_customization
+pack_id: gift_customization
+scenario_type: happy_path
+expected_behavior:
+  should_block: false
+  expected_rfx_action: RFQ
+  expected_next_stage: requirement_analysis
+inputs:
+  project_name: 员工关怀礼品采购
+  requester: 人力行政-王某
+  use_case: 员工节日礼品发放
+  budget: 180000
+  quantity: 1200
+  delivery_location: 上海总部仓
+  delivery_time: 2026-09-20
+  urgency: normal
+  compliance_requirements: 可开专票
+  customization_depth: 浅度定制
+  target_tier: 员工
+  unit_price_range: 120-150元
+  design_requirements: 企业logo+节日贺卡
+  packaging_requirements: 简约礼盒包装
+  sampling_requirements: 1轮打样
+  distribution_mode: 集中发放
+  quality_grade: B

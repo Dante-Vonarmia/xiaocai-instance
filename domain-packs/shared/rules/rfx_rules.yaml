@@ -1,0 +1,69 @@
+pack_id: shared_rfx_rules
+version: v1
+scope: p0
+
+input_signals:
+  - requirement_clarity
+  - customization_level
+  - budget_level
+  - urgency
+  - compliance_level
+  - supplier_market_maturity
+
+decision_conditions:
+  - rule_id: RFX-001
+    recommended_action: RFI
+    when:
+      requirement_clarity: low
+      supplier_market_maturity: unknown_or_low
+    rationale_template: "需求尚不稳定且市场信息不足，先做信息收集与能力摸底。"
+    fallback_action: RFP
+
+  - rule_id: RFX-002
+    recommended_action: RFP
+    when:
+      requirement_clarity: medium
+      customization_level: medium_or_high
+    rationale_template: "需要比方案与执行能力，RFP更适合比较方法与交付路径。"
+    fallback_action: RFI
+
+  - rule_id: RFX-003
+    recommended_action: RFQ
+    when:
+      requirement_clarity: high
+      customization_level: low_or_medium
+      supplier_market_maturity: high
+    rationale_template: "规格较清晰且市场成熟，可直接比价与交付条款。"
+    fallback_action: RFP
+
+  - rule_id: RFX-004
+    recommended_action: RFB
+    when:
+      compliance_level: high
+      budget_level: high
+    rationale_template: "高预算且强合规场景，优先采用规范化竞标流程。"
+    fallback_action: RFP
+
+thresholds:
+  requirement_clarity:
+    low: [0, 39]
+    medium: [40, 74]
+    high: [75, 100]
+  budget_level:
+    low: [0, 100000]
+    medium: [100001, 500000]
+    high: [500001, 999999999]
+  compliance_level:
+    low: [0, 39]
+    medium: [40, 74]
+    high: [75, 100]
+
+examples:
+  - scenario: 活动需求未冻结，供应商画像不清
+    recommended_action: RFI
+  - scenario: 活动执行方案差异大，需要比方案
+    recommended_action: RFP
+  - scenario: 礼品规格明确，重点比价与交付
+    recommended_action: RFQ
+  - scenario: 高预算且强审计要求
+    recommended_action: RFB

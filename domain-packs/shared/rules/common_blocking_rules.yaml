@@ -1,0 +1,33 @@
+pack_id: shared_common_blocking_rules
+version: v1
+scope: p0
+
+blocking_rules:
+  - rule_id: COM-BLOCK-001
+    when_missing_any:
+      - budget
+      - delivery_time
+      - delivery_location
+    block_actions:
+      - requirement_analysis
+      - intelligent_sourcing
+      - rfx_recommendation
+    reason: 缺少核心执行约束字段
+
+  - rule_id: COM-BLOCK-002
+    when_missing_any:
+      - project_name
+      - use_case
+    block_actions:
+      - requirement_analysis
+      - rfx_recommendation
+    reason: 缺少需求边界定义字段
+
+  - rule_id: COM-BLOCK-003
+    when_missing_any:
+      - compliance_requirements
+    block_actions:
+      - rfx_recommendation
+    reason: 合规要求缺失，RFX建议风险高
+    allow_bypass_if:
+      - operator_confirmed_temporary

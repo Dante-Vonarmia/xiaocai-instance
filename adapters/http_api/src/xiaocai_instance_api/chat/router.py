@@ -18,6 +18,7 @@ from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
+from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.local_orchestration import build_local_orchestration_response
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
@@ -411,6 +412,10 @@ async def chat_run(
             project_id=_extract_project_id(kernel_context),
         )
         kernel_context["auth_scope"] = retrieval_scope.to_dict()
+        kernel_context = await enrich_kernel_context_with_retrieval_policy(
+            claims=claims,
+            kernel_context=kernel_context,
+        )
         kernel_context.setdefault("function_type", session.function_type)
         kernel_context.setdefault("intake_session_id", request.session_id)
         kernel_client = get_kernel_client()
@@ -533,6 +538,10 @@ async def chat_stream(
                 project_id=_extract_project_id(kernel_context),
             )
             kernel_context["auth_scope"] = retrieval_scope.to_dict()
+            kernel_context = await enrich_kernel_context_with_retrieval_policy(
+                claims=claims,
+                kernel_context=kernel_context,
+            )
             kernel_context.setdefault("function_type", session.function_type)
             kernel_context.setdefault("intake_session_id", request.session_id)
             kernel_client = get_kernel_client()

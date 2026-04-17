@@ -1,0 +1,79 @@
+pack_id: gift_customization
+version: v1
+
+artifact_spec_ref: shared.artifacts.artifact_specs
+
+artifacts:
+  - artifact_key: requirement_summary
+    required_fields:
+      - project_name
+      - use_case
+      - budget
+      - quantity
+      - delivery_time
+      - customization_depth
+      - target_tier
+
+  - artifact_key: structured_requirement
+    required_fields:
+      - project_name
+      - requester
+      - budget
+      - quantity
+      - delivery_location
+      - delivery_time
+      - customization_depth
+      - target_tier
+      - unit_price_range
+      - design_requirements
+      - packaging_requirements
+      - sampling_requirements
+      - distribution_mode
+
+  - artifact_key: requirement_analysis
+    required_fields:
+      - project_name
+      - budget
+      - quantity
+      - delivery_time
+      - customization_depth
+      - design_requirements
+      - packaging_requirements
+
+  - artifact_key: supplier_longlist
+    required_fields:
+      - customization_depth
+      - target_tier
+      - delivery_time
+      - packaging_requirements
+
+  - artifact_key: supplier_shortlist
+    required_fields:
+      - supplier_longlist
+      - supplier_scorecard_output
+
+  - artifact_key: supplier_scorecard_output
+    required_fields:
+      - score_dimensions
+      - hard_gates
+      - veto_items
+
+  - artifact_key: rfx_recommendation
+    required_fields:
+      - requirement_clarity
+      - customization_depth
+      - budget
+      - urgency
+      - compliance_requirements
+
+  - artifact_key: clarification_questions
+    required_fields:
+      - missing_fields
+      - blocking_conditions
+
+  - artifact_key: risk_notice
+    required_fields:
+      - delivery_time
+      - customization_depth
+      - sampling_requirements
+      - supplier_shortlist
