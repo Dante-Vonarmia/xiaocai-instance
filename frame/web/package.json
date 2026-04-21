@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
-    "@flare/chat-core": "npm:flare-chat-core@0.2.2",
-    "@flare/chat-ui": "npm:flare-chat-ui@0.2.4",
+    "@flare/chat-core": "npm:flare-chat-core@0.2.3",
+    "@flare/chat-ui": "npm:flare-chat-ui@0.2.5",
     "@tanstack/react-query": "^5.17.0",
     "antd": "^6.2.2",
     "axios": "^1.6.0",
@@ -40,11 +40,11 @@
     "vitest": "^2.1.8"
   },
   "overrides": {
-    "flare-chat-core": "0.2.2",
+    "flare-chat-core": "0.2.3",
     "flare-canvas-ui": "0.2.3",
     "flare-generative-ui": "0.2.2",
     "flare-chat-ui": {
-      "flare-chat-core": "0.2.2",
+      "flare-chat-core": "0.2.3",
       "flare-canvas-ui": "0.2.3",
       "flare-generative-ui": "0.2.2"
     }
