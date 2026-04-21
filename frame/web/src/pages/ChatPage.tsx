@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import { FileTextOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { ChatWorkspace } from '@flare/chat-ui'
 import { chatApi, getCurrentUserId, sourceApi } from '@/services/api'
 import { createBackendRuntime, type BackendRuntime } from '@/services/backendRuntime'
+import { APP_ROUTES } from '@/constants/routes'
 
 type ChatPageProps = {
   onLogout?: () => void
 }
 
-const FLARE_VERSION = '0.2.3'
+const FLARE_VERSION = '0.2.4'
 
 type StreamHandlers = {
   onAgentStatus?: (payload: unknown) => void
@@ -525,6 +527,7 @@ function useRuntimeStream(runtime: Runtime, projectId: string, interactionMode: 
 }
 
 function ChatPage({ onLogout }: ChatPageProps) {
+  const navigate = useNavigate()
   const runtime = useMemo(
     () => createBackendRuntime(),
     [],
@@ -638,11 +641,12 @@ function ChatPage({ onLogout }: ChatPageProps) {
               padding: '8px 0',
               fontSize: '16px',
               color: '#6b7280',
-              cursor: 'default',
+              cursor: 'pointer',
               marginBottom: '8px',
               display: 'flex',
               justifyContent: 'center',
             }}
+            onClick={() => navigate(APP_ROUTES.settingsProfile)}
           >
             <UserOutlined />
           </button>

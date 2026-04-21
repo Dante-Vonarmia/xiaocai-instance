@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import ChatPage from './pages/ChatPage'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import CoreEntryPage from './pages/CoreEntryPage'
+import SettingsPage from './pages/SettingsPage'
+import { APP_ROUTES } from './constants/routes'
 import {
   authApi,
   clearAccessToken,
@@ -180,8 +182,10 @@ function App() {
     <BrowserRouter>
       {hasAccessToken ? (
         <Routes>
-          <Route path="/" element={<ChatPage onLogout={handleLogout} />} />
-          <Route path="*" element={<ChatPage onLogout={handleLogout} />} />
+          <Route path={APP_ROUTES.chat} element={<CoreEntryPage onLogout={handleLogout} />} />
+          <Route path={APP_ROUTES.settingsRoot} element={<Navigate to={APP_ROUTES.settingsProfile} replace />} />
+          <Route path={`${APP_ROUTES.settingsRoot}/:section`} element={<SettingsPage onLogout={handleLogout} />} />
+          <Route path="*" element={<CoreEntryPage onLogout={handleLogout} />} />
         </Routes>
       ) : (
         <main className="auth-screen">

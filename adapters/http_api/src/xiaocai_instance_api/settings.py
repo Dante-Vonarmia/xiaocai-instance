@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     daily_message_limit: int = Field(default=0, description="每日消息上限，0 表示不限制")
     daily_project_message_limit: int = Field(default=0, description="每日单项目消息上限，0 表示不限制")
 
+    # 外部连接健康检查
+    mcp_healthcheck_url: str = Field(default="", description="MCP 连接健康检查 URL（可选）")
+    external_search_healthcheck_url: str = Field(default="", description="外部搜索连接健康检查 URL（可选）")
+
     # 认证配置
     mock_auth: bool = Field(default=True, description="是否使用 Mock 认证")
     real_auth_verify_url: str = Field(default="", description="真实认证验证 URL")

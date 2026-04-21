@@ -161,3 +161,46 @@ body {
   text-align: right;
   width: 1.6em;
 }
+
+.settings-connector-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.settings-connector-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.settings-connector-icon {
+  align-items: center;
+  background: #eef2ff;
+  border-radius: 8px;
+  color: #4f46e5;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.settings-status-dot {
+  border-radius: 999px;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.settings-connector-actions {
+  border-top: 1px solid #f1f5f9;
+  margin-top: 2px;
+  padding-top: 8px;
+}
+
+.settings-visibility-item {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}

@@ -337,6 +337,73 @@ def _apply_v3(runtime: SQLRuntime) -> None:
         )
 
 
+def _apply_v4(runtime: SQLRuntime) -> None:
+    runtime.execute(
+        """
+        CREATE TABLE IF NOT EXISTS instance_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL
+        )
+        """
+    )
+    runtime.execute(
+        """
+        CREATE TABLE IF NOT EXISTS connector_status (
+            key TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            health TEXT NOT NULL,
+            latency_ms INTEGER NULL,
+            last_success_at TEXT NULL,
+            last_error TEXT NOT NULL DEFAULT '',
+            scope TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL
+        )
+        """
+    )
+
+    mode_row = runtime.fetchone(
+        "SELECT setting_key FROM instance_settings WHERE setting_key = ? LIMIT 1",
+        ("domain_injection_mode",),
+    )
+    if mode_row is None:
+        runtime.execute(
+            """
+            INSERT INTO instance_settings (setting_key, setting_value, updated_at, updated_by)
+            VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+            """,
+            ("domain_injection_mode", "assist", "system"),
+        )
+
+    default_connectors = [
+        ("xiaocai_db", "Xiaocai Database", 1, "disconnected", "down", "read_write"),
+        ("mcp_gateway", "MCP Gateway", 0, "disconnected", "down", "read"),
+        ("external_search", "External Search", 0, "disconnected", "down", "read"),
+    ]
+    for key, name, enabled, status, health, scope in default_connectors:
+        row = runtime.fetchone(
+            "SELECT key FROM connector_status WHERE key = ? LIMIT 1",
+            (key,),
+        )
+        if row is not None:
+            continue
+        runtime.execute(
+            """
+            INSERT INTO connector_status (
+                key, name, enabled, status, health,
+                latency_ms, last_success_at, last_error,
+                scope, updated_at, updated_by
+            ) VALUES (?, ?, ?, ?, ?, NULL, NULL, '', ?, CURRENT_TIMESTAMP, ?)
+            """,
+            (key, name, enabled, status, health, scope, "system"),
+        )
+
+
+
 def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     config = resolve_db_config(storage_db_url=db_url, storage_db_path=db_path)
     runtime = SQLRuntime(config)
@@ -353,6 +420,9 @@ def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     if current < 3:
         _apply_v3(runtime)
         _mark_version(runtime, 3)
+    if current < 4:
+        _apply_v4(runtime)
+        _mark_version(runtime, 4)
 
     runtime.commit()
-    return 3
+    return 4

@@ -23,6 +23,7 @@ from xiaocai_instance_api.artifacts.router import router as artifacts_router
 from xiaocai_instance_api.retrieval.router import router as retrieval_router
 from xiaocai_instance_api.tenant_profile.router import router as tenant_profile_router
 from xiaocai_instance_api.recommendation_policy.router import router as recommendation_policy_router
+from xiaocai_instance_api.integrations.router import router as integrations_router
 from xiaocai_instance_api.storage.migrations import run_storage_migrations
 
 
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(retrieval_router)
     app.include_router(tenant_profile_router)
     app.include_router(recommendation_policy_router)
+    app.include_router(integrations_router)
 
     # 健康检查端点
     @app.get("/health")
