@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import ChatPage from '@/pages/ChatPage'
+import ChatPage from '@/pages/chat-page'
+import { DEFAULT_PROJECT_SLOT } from '@/pages/chat-page/config/constants'
 import { chatApi } from '@/services/api'
 
 const streamSendSpy = vi.fn()
@@ -98,7 +99,7 @@ describe('ChatPage', () => {
       message: 'test message',
       session_id: 'sess-chatpage-1',
       context: {
-        project_id: 'project-local-1',
+        project_id: DEFAULT_PROJECT_SLOT.project_id,
         mode: 'auto',
         function_type: 'auto',
       },
@@ -174,7 +175,7 @@ describe('ChatPage', () => {
       message: 'test message',
       session_id: 'sess-created-1',
       context: {
-        project_id: 'project-local-1',
+        project_id: DEFAULT_PROJECT_SLOT.project_id,
         mode: 'auto',
         function_type: 'auto',
       },

@@ -24,9 +24,9 @@ server {
         return 301 /api/;
     }
 
-    # 主入口 core 同源代理（避免移动端访问 localhost 失败）
-    location /core/ {
-        proxy_pass http://127.0.0.1:3000/;
+    # 主入口 core 同源代理（浏览器不直接访问 :3000）
+    location /core/assets/ {
+        proxy_pass http://127.0.0.1:3000/assets/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -35,6 +35,37 @@ server {
         proxy_buffering off;
         proxy_cache off;
         proxy_read_timeout 3600s;
+    }
+
+    location = /core/vite.svg {
+        proxy_pass http://127.0.0.1:3000/vite.svg;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+    }
+
+    location /core/ {
+        proxy_pass http://127.0.0.1:3000/;
+        proxy_http_version 1.1;
+        proxy_set_header Accept-Encoding "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+
+        sub_filter_once off;
+        sub_filter_types text/html;
+        sub_filter 'src="/assets/' 'src="/core/assets/';
+        sub_filter 'href="/assets/' 'href="/core/assets/';
+        sub_filter 'href="/vite.svg"' 'href="/core/vite.svg"';
     }
 
     location = /core {
