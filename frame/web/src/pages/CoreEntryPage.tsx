@@ -6,7 +6,7 @@ type CoreEntryPageProps = {
   onLogout?: () => void
 }
 
-const CORE_ENTRY_URL = import.meta.env.VITE_FLARE_CORE_ENTRY_URL || 'http://localhost:9000'
+const CORE_ENTRY_URL = import.meta.env.VITE_FLARE_CORE_ENTRY_URL || '/core/'
 const FLARE_VERSION = '0.2.4'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
