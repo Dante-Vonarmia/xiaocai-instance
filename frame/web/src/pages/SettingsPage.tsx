@@ -12,7 +12,7 @@ type SettingsPageProps = {
 }
 
 const FLARE_VERSION = '0.2.4'
-const PROJECT_ID = 'project-local-1'
+const PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 
 function toSection(value: string | undefined): SettingsSection {
   return value === 'system' ? 'system' : 'profile'

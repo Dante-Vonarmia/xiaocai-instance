@@ -14,7 +14,7 @@ import {
 } from './services/api'
 
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
-const DEFAULT_PROJECT_ID = 'project-local-1'
+const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 type AuthStage = 'idle' | 'loading' | 'error'
 type AuthMode = 'host_token' | 'wechat_code' | 'mock'
 type AuthEntryMode = 'host_token' | 'wechat_code' | 'select'

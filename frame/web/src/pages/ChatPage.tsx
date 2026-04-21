@@ -47,16 +47,39 @@ type StarterPrompt = {
   prompt: string
 }
 
+type ProjectSlot = {
+  key: string
+  project_id: string
+  subtitle: string
+  name: string
+}
+
+type CanvasUiLabels = {
+  product_name: string
+  brand_tag: string
+  project_title: string
+  session_list_title: string
+  new_session_button: string
+  empty_state_title: string
+  empty_state_description: string
+  canvas_workspace_title: string
+  canvas_tab_result: string
+  canvas_empty_result: string
+  canvas_status_title: string
+  scenario_title: string
+}
+
 const DEFAULT_FUNCTION_TYPE = 'auto'
 const DEFAULT_SESSION_TITLE = '新会话'
 const DEFAULT_INTERACTION_MODE: InteractionMode = 'auto'
-const DEFAULT_PROJECT_SLOT = {
-  key: 'project-local-1',
-  project_id: 'project-local-1',
+const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
+const DEFAULT_PROJECT_SLOT: ProjectSlot = {
+  key: DEFAULT_PROJECT_ID,
+  project_id: DEFAULT_PROJECT_ID,
   subtitle: '项目',
-  name: '本地演示项目',
+  name: '采购项目',
 }
-const CANVAS_UI_LABELS = {
+const DEFAULT_CANVAS_UI_LABELS: CanvasUiLabels = {
   product_name: '小采',
   brand_tag: '采购助手',
   project_title: '采购项目',
@@ -69,7 +92,7 @@ const CANVAS_UI_LABELS = {
   canvas_empty_result: '发送后在这里生成需求文档草稿，结构化结果会同步展示。',
   canvas_status_title: '文档进度',
   scenario_title: '起步入口',
-} as const
+}
 
 const DEFAULT_STARTER_PROMPTS: StarterPrompt[] = [
   {
@@ -97,6 +120,43 @@ const DEFAULT_STARTER_PROMPTS: StarterPrompt[] = [
     prompt: '给我一个采购建议方向：先判断我的需求成熟度，再给出下一步行动建议。',
   },
 ]
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function toStarterPrompts(value: unknown): StarterPrompt[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((item): item is StarterPrompt => (
+    isObject(item)
+    && typeof item.key === 'string'
+    && typeof item.label === 'string'
+    && typeof item.description === 'string'
+    && typeof item.prompt === 'string'
+  ))
+}
+
+function toCanvasUiLabels(value: unknown): CanvasUiLabels {
+  if (!isObject(value)) {
+    return DEFAULT_CANVAS_UI_LABELS
+  }
+  return {
+    product_name: toText(value.product_name) || DEFAULT_CANVAS_UI_LABELS.product_name,
+    brand_tag: toText(value.brand_tag) || DEFAULT_CANVAS_UI_LABELS.brand_tag,
+    project_title: toText(value.project_title) || DEFAULT_CANVAS_UI_LABELS.project_title,
+    session_list_title: toText(value.session_list_title) || DEFAULT_CANVAS_UI_LABELS.session_list_title,
+    new_session_button: toText(value.new_session_button) || DEFAULT_CANVAS_UI_LABELS.new_session_button,
+    empty_state_title: toText(value.empty_state_title) || DEFAULT_CANVAS_UI_LABELS.empty_state_title,
+    empty_state_description: toText(value.empty_state_description) || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
+    canvas_workspace_title: toText(value.canvas_workspace_title) || DEFAULT_CANVAS_UI_LABELS.canvas_workspace_title,
+    canvas_tab_result: toText(value.canvas_tab_result) || DEFAULT_CANVAS_UI_LABELS.canvas_tab_result,
+    canvas_empty_result: toText(value.canvas_empty_result) || DEFAULT_CANVAS_UI_LABELS.canvas_empty_result,
+    canvas_status_title: toText(value.canvas_status_title) || DEFAULT_CANVAS_UI_LABELS.canvas_status_title,
+    scenario_title: toText(value.scenario_title) || DEFAULT_CANVAS_UI_LABELS.scenario_title,
+  }
+}
 function toText(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
     return value.trim()
@@ -533,8 +593,10 @@ function ChatPage({ onLogout }: ChatPageProps) {
     [],
   )
   const [interactionMode, setInteractionMode] = useState<InteractionMode>(DEFAULT_INTERACTION_MODE)
+  const [functionType, setFunctionType] = useState(DEFAULT_FUNCTION_TYPE)
+  const [projectSlot, setProjectSlot] = useState<ProjectSlot>(DEFAULT_PROJECT_SLOT)
+  const [uiLabels, setUiLabels] = useState<CanvasUiLabels>(DEFAULT_CANVAS_UI_LABELS)
   const [starterPrompts, setStarterPrompts] = useState<StarterPrompt[]>([])
-  const projectSlot = useMemo(() => ({ ...DEFAULT_PROJECT_SLOT }), [])
   const streamAPI = useRuntimeStream(runtime, projectSlot.project_id, interactionMode)
   const projectItems = useMemo(() => [projectSlot], [projectSlot])
   const currentUserId = useMemo(() => getCurrentUserId() || 'anonymous-user', [])
@@ -550,26 +612,62 @@ function ChatPage({ onLogout }: ChatPageProps) {
         const payload = await response.json() as {
           ui?: {
             chat?: {
+              functionType?: unknown
+              defaultInteractionMode?: unknown
+              projectSlot?: unknown
+              uiLabels?: unknown
               starterPrompts?: unknown[]
             }
           }
         }
-        const candidate = payload.ui?.chat?.starterPrompts
-        if (!Array.isArray(candidate) || cancelled) {
+        const chatConfig = payload.ui?.chat
+        if (!chatConfig || cancelled) {
+          setFunctionType(DEFAULT_FUNCTION_TYPE)
+          setInteractionMode(DEFAULT_INTERACTION_MODE)
+          setProjectSlot(DEFAULT_PROJECT_SLOT)
+          setUiLabels(DEFAULT_CANVAS_UI_LABELS)
           setStarterPrompts(DEFAULT_STARTER_PROMPTS)
           return
         }
-        const next = candidate.filter((item): item is StarterPrompt => (
-          Boolean(item)
-          && typeof item === 'object'
-          && typeof (item as { key?: unknown }).key === 'string'
-          && typeof (item as { label?: unknown }).label === 'string'
-          && typeof (item as { description?: unknown }).description === 'string'
-          && typeof (item as { prompt?: unknown }).prompt === 'string'
-        ))
+
+        const nextFunctionType = toText(chatConfig.functionType) || DEFAULT_FUNCTION_TYPE
+        setFunctionType(nextFunctionType)
+
+        const nextMode = toText(chatConfig.defaultInteractionMode)
+        if (
+          nextMode === 'auto'
+          || nextMode === 'requirement_canvas'
+          || nextMode === 'intelligent_sourcing'
+        ) {
+          setInteractionMode(nextMode)
+        } else {
+          setInteractionMode(DEFAULT_INTERACTION_MODE)
+        }
+
+        const projectConfig = chatConfig.projectSlot
+        if (isObject(projectConfig)) {
+          const projectId = toText(projectConfig.project_id) || DEFAULT_PROJECT_SLOT.project_id
+          const projectKey = toText(projectConfig.key) || projectId
+          setProjectSlot({
+            key: projectKey,
+            project_id: projectId,
+            subtitle: toText(projectConfig.subtitle) || DEFAULT_PROJECT_SLOT.subtitle,
+            name: toText(projectConfig.name) || DEFAULT_PROJECT_SLOT.name,
+          })
+        } else {
+          setProjectSlot(DEFAULT_PROJECT_SLOT)
+        }
+
+        setUiLabels(toCanvasUiLabels(chatConfig.uiLabels))
+
+        const next = toStarterPrompts(chatConfig.starterPrompts)
         setStarterPrompts(next.length > 0 ? next : DEFAULT_STARTER_PROMPTS)
       } catch {
         if (!cancelled) {
+          setFunctionType(DEFAULT_FUNCTION_TYPE)
+          setInteractionMode(DEFAULT_INTERACTION_MODE)
+          setProjectSlot(DEFAULT_PROJECT_SLOT)
+          setUiLabels(DEFAULT_CANVAS_UI_LABELS)
           setStarterPrompts(DEFAULT_STARTER_PROMPTS)
         }
       }
@@ -687,7 +785,7 @@ function ChatPage({ onLogout }: ChatPageProps) {
               activeModeKey={interactionMode}
               composerPlaceholder="请输入采购需求"
               defaultTitle={DEFAULT_SESSION_TITLE}
-              functionType={DEFAULT_FUNCTION_TYPE}
+              functionType={functionType}
               identityContext={{
                 project_id: projectSlot.project_id,
                 user_id: currentUserId,
@@ -701,7 +799,7 @@ function ChatPage({ onLogout }: ChatPageProps) {
               sessionAPI={runtime.sessionAPI}
               sessionListTitle="会话列表"
               streamAPI={streamAPI}
-              uiLabels={CANVAS_UI_LABELS}
+              uiLabels={uiLabels}
               onModeChange={(nextModeKey: string) => {
                 const normalized = String(nextModeKey || '').trim() as InteractionMode
                 if (!normalized) {
