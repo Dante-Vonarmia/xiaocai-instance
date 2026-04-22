@@ -13,7 +13,7 @@ const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'chat_com
 const DEFAULT_SESSION_TITLE = import.meta.env.VITE_FLARE_CHAT_DEFAULT_SESSION_TITLE || '调试会话'
 const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const FLARE_VERSION = '0.2.4'
+const FLARE_VERSION = '0.2.8'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const navigate = useNavigate()

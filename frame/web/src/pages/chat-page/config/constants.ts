@@ -29,7 +29,7 @@ export type CanvasUiLabels = {
   scenario_title: string
 }
 
-export const FLARE_VERSION = '0.2.4'
+export const FLARE_VERSION = '0.2.8'
 export const DEFAULT_FUNCTION_TYPE = 'auto'
 export const DEFAULT_SESSION_TITLE = '新会话'
 export const DEFAULT_INTERACTION_MODE: InteractionMode = 'auto'

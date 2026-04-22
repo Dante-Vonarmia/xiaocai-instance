@@ -520,6 +520,7 @@ async def chat_stream(
             done_message: str | None = None
             emitted_done_event = False
             latest_pending_contract: dict | None = None
+            exchange_persisted = False
             try:
                 event_iter = kernel_client.chat_stream(
                     user_id=claims.user_id,

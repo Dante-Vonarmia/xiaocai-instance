@@ -38,6 +38,13 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
+def _normalize_source_status(value: object) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized == "available":
+        return "ready"
+    return normalized or "ready"
+
+
 def _source_access_clause(alias: str = "ps") -> str:
     return f"""
         (
@@ -165,7 +172,7 @@ class SourceStore:
     def _sync_legacy_columns(self) -> None:
         column_names = self._get_column_names()
         if "status" not in column_names:
-            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN status TEXT NOT NULL DEFAULT 'available'")
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN status TEXT NOT NULL DEFAULT 'ready'")
         if "folder_name" not in column_names:
             self._runtime.execute("ALTER TABLE project_sources ADD COLUMN folder_name TEXT NOT NULL DEFAULT '默认文件夹'")
         if "owner_user_id" not in column_names:
@@ -194,6 +201,13 @@ class SourceStore:
                 WHEN date_bucket IS NULL OR date_bucket = '' THEN SUBSTR(created_at, 1, 10)
                 ELSE date_bucket
             END
+            """
+        )
+        self._runtime.execute(
+            """
+            UPDATE project_sources
+            SET status = 'ready'
+            WHERE status = 'available'
             """
         )
 
@@ -230,7 +244,7 @@ class SourceStore:
             time_bucket=str(row.get("time_bucket") or "afternoon"),
             context_priority=int(row.get("context_priority") or 100),
             storage_path=str(row["storage_path"]),
-            status=str(row["status"]),
+            status=_normalize_source_status(row["status"]),
             created_at=str(row["created_at"]),
         )
 
@@ -349,7 +363,7 @@ class SourceStore:
                 time_bucket=_derive_time_bucket(),
                 context_priority=context_priority,
                 storage_path=str(target_path),
-                status="available",
+                status="ready",
                 created_at=created_at,
             )
             self._runtime.execute(

@@ -20,6 +20,10 @@ from xiaocai_instance_api.storage.source_store import get_source_store
 
 
 router = APIRouter(prefix="/sources", tags=["sources"])
+project_compat_router = APIRouter(prefix="/projects", tags=["sources-compat"])
+chat_project_compat_router = APIRouter(prefix="/chat/projects", tags=["sources-compat"])
+files_compat_router = APIRouter(tags=["files-compat"])
+chat_files_compat_router = APIRouter(prefix="/chat", tags=["files-compat"])
 
 
 class SourcePriorityUpdateRequest(BaseModel):
@@ -98,6 +102,7 @@ async def list_project_source_folders(
 @router.post("/upload")
 async def upload_source_file(
     project_id: str = Form(...),
+    user_id: str | None = Form(default=None),
     session_id: str | None = Form(default=None),
     folder_name: str = Form(default="默认文件夹"),
     source_type: str = Form(default="upload_attachment"),
@@ -273,4 +278,112 @@ async def download_project_source(
         path=record.storage_path,
         filename=record.file_name,
         media_type=record.mime_type,
+    )
+
+
+@project_compat_router.get("/{project_id}/sources")
+async def list_project_sources_compat(
+    project_id: str,
+    q: str | None = None,
+    folder_name: str | None = None,
+    session_id: str | None = None,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    _ = session_id
+    return await list_project_sources(
+        project_id=project_id,
+        q=q,
+        folder_name=folder_name,
+        claims=claims,
+    )
+
+
+@chat_project_compat_router.get("/{project_id}/sources")
+async def list_chat_project_sources_compat(
+    project_id: str,
+    q: str | None = None,
+    folder_name: str | None = None,
+    session_id: str | None = None,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    _ = session_id
+    return await list_project_sources(
+        project_id=project_id,
+        q=q,
+        folder_name=folder_name,
+        claims=claims,
+    )
+
+
+@files_compat_router.post("/files/upload")
+async def upload_source_file_compat(
+    project_id: str = Form(...),
+    user_id: str | None = Form(default=None),
+    session_id: str | None = Form(default=None),
+    folder_name: str = Form(default="默认文件夹"),
+    source_type: str = Form(default="upload_attachment"),
+    context_priority: int = Form(default=100),
+    file: UploadFile = File(...),
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    _ = user_id
+    return await upload_source_file(
+        project_id=project_id,
+        user_id=user_id,
+        session_id=session_id,
+        folder_name=folder_name,
+        source_type=source_type,
+        context_priority=context_priority,
+        file=file,
+        claims=claims,
+    )
+
+
+@chat_files_compat_router.post("/files/upload")
+async def upload_chat_source_file_compat(
+    project_id: str = Form(...),
+    user_id: str | None = Form(default=None),
+    session_id: str | None = Form(default=None),
+    folder_name: str = Form(default="默认文件夹"),
+    source_type: str = Form(default="upload_attachment"),
+    context_priority: int = Form(default=100),
+    file: UploadFile = File(...),
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    _ = user_id
+    return await upload_source_file(
+        project_id=project_id,
+        user_id=user_id,
+        session_id=session_id,
+        folder_name=folder_name,
+        source_type=source_type,
+        context_priority=context_priority,
+        file=file,
+        claims=claims,
+    )
+
+
+@project_compat_router.delete("/{project_id}/sources/{source_id}")
+async def delete_project_source_compat(
+    project_id: str,
+    source_id: str,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    return await delete_project_source(
+        source_id=source_id,
+        project_id=project_id,
+        claims=claims,
+    )
+
+
+@chat_project_compat_router.delete("/{project_id}/sources/{source_id}")
+async def delete_chat_project_source_compat(
+    project_id: str,
+    source_id: str,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    return await delete_project_source(
+        source_id=source_id,
+        project_id=project_id,
+        claims=claims,
     )

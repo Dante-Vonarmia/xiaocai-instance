@@ -1,65 +1,83 @@
 const fs = require('fs')
 const path = require('path')
 
-const distPath = path.resolve(__dirname, '../node_modules/@flare/chat-core/dist/index.js')
+const defaultTarget = path.resolve(__dirname, '../dist/assets')
 
-function applyPatch(source) {
-  const streamNeedle = `const f = await fetch(fn(e, "/chat/stream"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },`
-  const streamReplacement = `const fetchAuthToken = (() => {
-    try {
-      return typeof window < "u" && window?.localStorage ? String(window.localStorage.getItem("access_token") || "").trim() : "";
-    } catch {
-      return "";
-    }
-  })(), f = await fetch(fn(e, "/chat/stream"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...fetchAuthToken ? { Authorization: \`Bearer \${fetchAuthToken}\` } : {}
-    },`
+function resolveTarget(argvTarget) {
+  if (argvTarget) {
+    return path.resolve(process.cwd(), argvTarget)
+  }
+  return defaultTarget
+}
 
-  const actionNeedle = `const a = await fetch(fn(e, "/chat/action"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },`
-  const actionReplacement = `const fetchAuthToken = (() => {
-    try {
-      return typeof window < "u" && window?.localStorage ? String(window.localStorage.getItem("access_token") || "").trim() : "";
-    } catch {
-      return "";
-    }
-  })(), a = await fetch(fn(e, "/chat/action"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...fetchAuthToken ? { Authorization: \`Bearer \${fetchAuthToken}\` } : {}
-    },`
+function collectFiles(targetPath) {
+  if (!fs.existsSync(targetPath)) {
+    throw new Error(`patch target not found: ${targetPath}`)
+  }
 
+  const stat = fs.statSync(targetPath)
+  if (stat.isDirectory()) {
+    return fs.readdirSync(targetPath)
+      .filter((name) => name.endsWith('.js'))
+      .map((name) => path.join(targetPath, name))
+  }
+
+  return [targetPath]
+}
+
+function buildAuthHeadersExpression() {
+  return '(()=>{const fetchAuthToken=(()=>{try{return typeof window<"u"&&window?.localStorage?String(window.localStorage.getItem("access_token")||"").trim():""}catch{return""}})();return{"Content-Type":"application/json",...fetchAuthToken?{Authorization:`Bearer ${fetchAuthToken}`}:{}}})()'
+}
+
+function patchContent(source) {
   let patched = source
+  let changes = 0
+  const authHeaders = buildAuthHeadersExpression()
 
-  if (patched.includes(streamNeedle)) {
-    patched = patched.replace(streamNeedle, streamReplacement)
+  const replacements = [
+    {
+      pattern: /(await fetch\([^)]*?"\/chat\/stream"\),\{method:"POST",)headers:\{"Content-Type":"application\/json"\},body:/g,
+      replacement: `$1headers:${authHeaders},body:`,
+    },
+    {
+      pattern: /(await fetch\([^)]*?"\/chat\/action"\),\{method:"POST",)headers:\{"Content-Type":"application\/json"\},body:/g,
+      replacement: `$1headers:${authHeaders},body:`,
+    },
+    {
+      pattern: /(await fetch\([^)]*?"\/chat\/stream"\),\s*\{\s*method:\s*"POST",\s*)headers:\s*\{\s*"Content-Type":\s*"application\/json"\s*\},\s*body:/g,
+      replacement: `$1headers: ${authHeaders}, body:`,
+    },
+    {
+      pattern: /(await fetch\([^)]*?"\/chat\/action"\),\s*\{\s*method:\s*"POST",\s*)headers:\s*\{\s*"Content-Type":\s*"application\/json"\s*\},\s*body:/g,
+      replacement: `$1headers: ${authHeaders}, body:`,
+    },
+  ]
+
+  for (const { pattern, replacement } of replacements) {
+    patched = patched.replace(pattern, (...args) => {
+      changes += 1
+      return args[0].replace(pattern, replacement)
+    })
   }
 
-  if (patched.includes(actionNeedle)) {
-    patched = patched.replace(actionNeedle, actionReplacement)
+  return { patched, changes }
+}
+
+const target = resolveTarget(process.argv[2])
+const files = collectFiles(target)
+let totalChanges = 0
+
+for (const filePath of files) {
+  const original = fs.readFileSync(filePath, 'utf8')
+  const { patched, changes } = patchContent(original)
+  if (changes > 0) {
+    fs.writeFileSync(filePath, patched)
+    totalChanges += changes
   }
-
-  return patched
 }
 
-if (!fs.existsSync(distPath)) {
-  throw new Error(`flare-chat-core dist not found: ${distPath}`)
+if (totalChanges === 0) {
+  throw new Error(`[patch-flare-chat-core] no stream/action transport patch applied for target: ${target}`)
 }
 
-const original = fs.readFileSync(distPath, 'utf8')
-const patched = applyPatch(original)
-
-if (patched === original) {
-  console.log('[patch-flare-chat-core] no changes applied')
-  process.exit(0)
-}
-
-fs.writeFileSync(distPath, patched)
-console.log('[patch-flare-chat-core] patched Authorization forwarding for chat stream/action')
+console.log(`[patch-flare-chat-core] applied ${totalChanges} replacement(s) to ${target}`)
