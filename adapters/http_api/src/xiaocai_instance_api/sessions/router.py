@@ -21,6 +21,7 @@ from xiaocai_instance_api.storage.conversation_store import get_conversation_sto
 
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+chat_compat_router = APIRouter(prefix="/chat", tags=["chat-compat"])
 
 
 class SessionListResponse(BaseModel):
@@ -141,6 +142,25 @@ async def list_sessions(
             "total_pages": (total + safe_page_size - 1) // safe_page_size,
         },
         grouped=grouped,
+    )
+
+
+@chat_compat_router.get("/sessions", response_model=SessionListResponse)
+async def list_chat_sessions(
+    function_type: str | None = None,
+    project_id: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+    group_by_time: bool = False,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> SessionListResponse:
+    return await list_sessions(
+        function_type=function_type,
+        project_id=project_id,
+        page=page,
+        page_size=page_size,
+        group_by_time=group_by_time,
+        claims=claims,
     )
 
 

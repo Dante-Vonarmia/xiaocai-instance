@@ -8,6 +8,7 @@ import {
   clearAccessToken,
   clearCurrentUserId,
   getAccessToken,
+  getCurrentUserId,
   projectApi,
   setAccessToken,
   setCurrentUserId,
@@ -97,10 +98,10 @@ function App() {
         throw new Error('认证响应缺少 access_token')
       }
 
-      setAccessToken(token)
       if (userId) {
         setCurrentUserId(userId)
       }
+      setAccessToken(token)
       await projectApi.bindProject(DEFAULT_PROJECT_ID)
       setAccessTokenState(token)
       setAuthStage('idle')
@@ -135,7 +136,39 @@ function App() {
   }, [authParams.mode])
 
   useEffect(() => {
+    if (authParams.mode !== 'select') {
+      return
+    }
+
+    const currentUserId = getCurrentUserId().trim()
+    const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
+
+    if (!currentUserId || isKnownMockUser) {
+      return
+    }
+
+    clearAccessToken()
+    clearCurrentUserId()
+    setAccessTokenState('')
+    setAuthError('')
+    setAuthStage('idle')
+  }, [authParams.mode])
+
+  useEffect(() => {
     const syncToken = () => {
+      if (authParams.mode === 'select') {
+        if (authStage === 'loading') {
+          return
+        }
+        const currentUserId = getCurrentUserId().trim()
+        const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
+        if (currentUserId && !isKnownMockUser) {
+          clearAccessToken()
+          clearCurrentUserId()
+          setAccessTokenState('')
+          return
+        }
+      }
       setAccessTokenState(getAccessToken())
     }
 
@@ -153,7 +186,7 @@ function App() {
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener(AUTH_CHANGED_EVENT, syncToken as EventListener)
     }
-  }, [])
+  }, [authParams.mode, authStage])
   
   useEffect(() => {
     if (!accessToken.trim() && authStage !== 'loading' && authParams.mode !== 'select') {

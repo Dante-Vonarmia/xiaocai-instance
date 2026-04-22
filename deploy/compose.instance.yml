@@ -115,6 +115,9 @@ services:
     build:
       context: ../..
       dockerfile: procurement-agents/frame/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_FLARE_CORE_ENTRY_URL: ${VITE_FLARE_CORE_ENTRY_URL}
     container_name: inst-xiaocai-web
     ports:
       - "${WEB_PORT:-3001}:80"

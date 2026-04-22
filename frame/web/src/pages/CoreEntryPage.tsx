@@ -1,16 +1,23 @@
 import { FileTextOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { App as FlareChatCoreApp } from '@flare/chat-core'
 import { APP_ROUTES } from '@/constants/routes'
+import { getAccessToken, getCurrentUserId } from '@/services/api'
 
 type CoreEntryPageProps = {
   onLogout?: () => void
 }
 
-const CORE_ENTRY_URL = import.meta.env.VITE_FLARE_CORE_ENTRY_URL || '/core/'
+const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'chat_component_debug'
+const DEFAULT_SESSION_TITLE = import.meta.env.VITE_FLARE_CHAT_DEFAULT_SESSION_TITLE || '调试会话'
+const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const FLARE_VERSION = '0.2.4'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const navigate = useNavigate()
+  const accessToken = getAccessToken()
+  const currentUserId = getCurrentUserId() || 'anonymous-user'
 
   return (
     <div className="xiaocai-settings-page" style={{ height: '100vh', display: 'flex', background: '#f6f8fc' }}>
@@ -127,10 +134,14 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
       </aside>
 
       <main style={{ flex: 1, minWidth: 0 }}>
-        <iframe
-          src={CORE_ENTRY_URL}
-          title="flare-chat-core-entry"
-          style={{ border: 'none', width: '100%', height: '100%' }}
+        <FlareChatCoreApp
+          apiBaseUrl={API_BASE_URL}
+          apiToken={accessToken}
+          backendMode="real"
+          defaultSessionTitle={DEFAULT_SESSION_TITLE}
+          functionType={FUNCTION_TYPE}
+          projectId={DEFAULT_PROJECT_ID}
+          userId={currentUserId}
         />
       </main>
     </div>

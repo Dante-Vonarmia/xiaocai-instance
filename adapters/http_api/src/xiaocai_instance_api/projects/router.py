@@ -34,6 +34,19 @@ class ProjectListResponse(BaseModel):
     project_ids: list[str] = Field(default_factory=list)
 
 
+class ProjectRecord(BaseModel):
+    project_id: str
+    project_name: str
+    status: str = "active"
+    session_count: int = 0
+    created_at: str = ""
+    latest_updated_at: str = ""
+
+
+class ProjectsCollectionResponse(BaseModel):
+    projects: list[ProjectRecord] = Field(default_factory=list)
+
+
 class UsageSummaryResponse(BaseModel):
     user_id: str
     project_id: str | None = None
@@ -56,6 +69,23 @@ async def bind_project(
     return ProjectBindResponse(user_id=user_id, project_id=request.project_id)
 
 
+@router.get("", response_model=ProjectsCollectionResponse)
+async def list_projects(
+    user_id: str = Depends(get_current_user_id),
+) -> ProjectsCollectionResponse:
+    store = get_ownership_store()
+    project_ids = await store.list_user_projects(user_id=user_id)
+    return ProjectsCollectionResponse(
+        projects=[
+            ProjectRecord(
+                project_id=project_id,
+                project_name=project_id,
+            )
+            for project_id in project_ids
+        ]
+    )
+
+
 @router.get("/mine", response_model=ProjectListResponse)
 async def list_my_projects(
     user_id: str = Depends(get_current_user_id),
@@ -63,6 +93,20 @@ async def list_my_projects(
     store = get_ownership_store()
     project_ids = await store.list_user_projects(user_id=user_id)
     return ProjectListResponse(project_ids=project_ids)
+
+
+@router.put("/{project_id}", response_model=ProjectRecord)
+async def upsert_project(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id),
+) -> ProjectRecord:
+    normalized_project_id = str(project_id or "").strip()
+    store = get_ownership_store()
+    await store.add_project_ownership(user_id=user_id, project_id=normalized_project_id)
+    return ProjectRecord(
+        project_id=normalized_project_id,
+        project_name=normalized_project_id,
+    )
 
 
 @router.get("/usage", response_model=UsageSummaryResponse)
