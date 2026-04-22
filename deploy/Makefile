@@ -10,7 +10,7 @@ DEV_COMPOSE := $(COMPOSE) -p $(INSTANCE_PROJECT) -f $(INSTANCE_COMPOSE_FILE) -f 
 
 .PHONY: help init env-check \
 	start stop restart \
-	up-instance down-instance build-instance ps-instance logs-instance \
+	up-instance up-instance-backend down-instance build-instance ps-instance logs-instance \
 	up-dev down-dev build-dev ps-dev logs-dev logs-devlib \
 	config-instance config-dev db-migrate backup-db restore-db domain-packs-check pack-registry-check domain-acceptance health api-smoke acceptance clean-logs
 
@@ -23,6 +23,7 @@ help:
 	@echo "  make restart        # stop + start"
 	@echo ""
 	@echo "  make up-instance    # start instance-only stack (delivery baseline)"
+	@echo "  make up-instance-backend # start backend-only instance services (api + infra)"
 	@echo "  make down-instance  # stop instance-only stack"
 	@echo "  make build-instance # build instance images"
 	@echo "  make ps-instance    # instance stack status"
@@ -70,6 +71,9 @@ restart: stop start
 
 up-instance: env-check
 	$(INSTANCE_COMPOSE) up -d
+
+up-instance-backend: env-check
+	$(INSTANCE_COMPOSE) up -d inst-xiaocai-postgres inst-xiaocai-redis inst-xiaocai-qdrant inst-xiaocai-api
 
 down-instance:
 	$(INSTANCE_COMPOSE) down

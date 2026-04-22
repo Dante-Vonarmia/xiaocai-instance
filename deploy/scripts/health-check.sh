@@ -23,6 +23,7 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 REDIS_PORT=${REDIS_PORT:-6379}
 QDRANT_HTTP_PORT=${QDRANT_HTTP_PORT:-6333}
 ENABLE_DEVLIB_FLARE=${ENABLE_DEVLIB_FLARE:-false}
+CHECK_WEB=${CHECK_WEB:-true}
 
 echo "========================================="
 echo "   xiaocai instance 服务健康检查"
@@ -81,8 +82,12 @@ if ! check_service "inst-xiaocai-api" "http://localhost:${API_PORT}/health"; the
 fi
 
 # 2. 检查 Web
-if ! check_service "inst-xiaocai-web" "http://localhost:${WEB_PORT}"; then
-    all_ok=false
+if [ "$CHECK_WEB" = true ]; then
+    if ! check_service "inst-xiaocai-web" "http://localhost:${WEB_PORT}"; then
+        all_ok=false
+    fi
+else
+    echo -e "${YELLOW}跳过 inst-xiaocai-web 健康检查（CHECK_WEB=false）${NC}"
 fi
 
 # 3. 检查 Infra 端口

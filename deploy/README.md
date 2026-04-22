@@ -166,11 +166,12 @@ make db-migrate
 
 ---
 
-## 8. 生产发布（前端独立）
+## 8. 生产发布（当前推荐：backend-only compose + frontend standalone）
 
 适用目标：
 - 后端与中间件走 `compose.instance.yml`
-- 前端静态资源独立部署，不复用 `inst-xiaocai-web/inst-xiaocai-nginx`
+- 前端静态资源独立部署到服务器主机 Nginx
+- 远端默认不依赖 `inst-xiaocai-web/inst-xiaocai-nginx`
 - 首发先 `IP + HTTP` 验证
 
 ### 8.1 准备生产环境文件
@@ -194,7 +195,7 @@ cp .env.production.example .env.production
 
 ```bash
 REMOTE_HOST=aliyun-xiaocai \
-REMOTE_DIR=/opt/xiaocai-instance \
+REMOTE_DIR=~/mnt/xiaocai-instance \
 ./scripts/upload-instance-to-aliyun-xiaocai.sh
 ```
 
@@ -209,25 +210,27 @@ scp .env.production aliyun-xiaocai:/opt/xiaocai-instance/deploy/.env
 在服务器执行：
 
 ```bash
-REPO_DIR=/opt/xiaocai-instance \
-bash /opt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh
+REPO_DIR=~/mnt/xiaocai-instance \
+FRONTEND_DEPLOY_MODE=standalone \
+bash ~/mnt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh
 ```
 
 若 kernel 暂时不可达，可先跳过 smoke：
 
 ```bash
-REPO_DIR=/opt/xiaocai-instance \
+REPO_DIR=~/mnt/xiaocai-instance \
 SKIP_API_SMOKE=true \
-bash /opt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh
+FRONTEND_DEPLOY_MODE=standalone \
+bash ~/mnt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh
 ```
 
 该脚本包含：
 1. `make config-instance`
 2. `make backup-db`（若已有运行栈）
 3. `make down-instance`
-4. `make up-instance`
+4. standalone 模式下执行 `make up-instance-backend`
 5. `make db-migrate`
-6. `make health`
+6. standalone 模式下执行 `CHECK_WEB=false make health`
 7. `make api-smoke`
 
 ### 8.4 前端独立部署
@@ -244,23 +247,38 @@ API_BASE_URL=http://47.101.138.75:8001 ./scripts/build-standalone.sh
 ```bash
 cd ../../deploy
 REMOTE_HOST=aliyun-xiaocai \
-API_BASE_URL=http://47.101.138.75:8001 \
+API_UPSTREAM_URL=http://127.0.0.1:8001 \
 SERVER_NAME=_ \
 ./scripts/deploy-frontend-standalone-to-aliyun-xiaocai.sh
 ```
 
 Nginx 模板：`deploy/nginx/frontend-standalone-http.conf.template`
 
-### 8.5 一键串联发布
+### 8.5 一键串联发布（正式推荐）
 
 ```bash
-API_BASE_URL=http://47.101.138.75:8001 \
+cd /Users/dantevonalcatraz/Development/procurement-agents
+
+FRONTEND_API_BASE_URL=/api \
+API_UPSTREAM_URL=http://127.0.0.1:8001 \
 REMOTE_HOST=aliyun-xiaocai \
-REMOTE_DIR=/opt/xiaocai-instance \
+REMOTE_DIR=~/mnt/xiaocai-instance \
+FRONTEND_DEPLOY_MODE=standalone \
 COPY_PROD_ENV=true \
-./scripts/release-to-aliyun-xiaocai.sh
+./deploy/scripts/release-to-aliyun-xiaocai.sh
 ```
 
 注意：
 - `COPY_PROD_ENV=true` 前需要本地存在 `deploy/.env.production`
 - 若你不希望脚本覆盖远端 `.env`，把 `COPY_PROD_ENV` 设为 `false`
+- `FRONTEND_DEPLOY_MODE=standalone` 是当前推荐默认值
+
+### 8.6 当前推荐路径为什么更稳
+
+这条链路专门规避了最近已经踩过的几个问题：
+
+- 远端只有 `docker compose`，没有 `docker-compose`
+- 远端 repo 目录名变化导致 web Dockerfile 路径失效
+- 远端 web 镜像构建依赖 Docker Hub，容易超时
+- 首次前端部署时 `nginx -s reload` 可能因为 pid 不存在失败
+- standalone 前端上传时 macOS xattr 会产生无意义 tar 警告

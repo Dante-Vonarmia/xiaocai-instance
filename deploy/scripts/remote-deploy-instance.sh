@@ -5,9 +5,10 @@ set -euo pipefail
 # 用法:
 #   REPO_DIR=/opt/xiaocai-instance ./deploy/scripts/remote-deploy-instance.sh
 
-REPO_DIR=${REPO_DIR:-/opt/xiaocai-instance}
+REPO_DIR=${REPO_DIR:-$HOME/mnt/xiaocai-instance}
 DEPLOY_DIR="$REPO_DIR/deploy"
 SKIP_API_SMOKE=${SKIP_API_SMOKE:-false}
+FRONTEND_DEPLOY_MODE=${FRONTEND_DEPLOY_MODE:-standalone}
 
 if [ ! -d "$DEPLOY_DIR" ]; then
   echo "deploy dir not found: $DEPLOY_DIR"
@@ -72,14 +73,23 @@ fi
 echo "[deploy] stop old instance stack"
 make down-instance || true
 
-echo "[deploy] start new instance stack"
-make up-instance
+if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
+  echo "[deploy] start backend-only instance stack (frontend via host nginx)"
+  make up-instance-backend
+else
+  echo "[deploy] start full instance stack"
+  make up-instance
+fi
 
 echo "[deploy] run migrations"
 make db-migrate
 
 echo "[deploy] health checks"
-make health
+if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
+  CHECK_WEB=false make health
+else
+  make health
+fi
 
 if [ "$SKIP_API_SMOKE" = "true" ]; then
   echo "[deploy] skip api smoke (SKIP_API_SMOKE=true)"

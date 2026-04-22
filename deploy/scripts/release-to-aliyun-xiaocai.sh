@@ -10,11 +10,12 @@ set -euo pipefail
 
 ROOT_DIR=${ROOT_DIR:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"}
 REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
-REMOTE_DIR=${REMOTE_DIR:-/opt/xiaocai-instance}
+REMOTE_DIR=${REMOTE_DIR:-~/mnt/xiaocai-instance}
 FRONTEND_API_BASE_URL=${FRONTEND_API_BASE_URL:-/api}
 API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:8001}
 SERVER_NAME=${SERVER_NAME:-_}
 COPY_PROD_ENV=${COPY_PROD_ENV:-false}
+FRONTEND_DEPLOY_MODE=${FRONTEND_DEPLOY_MODE:-standalone}
 
 cd "$ROOT_DIR"
 
@@ -31,7 +32,7 @@ if [ "$COPY_PROD_ENV" = "true" ]; then
 fi
 
 echo "[release] 2/5 remote backend deploy"
-ssh "$REMOTE_HOST" "REPO_DIR='$REMOTE_DIR' bash '$REMOTE_DIR/deploy/scripts/remote-deploy-instance.sh'"
+ssh "$REMOTE_HOST" "REPO_DIR='$REMOTE_DIR' FRONTEND_DEPLOY_MODE='$FRONTEND_DEPLOY_MODE' bash '$REMOTE_DIR/deploy/scripts/remote-deploy-instance.sh'"
 
 echo "[release] 3/5 build standalone frontend"
 cd "$ROOT_DIR/frame/web"

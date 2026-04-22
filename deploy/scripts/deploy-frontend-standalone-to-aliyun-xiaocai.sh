@@ -11,6 +11,7 @@ REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
 REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/var/www/xiaocai-web}
 SERVER_NAME=${SERVER_NAME:-_}
 API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:8001}
+export COPYFILE_DISABLE=1
 
 DIST_DIR="$ROOT_DIR/frame/web/dist"
 TEMPLATE_FILE="$ROOT_DIR/deploy/nginx/frontend-standalone-http.conf.template"
@@ -53,6 +54,6 @@ fi
 echo "[frontend] install nginx site config"
 scp "$TMP_CONF" "$REMOTE_HOST:/etc/nginx/conf.d/xiaocai-frontend.conf"
 
-ssh "$REMOTE_HOST" "nginx -t && nginx -s reload"
+ssh "$REMOTE_HOST" "nginx -t && (nginx -s reload || nginx)"
 
 echo "[frontend] deployed"
