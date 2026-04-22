@@ -204,66 +204,66 @@ class KernelClient:
                 )
                 response.raise_for_status()
                 result = response.json()
-            if isinstance(result, dict):
-                result_payload = result.get("result", {})
-                if not isinstance(result_payload, dict):
-                    result_payload = {}
+        if isinstance(result, dict):
+            result_payload = result.get("result", {})
+            if not isinstance(result_payload, dict):
+                result_payload = {}
 
-                metadata = result.get("metadata", {})
-                if not isinstance(metadata, dict):
-                    metadata = {}
-                # FLARE recovery protocol compatibility:
-                # keep newly added top-level fields in metadata for instance-side orchestration.
-                if "confusion_detector" in result:
-                    metadata["confusion_detector"] = result.get("confusion_detector")
-                if "recovery_plan" in result:
-                    metadata["recovery_plan"] = result.get("recovery_plan")
-                observability = result.get("observability")
-                if isinstance(observability, dict) and "recovery" in observability:
-                    metadata["observability"] = dict(metadata.get("observability", {})) if isinstance(metadata.get("observability"), dict) else {}
-                    metadata["observability"]["recovery"] = observability.get("recovery")
-                if isinstance(result.get("events"), list):
-                    metadata["events"] = result.get("events")
-                if isinstance(result.get("state"), str):
-                    metadata["state"] = result.get("state")
+            metadata = result.get("metadata", {})
+            if not isinstance(metadata, dict):
+                metadata = {}
+            # FLARE recovery protocol compatibility:
+            # keep newly added top-level fields in metadata for instance-side orchestration.
+            if "confusion_detector" in result:
+                metadata["confusion_detector"] = result.get("confusion_detector")
+            if "recovery_plan" in result:
+                metadata["recovery_plan"] = result.get("recovery_plan")
+            observability = result.get("observability")
+            if isinstance(observability, dict) and "recovery" in observability:
+                metadata["observability"] = dict(metadata.get("observability", {})) if isinstance(metadata.get("observability"), dict) else {}
+                metadata["observability"]["recovery"] = observability.get("recovery")
+            if isinstance(result.get("events"), list):
+                metadata["events"] = result.get("events")
+            if isinstance(result.get("state"), str):
+                metadata["state"] = result.get("state")
 
-                next_actions = result.get("next_actions")
-                if not isinstance(next_actions, list):
-                    next_actions = result_payload.get("next_actions")
-                if isinstance(next_actions, list) and next_actions:
-                    metadata["next_actions"] = next_actions
+            next_actions = result.get("next_actions")
+            if not isinstance(next_actions, list):
+                next_actions = result_payload.get("next_actions")
+            if isinstance(next_actions, list) and next_actions:
+                metadata["next_actions"] = next_actions
 
-                cards = result.get("cards")
-                if not isinstance(cards, list):
-                    cards = result_payload.get("cards", [])
-                if not isinstance(cards, list):
-                    cards = []
+            cards = result.get("cards")
+            if not isinstance(cards, list):
+                cards = result_payload.get("cards", [])
+            if not isinstance(cards, list):
+                cards = []
 
-                if not cards and isinstance(next_actions, list) and next_actions:
-                    cards = [
-                        {
-                            "type": "next_actions",
-                            "actions": next_actions,
-                            "next_actions": next_actions,
-                            "render_hint": "next_actions",
-                        }
-                    ]
+            if not cards and isinstance(next_actions, list) and next_actions:
+                cards = [
+                    {
+                        "type": "next_actions",
+                        "actions": next_actions,
+                        "next_actions": next_actions,
+                        "render_hint": "next_actions",
+                    }
+                ]
 
-                normalized = dict(result)
-                normalized["message"] = (
-                    result.get("message")
-                    or result.get("reply")
-                    or result_payload.get("message", "")
-                )
-                normalized["cards"] = cards
-                normalized["session_id"] = (
-                    result.get("session_id")
-                    or result_payload.get("session_id")
-                    or session_id
-                )
-                normalized["metadata"] = metadata
-                return normalized
-            raise ValueError("Kernel response must be a JSON object")
+            normalized = dict(result)
+            normalized["message"] = (
+                result.get("message")
+                or result.get("reply")
+                or result_payload.get("message", "")
+            )
+            normalized["cards"] = cards
+            normalized["session_id"] = (
+                result.get("session_id")
+                or result_payload.get("session_id")
+                or session_id
+            )
+            normalized["metadata"] = metadata
+            return normalized
+        raise ValueError("Kernel response must be a JSON object")
 
     async def chat_stream(
         self,
