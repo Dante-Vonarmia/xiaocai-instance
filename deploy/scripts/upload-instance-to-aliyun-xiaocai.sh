@@ -32,6 +32,7 @@ if [ "$LOCAL_RSYNC" = true ] && [ "$REMOTE_RSYNC" = true ]; then
     --exclude 'docs/archive/' \
     --exclude 'deploy/backups/' \
     --exclude 'deploy/*.log' \
+    --exclude 'deploy/.env' \
     "$ROOT_DIR/" "$REMOTE_HOST:$REMOTE_DIR/"
 else
   echo "[upload] rsync unavailable on local/remote, fallback to tar stream"
@@ -43,6 +44,7 @@ else
     --exclude='docs/archive' \
     --exclude='deploy/backups' \
     --exclude='deploy/*.log' \
+    --exclude='deploy/.env' \
     -C "$ROOT_DIR" -cf - . | ssh "$REMOTE_HOST" "tar -C '$REMOTE_DIR' -xf -"
 fi
 

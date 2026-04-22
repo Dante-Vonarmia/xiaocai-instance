@@ -17,6 +17,10 @@ from xiaocai_instance_api.contracts.chat_contract import (
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
+from xiaocai_instance_api.chat.fallback_bridge import (
+    build_chat_run_fallback_response,
+    build_chat_stream_fallback_done_event,
+)
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.settings import get_settings
@@ -41,6 +45,11 @@ def _extract_project_id(context: dict | None) -> str | None:
     if isinstance(project_id, str) and project_id.strip():
         return project_id.strip()
     return None
+
+
+def _should_use_local_fallback() -> bool:
+    """控制 kernel 不可用时是否允许回退到本地编排。"""
+    return bool(get_settings().enable_local_orchestration_fallback)
 
 
 async def _check_project_access(claims: AuthClaims, context: dict | None) -> None:
@@ -378,12 +387,29 @@ async def chat_run(
         kernel_context.setdefault("function_type", session.function_type)
         kernel_context.setdefault("intake_session_id", request.session_id)
         kernel_client = get_kernel_client()
-        result = await kernel_client.chat_run(
-            user_id=claims.user_id,
-            message=request.message,
-            session_id=request.session_id,
-            context=kernel_context,
-        )
+        try:
+            result = await kernel_client.chat_run(
+                user_id=claims.user_id,
+                message=request.message,
+                session_id=request.session_id,
+                context=kernel_context,
+            )
+        except Exception:
+            if not _should_use_local_fallback():
+                raise
+            response = build_chat_run_fallback_response(
+                message=request.message,
+                session_id=request.session_id,
+                mode=mode,
+                empty_message=EMPTY_ASSISTANT_MESSAGE,
+            )
+            await conversation_store.append_exchange(
+                user_id=claims.user_id,
+                session_id=request.session_id,
+                user_message=request.message,
+                assistant_message=response.message,
+            )
+            return response
         pending_contract = _build_pending_contract(
             result if isinstance(result, dict) else {},
             session_id=request.session_id,
@@ -494,37 +520,64 @@ async def chat_stream(
             done_message: str | None = None
             emitted_done_event = False
             latest_pending_contract: dict | None = None
-            async for event in kernel_client.chat_stream(
-                user_id=claims.user_id,
-                message=request.message,
-                session_id=request.session_id,
-                context=kernel_context,
-            ):
-                event_type = event.get("type", "message")
-                pending_contract = _build_pending_contract(
-                    event if isinstance(event, dict) else {},
+            try:
+                event_iter = kernel_client.chat_stream(
+                    user_id=claims.user_id,
+                    message=request.message,
+                    session_id=request.session_id,
+                    context=kernel_context,
+                )
+                async for event in event_iter:
+                    event_type = event.get("type", "message")
+                    pending_contract = _build_pending_contract(
+                        event if isinstance(event, dict) else {},
+                        session_id=request.session_id,
+                        mode=mode,
+                    )
+                    if pending_contract:
+                        latest_pending_contract = pending_contract
+                        event = {**event, **pending_contract}
+                    chunk = _extract_event_chunk(event)
+                    if chunk:
+                        final_message_chunks.append(chunk)
+                    if event_type in ("done", "complete"):
+                        emitted_done_event = True
+                        done_payload_message = _to_text(event.get("message"))
+                        if _is_non_empty_text(done_payload_message):
+                            done_message = done_payload_message
+                        elif not final_message_chunks:
+                            done_message = EMPTY_ASSISTANT_MESSAGE
+                            event = {**event, "message": done_message}
+                    yield f"event: {event_type}\n"
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
+                        yield "event: next_actions\n"
+                        yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
+            except Exception:
+                if not _should_use_local_fallback():
+                    raise
+                fallback_done_event = build_chat_stream_fallback_done_event(
+                    message=request.message,
                     session_id=request.session_id,
                     mode=mode,
+                    empty_message=EMPTY_ASSISTANT_MESSAGE,
                 )
-                if pending_contract:
-                    latest_pending_contract = pending_contract
-                    event = {**event, **pending_contract}
-                chunk = _extract_event_chunk(event)
-                if chunk:
-                    final_message_chunks.append(chunk)
-                if event_type in ("done", "complete"):
-                    emitted_done_event = True
-                    done_payload_message = _to_text(event.get("message"))
-                    if _is_non_empty_text(done_payload_message):
-                        done_message = done_payload_message
-                    elif not final_message_chunks:
-                        done_message = EMPTY_ASSISTANT_MESSAGE
-                        event = {**event, "message": done_message}
-                yield f"event: {event_type}\n"
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
+                latest_pending_contract = fallback_done_event.get("metadata", {}).get("pending_contract")
+                done_message = _to_text(fallback_done_event.get("message"))
+                emitted_done_event = True
+                if latest_pending_contract:
                     yield "event: next_actions\n"
-                    yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps(latest_pending_contract, ensure_ascii=False)}\n\n"
+                yield "event: done\n"
+                yield f"data: {json.dumps(fallback_done_event, ensure_ascii=False)}\n\n"
+                if done_message:
+                    await conversation_store.append_exchange(
+                        user_id=claims.user_id,
+                        session_id=request.session_id,
+                        user_message=request.message,
+                        assistant_message=done_message,
+                    )
+                return
 
             final_message = done_message or "".join(final_message_chunks)
             if _should_suppress_assistant_message(latest_pending_contract):
