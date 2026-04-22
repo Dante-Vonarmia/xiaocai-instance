@@ -164,6 +164,64 @@ async def list_chat_sessions(
     )
 
 
+@chat_compat_router.get("/sessions/{session_id}")
+async def get_chat_session(
+    session_id: str,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> dict:
+    return await get_session(session_id=session_id, claims=claims)
+
+
+@chat_compat_router.post("/sessions", response_model=SessionCreateResponse)
+async def create_chat_session(
+    request: SessionCreateRequest,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> SessionCreateResponse:
+    return await create_session(request=request, claims=claims)
+
+
+@chat_compat_router.patch("/sessions/{session_id}", response_model=SessionUpdateResponse)
+async def update_chat_session(
+    session_id: str,
+    request: SessionUpdateRequest,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> SessionUpdateResponse:
+    return await update_session(
+        session_id=session_id,
+        request=request,
+        claims=claims,
+    )
+
+
+@chat_compat_router.get("/sessions/{session_id}/messages", response_model=MessageListResponse)
+async def list_chat_messages(
+    session_id: str,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> MessageListResponse:
+    return await list_messages(session_id=session_id, claims=claims)
+
+
+@chat_compat_router.post("/sessions/{session_id}/messages/append", response_model=AppendExchangeResponse)
+async def append_chat_exchange(
+    session_id: str,
+    request: AppendExchangeRequest,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> AppendExchangeResponse:
+    return await append_exchange(
+        session_id=session_id,
+        request=request,
+        claims=claims,
+    )
+
+
+@chat_compat_router.delete("/sessions/{session_id}", response_model=SessionDeleteResponse)
+async def delete_chat_session(
+    session_id: str,
+    claims: AuthClaims = Depends(get_current_auth_claims),
+) -> SessionDeleteResponse:
+    return await delete_session(session_id=session_id, claims=claims)
+
+
 @router.get("/{session_id}")
 async def get_session(
     session_id: str,

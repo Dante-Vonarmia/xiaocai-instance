@@ -5,7 +5,7 @@
 """
 
 from typing import List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ChatMessage(BaseModel):
@@ -14,7 +14,38 @@ class ChatMessage(BaseModel):
     content: str = Field(..., description="消息内容")
 
 
-class ChatRunRequest(BaseModel):
+class _ChatRequestCompatMixin(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_flare_chat_core_payload(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+
+        normalized = dict(value)
+        payload = normalized.get("payload")
+        payload_dict = payload if isinstance(payload, dict) else {}
+
+        message = normalized.get("message")
+        if (not isinstance(message, str) or not message.strip()) and isinstance(payload_dict.get("message"), str):
+            normalized["message"] = payload_dict["message"]
+
+        context = normalized.get("context")
+        context_dict = dict(context) if isinstance(context, dict) else {}
+
+        for key in ("project_id", "user_id", "context_refs", "knowledge_refs", "intent", "tenant_id", "instance_id", "domain_pack_version"):
+            if key in normalized and key not in context_dict:
+                context_dict[key] = normalized[key]
+
+        if payload_dict:
+            for key in ("project_id", "user_id", "entities", "context_refs", "knowledge_refs"):
+                if key in payload_dict and key not in context_dict:
+                    context_dict[key] = payload_dict[key]
+
+        normalized["context"] = context_dict
+        return normalized
+
+
+class ChatRunRequest(_ChatRequestCompatMixin):
     """
     同步对话请求
 
@@ -33,7 +64,7 @@ class ChatRunResponse(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
 
 
-class ChatStreamRequest(BaseModel):
+class ChatStreamRequest(_ChatRequestCompatMixin):
     """
     流式对话请求
 

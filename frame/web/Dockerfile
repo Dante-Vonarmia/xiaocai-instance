@@ -13,6 +13,8 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ARG VITE_FLARE_CORE_ENTRY_URL
 ENV VITE_FLARE_CORE_ENTRY_URL=${VITE_FLARE_CORE_ENTRY_URL}
 
+RUN node ./scripts/patch-flare-chat-core.cjs
+
 RUN npm run build
 
 FROM nginx:1.27-alpine
