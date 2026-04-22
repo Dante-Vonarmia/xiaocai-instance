@@ -15,6 +15,7 @@ import { useRuntimeStream } from '@/pages/chat-page/hooks/useRuntimeStream'
 import { getCurrentUserId } from '@/services/api'
 import { createBackendRuntime } from '@/services/backendRuntime'
 import { instanceSourceApi } from '@/services/instanceApi'
+import { XIAOCAI_CHAT_ANTD_THEME, XIAOCAI_CHAT_THEME_TOKENS } from '@/theme/chatTheme'
 
 type ChatPageProps = {
   onLogout?: () => void
@@ -76,8 +77,9 @@ function ChatPage({ onLogout }: ChatPageProps) {
       onLogout={onLogout}
       onProfileClick={() => navigate?.(APP_ROUTES.settingsProfile)}
       workspace={(
-        <ConfigProvider theme={{ token: { borderRadius: 10 } }}>
+        <ConfigProvider theme={XIAOCAI_CHAT_ANTD_THEME}>
           <ChatWorkspace
+            themeTokens={XIAOCAI_CHAT_THEME_TOKENS}
             activeModeKey={interactionMode}
             composerPlaceholder="请输入采购需求"
             defaultTitle={DEFAULT_SESSION_TITLE}

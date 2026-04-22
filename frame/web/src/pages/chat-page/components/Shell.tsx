@@ -40,7 +40,7 @@ export function Shell({ onLogout, onProfileClick, workspace }: ShellProps) {
             height: '52px',
             border: 'none',
             borderRadius: '14px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
             color: '#ffffff',
             fontSize: '22px',
             lineHeight: 0,
@@ -54,7 +54,7 @@ export function Shell({ onLogout, onProfileClick, workspace }: ShellProps) {
         >
           <FileTextOutlined />
         </button>
-        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#667eea', marginTop: '-8px' }} />
+        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#8b5cf6', marginTop: '-8px' }} />
 
         <div style={{ marginTop: 'auto', width: '100%' }}>
           <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginBottom: '8px' }}>

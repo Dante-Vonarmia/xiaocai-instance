@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { App as FlareChatCoreApp } from '@flare/chat-core'
 import { APP_ROUTES } from '@/constants/routes'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
+import { XIAOCAI_CHAT_THEME_TOKENS } from '@/theme/chatTheme'
 
 type CoreEntryPageProps = {
   onLogout?: () => void
@@ -49,7 +50,7 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
             height: '52px',
             border: 'none',
             borderRadius: '14px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
             color: '#ffffff',
             fontSize: '22px',
             lineHeight: 0,
@@ -141,6 +142,7 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
           defaultSessionTitle={DEFAULT_SESSION_TITLE}
           functionType={FUNCTION_TYPE}
           projectId={DEFAULT_PROJECT_ID}
+          themeTokens={XIAOCAI_CHAT_THEME_TOKENS}
           userId={currentUserId}
         />
       </main>

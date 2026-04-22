@@ -80,7 +80,7 @@ function SettingsPage({ onLogout }: SettingsPageProps) {
             height: '52px',
             border: 'none',
             borderRadius: '14px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
             color: '#ffffff',
             fontSize: '22px',
             lineHeight: 0,

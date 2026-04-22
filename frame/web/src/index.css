@@ -43,7 +43,7 @@ body {
 }
 
 .auth-card__eyebrow {
-  color: #2563eb;
+  color: #8b5cf6;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -84,12 +84,12 @@ body {
 }
 
 .auth-form__input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
 }
 
 .auth-form__button {
-  background: #2563eb;
+  background: #8b5cf6;
   border: 0;
   border-radius: 10px;
   color: #ffffff;
@@ -99,7 +99,7 @@ body {
 }
 
 .auth-form__button:hover {
-  background: #1d4ed8;
+  background: #7c3aed;
 }
 
 .auth-form__button:disabled {
@@ -177,9 +177,9 @@ body {
 
 .settings-connector-icon {
   align-items: center;
-  background: #eef2ff;
+  background: #f3e8ff;
   border-radius: 8px;
-  color: #4f46e5;
+  color: #7c3aed;
   display: inline-flex;
   height: 28px;
   justify-content: center;
@@ -203,4 +203,273 @@ body {
   align-items: center;
   display: flex;
   justify-content: space-between;
+}
+
+
+.xiaocai-chat-page .flare-chat-workspace {
+  --flare-seg-track-bg: #f5f3ff;
+  --flare-seg-track-border: #ddd6fe;
+  --flare-seg-item-color: #7c6f9f;
+  --flare-seg-item-hover-color: #6d28d9;
+  --flare-seg-item-selected-color: #4c1d95;
+  --flare-seg-item-selected-bg: #ffffff;
+}
+
+.xiaocai-chat-page .flare-composer-quick-mode-toggle {
+  background: #f5f3ff;
+  border-color: #d8b4fe;
+  color: #6d28d9;
+}
+
+.xiaocai-chat-page .flare-composer-quick-mode-toggle:hover {
+  background: #ede9fe;
+  border-color: #c084fc;
+  color: #5b21b6;
+}
+
+.xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+  color: #4c1d95;
+}
+
+.xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active .flare-composer-quick-mode-state {
+  color: #7c3aed;
+}
+
+.xiaocai-chat-page .flare-composer-menu-item.is-checked:not(:disabled) {
+  color: #7c3aed;
+}
+
+.xiaocai-chat-page .flare-composer-menu-item-toggle.ant-switch.ant-switch-checked {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.xiaocai-chat-page .flare-composer-codex-chooser-item:hover,
+.xiaocai-chat-page .flare-composer-action-list-item:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+}
+
+.xiaocai-chat-page .flare-composer-codex-chooser-item.is-selected {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+  color: #4c1d95;
+}
+
+.xiaocai-chat-page .flare-composer-codex-chooser-submit {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.xiaocai-chat-page .flare-workspace-action-zone-button,
+.xiaocai-chat-page .flare-workspace-mode-hint-apply {
+  background: #f5f3ff;
+  border-color: #d8b4fe;
+  color: #6d28d9;
+}
+
+.xiaocai-chat-page .flare-workspace-action-zone-button:hover {
+  background: #ede9fe;
+  border-color: #c084fc;
+}
+
+.xiaocai-chat-page .flare-workspace-workbench-trigger.is-active.ant-btn {
+  background: rgba(139, 92, 246, 0.14);
+  color: #6d28d9;
+}
+
+.xiaocai-chat-page .flare-workspace-context-gauge {
+  background: conic-gradient(#8b5cf6 var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0);
+}
+
+.xiaocai-chat-page .flare-workspace-context-popover-chart {
+  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(139, 92, 246, 0.26);
+}
+
+.xiaocai-chat-page .flare-workspace-context-popover-chart-fill {
+  background: #8b5cf6;
+}
+
+
+.xiaocai-settings-page .flare-chat-workspace,
+.xiaocai-chat-page .flare-chat-workspace {
+  --flare-seg-track-bg: #f5f3ff;
+  --flare-seg-track-border: #ddd6fe;
+  --flare-seg-item-color: #7c6f9f;
+  --flare-seg-item-hover-color: #6d28d9;
+  --flare-seg-item-selected-color: #4c1d95;
+  --flare-seg-item-selected-bg: #ffffff;
+}
+
+.xiaocai-settings-page .flare-composer-quick-mode-toggle,
+.xiaocai-chat-page .flare-composer-quick-mode-toggle {
+  background: #f5f3ff;
+  border-color: #d8b4fe;
+  color: #6d28d9;
+}
+
+.xiaocai-settings-page .flare-composer-quick-mode-toggle:hover,
+.xiaocai-chat-page .flare-composer-quick-mode-toggle:hover {
+  background: #ede9fe;
+  border-color: #c084fc;
+  color: #5b21b6;
+}
+
+.xiaocai-settings-page .flare-composer-quick-mode-toggle.is-active,
+.xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+  color: #4c1d95;
+}
+
+.xiaocai-settings-page .flare-composer-quick-mode-toggle.is-active .flare-composer-quick-mode-state,
+.xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active .flare-composer-quick-mode-state {
+  color: #7c3aed;
+}
+
+.xiaocai-settings-page .flare-composer-menu-item.is-checked:not(:disabled),
+.xiaocai-chat-page .flare-composer-menu-item.is-checked:not(:disabled) {
+  color: #7c3aed;
+}
+
+.xiaocai-settings-page .flare-composer-menu-item-toggle.ant-switch.ant-switch-checked,
+.xiaocai-chat-page .flare-composer-menu-item-toggle.ant-switch.ant-switch-checked {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.xiaocai-settings-page .flare-composer-codex-chooser-item:hover,
+.xiaocai-settings-page .flare-composer-action-list-item:hover,
+.xiaocai-chat-page .flare-composer-codex-chooser-item:hover,
+.xiaocai-chat-page .flare-composer-action-list-item:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+}
+
+.xiaocai-settings-page .flare-composer-codex-chooser-item.is-selected,
+.xiaocai-chat-page .flare-composer-codex-chooser-item.is-selected {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+  color: #4c1d95;
+}
+
+.xiaocai-settings-page .flare-composer-codex-chooser-submit,
+.xiaocai-chat-page .flare-composer-codex-chooser-submit {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.xiaocai-settings-page .flare-workspace-action-zone-button,
+.xiaocai-settings-page .flare-workspace-mode-hint-apply,
+.xiaocai-chat-page .flare-workspace-action-zone-button,
+.xiaocai-chat-page .flare-workspace-mode-hint-apply {
+  background: #f5f3ff;
+  border-color: #d8b4fe;
+  color: #6d28d9;
+}
+
+.xiaocai-settings-page .flare-workspace-action-zone-button:hover,
+.xiaocai-chat-page .flare-workspace-action-zone-button:hover {
+  background: #ede9fe;
+  border-color: #c084fc;
+}
+
+.xiaocai-settings-page .flare-workspace-workbench-trigger.is-active.ant-btn,
+.xiaocai-chat-page .flare-workspace-workbench-trigger.is-active.ant-btn {
+  background: rgba(139, 92, 246, 0.14);
+  color: #6d28d9;
+}
+
+.xiaocai-settings-page .flare-workspace-context-gauge,
+.xiaocai-chat-page .flare-workspace-context-gauge {
+  background: conic-gradient(#8b5cf6 var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0);
+}
+
+.xiaocai-settings-page .flare-workspace-context-popover-chart,
+.xiaocai-chat-page .flare-workspace-context-popover-chart {
+  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(139, 92, 246, 0.26);
+}
+
+.xiaocai-settings-page .flare-workspace-context-popover-chart-fill,
+.xiaocai-chat-page .flare-workspace-context-popover-chart-fill {
+  background: #8b5cf6;
+}
+
+/* Purple interaction refinements: button text / hover / focus */
+.xiaocai-settings-page .flare-chat-workspace .ant-btn-primary,
+.xiaocai-chat-page .flare-chat-workspace .ant-btn-primary {
+  background: #8b5cf6 !important;
+  border-color: #8b5cf6 !important;
+  color: #ffffff !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .ant-btn-primary:hover,
+.xiaocai-chat-page .flare-chat-workspace .ant-btn-primary:hover {
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .ant-btn-primary:focus-visible,
+.xiaocai-settings-page .flare-chat-workspace .ant-btn-primary:focus,
+.xiaocai-chat-page .flare-chat-workspace .ant-btn-primary:focus-visible,
+.xiaocai-chat-page .flare-chat-workspace .ant-btn-primary:focus {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.20) !important;
+  outline: none !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-send-button,
+.xiaocai-chat-page .flare-chat-workspace .flare-send-button {
+  color: #ffffff !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-send-button:hover,
+.xiaocai-chat-page .flare-chat-workspace .flare-send-button:hover {
+  color: #ffffff !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-send-button-shortcut,
+.xiaocai-chat-page .flare-chat-workspace .flare-send-button-shortcut {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-attach-button.ant-btn,
+.xiaocai-settings-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn,
+.xiaocai-settings-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn,
+.xiaocai-chat-page .flare-chat-workspace .flare-attach-button.ant-btn,
+.xiaocai-chat-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn,
+.xiaocai-chat-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn {
+  color: #7c3aed !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-attach-button.ant-btn:hover,
+.xiaocai-settings-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn:hover,
+.xiaocai-settings-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn:hover,
+.xiaocai-chat-page .flare-chat-workspace .flare-attach-button.ant-btn:hover,
+.xiaocai-chat-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn:hover,
+.xiaocai-chat-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn:hover {
+  background: #f3e8ff !important;
+  color: #6d28d9 !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-attach-button.ant-btn:focus-visible,
+.xiaocai-settings-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn:focus-visible,
+.xiaocai-settings-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn:focus-visible,
+.xiaocai-chat-page .flare-chat-workspace .flare-attach-button.ant-btn:focus-visible,
+.xiaocai-chat-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn:focus-visible,
+.xiaocai-chat-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
+  outline: none !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-composer-box:focus-within,
+.xiaocai-settings-page .flare-chat-workspace .flare-composer-box.is-drag-over,
+.xiaocai-chat-page .flare-chat-workspace .flare-composer-box:focus-within,
+.xiaocai-chat-page .flare-chat-workspace .flare-composer-box.is-drag-over {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
 }
