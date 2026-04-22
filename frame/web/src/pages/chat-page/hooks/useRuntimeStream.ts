@@ -107,6 +107,16 @@ function toPendingPatchPayload(payload: unknown) {
   const gate = source.gate && typeof source.gate === 'object' && !Array.isArray(source.gate)
     ? source.gate as Record<string, unknown>
     : null
+  const commandType = toText(source.command_type).toLowerCase()
+  const gateStatus = toText(gate?.status).toLowerCase()
+  const hasPendingSignal = Boolean(question || chooser || interactionNode)
+    || commandType === 'continue_collection'
+    || gateStatus === 'blocked'
+    || gateStatus === 'collecting'
+    || gateStatus === 'pending'
+  if (!hasPendingSignal) {
+    return null
+  }
 
   const fieldKey = toText(question?.field_key ?? chooser?.field_key ?? interactionNode?.field_key ?? interactionNode?.id ?? 'pending')
   const optionSource = Array.isArray(question?.options)
@@ -147,37 +157,6 @@ function toPendingPatchPayload(payload: unknown) {
       ? source.blocking
       : gate,
   } as Record<string, unknown>
-}
-
-function isPendingCollectionPayload(payload: unknown) {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return false
-  }
-  const source = payload as Record<string, unknown>
-  const gate = source.gate && typeof source.gate === 'object' && !Array.isArray(source.gate)
-    ? source.gate as Record<string, unknown>
-    : null
-  const gateStatus = toText(gate?.status).toLowerCase()
-  const commandType = toText(source.command_type).toLowerCase()
-  return Boolean(source.interaction_node || source.chooser || source.question || source.current_question)
-    || commandType === 'continue_collection'
-    || gateStatus === 'blocked'
-    || gateStatus === 'collecting'
-    || gateStatus === 'pending'
-}
-
-function extractPendingQuestionText(payload: unknown) {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return ''
-  }
-  const source = payload as Record<string, unknown>
-  const question = source.question && typeof source.question === 'object' && !Array.isArray(source.question)
-    ? source.question as Record<string, unknown>
-    : null
-  const currentQuestion = source.current_question && typeof source.current_question === 'object' && !Array.isArray(source.current_question)
-    ? source.current_question as Record<string, unknown>
-    : null
-  return toText(question?.question_text ?? question?.text ?? currentQuestion?.question_text)
 }
 
 export function useRuntimeStream(runtime: BackendRuntime, projectId: string, interactionMode: InteractionMode) {
@@ -226,11 +205,8 @@ export function useRuntimeStream(runtime: BackendRuntime, projectId: string, int
     handlers.onAgentStatus?.({ agent: 'xiaocai-api', status: 'running', label: '请求中' })
 
     let streamedContent = ''
-    let hasStreamedText = false
 
     try {
-      let hasPendingContract = false
-      let pendingQuestionText = ''
       const response = await chatApi.stream(
         {
           message: trimmedContent,
@@ -270,10 +246,6 @@ export function useRuntimeStream(runtime: BackendRuntime, projectId: string, int
             }
             if (eventType === 'next_actions') {
               const bridgedPayload = toPendingPatchPayload(payload) || payload
-              if (isPendingCollectionPayload(bridgedPayload)) {
-                hasPendingContract = true
-                pendingQuestionText = extractPendingQuestionText(bridgedPayload) || pendingQuestionText
-              }
               handlers.onNextActions?.(bridgedPayload)
               return
             }
@@ -281,10 +253,6 @@ export function useRuntimeStream(runtime: BackendRuntime, projectId: string, int
               const bridgedPayload = toPendingPatchPayload(payload)
               if (!bridgedPayload) {
                 return
-              }
-              if (isPendingCollectionPayload(bridgedPayload)) {
-                hasPendingContract = true
-                pendingQuestionText = extractPendingQuestionText(bridgedPayload) || pendingQuestionText
               }
               handlers.onNextActions?.(bridgedPayload)
               return
@@ -315,9 +283,6 @@ export function useRuntimeStream(runtime: BackendRuntime, projectId: string, int
           },
           onChunk: (chunk) => {
             streamedContent += chunk
-            if (chunk) {
-              hasStreamedText = true
-            }
             handlers.onContent?.(chunk)
           },
           onCard: (card) => {
@@ -340,12 +305,8 @@ export function useRuntimeStream(runtime: BackendRuntime, projectId: string, int
       }
 
       handlers.onAgentStatus?.({ agent: 'xiaocai-api', status: 'completed', label: '完成' })
-      if (hasPendingContract) {
-        handlers.onComplete?.(pendingQuestionText || '')
-        return
-      }
       const finalContent = toText(response.message) || streamedContent
-      handlers.onComplete?.(hasStreamedText ? '' : finalContent)
+      handlers.onComplete?.(finalContent)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return

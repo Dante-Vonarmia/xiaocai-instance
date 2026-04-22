@@ -11,7 +11,7 @@ import {
   type ProjectSlot,
   type StarterPrompt,
 } from '@/pages/chat-page/config/constants'
-import { isObject, toCanvasUiLabels, toStarterPrompts, toText } from '@/pages/chat-page/config/normalizers'
+import { toCanvasUiLabels } from '@/pages/chat-page/config/normalizers'
 
 type BrandingState = {
   functionType: string
@@ -41,40 +41,24 @@ const DEFAULT_BRANDING_STATE: BrandingState = {
   starterPrompts: DEFAULT_STARTER_PROMPTS,
 }
 
-function normalizeInteractionMode(value: unknown): InteractionMode {
-  const mode = toText(value)
-  if (mode === 'auto' || mode === 'requirement_canvas' || mode === 'intelligent_sourcing') {
-    return mode
-  }
-  return DEFAULT_INTERACTION_MODE
-}
-
-function normalizeProjectSlot(value: unknown): ProjectSlot {
-  if (!isObject(value)) {
-    return DEFAULT_PROJECT_SLOT
-  }
-  const projectId = toText(value.project_id) || DEFAULT_PROJECT_SLOT.project_id
-  return {
-    key: toText(value.key) || projectId,
-    project_id: projectId,
-    subtitle: toText(value.subtitle) || DEFAULT_PROJECT_SLOT.subtitle,
-    name: toText(value.name) || DEFAULT_PROJECT_SLOT.name,
-  }
-}
-
 function normalizeBrandingState(payload: BrandingPayload | null | undefined): BrandingState {
   const chatConfig = payload?.ui?.chat
   if (!chatConfig) {
     return DEFAULT_BRANDING_STATE
   }
 
-  const starterPrompts = toStarterPrompts(chatConfig.starterPrompts)
+  const normalizedUiLabels = toCanvasUiLabels(chatConfig.uiLabels)
   return {
-    functionType: toText(chatConfig.functionType) || DEFAULT_FUNCTION_TYPE,
-    interactionMode: normalizeInteractionMode(chatConfig.defaultInteractionMode),
-    projectSlot: normalizeProjectSlot(chatConfig.projectSlot),
-    uiLabels: toCanvasUiLabels(chatConfig.uiLabels),
-    starterPrompts: starterPrompts.length > 0 ? starterPrompts : DEFAULT_STARTER_PROMPTS,
+    functionType: DEFAULT_FUNCTION_TYPE,
+    interactionMode: DEFAULT_INTERACTION_MODE,
+    projectSlot: DEFAULT_PROJECT_SLOT,
+    uiLabels: {
+      ...DEFAULT_CANVAS_UI_LABELS,
+      product_name: normalizedUiLabels.product_name,
+      brand_tag: normalizedUiLabels.brand_tag,
+      project_title: normalizedUiLabels.project_title,
+    },
+    starterPrompts: DEFAULT_STARTER_PROMPTS,
   }
 }
 

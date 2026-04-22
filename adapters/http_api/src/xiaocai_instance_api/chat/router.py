@@ -19,7 +19,6 @@ from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
-from xiaocai_instance_api.chat.local_orchestration import build_local_orchestration_response
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 import json
@@ -28,6 +27,7 @@ import json
 router = APIRouter(prefix="/chat", tags=["chat"])
 INTAKE_MODE_PREFIX = "requirement_intake"
 INTAKE_MODE_ALIAS = "requirement_canvas"
+EMPTY_ASSISTANT_MESSAGE = "当前未生成可展示回复，请重试。"
 
 
 def _is_non_empty_text(value: object) -> bool:
@@ -78,7 +78,7 @@ async def _ensure_session_exists(claims: AuthClaims, request: ChatRunRequest | C
     mode = _extract_mode(context)
     return await store.create_session(
         user_id=claims.user_id,
-        function_type="requirement_canvas",
+        function_type="auto",
         title="新会话",
         project_id=project_id,
         mode=mode,
@@ -281,47 +281,6 @@ def _ensure_response_cards(
     return cards
 
 
-def _is_result_minimal(result: dict | None) -> bool:
-    if not isinstance(result, dict):
-        return True
-    message = _to_text(result.get("message")) or _to_text(result.get("reply"))
-    cards = result.get("cards")
-    has_cards = isinstance(cards, list) and len(cards) > 0
-    pending_contract = _build_pending_contract(
-        result,
-        session_id=_to_text(result.get("session_id")) or "unknown",
-        mode=_to_text((_as_object(result.get("metadata")) or {}).get("mode")),
-    )
-    return not message and not has_cards and pending_contract is None
-
-
-async def _build_local_fallback_result(
-    *,
-    request_message: str,
-    request_session_id: str,
-    mode: str | None,
-    claims: AuthClaims,
-) -> dict:
-    conversation_store = get_conversation_store()
-    history = await conversation_store.list_messages(user_id=claims.user_id, session_id=request_session_id)
-    history_user_messages = [record.content for record in history if record.role == "user"]
-    local_result = build_local_orchestration_response(
-        user_message=request_message,
-        mode=mode,
-        history_user_messages=history_user_messages,
-    )
-    metadata: dict = dict(local_result.metadata)
-    metadata["fallback"] = "local_orchestration"
-    if local_result.pending_contract:
-        metadata["pending_contract"] = local_result.pending_contract
-    return {
-        "message": local_result.message,
-        "cards": local_result.cards,
-        "session_id": request_session_id,
-        "metadata": metadata,
-    }
-
-
 async def _check_mode_allowed(mode: str | None) -> None:
     if not mode:
         return
@@ -419,42 +378,28 @@ async def chat_run(
         kernel_context.setdefault("function_type", session.function_type)
         kernel_context.setdefault("intake_session_id", request.session_id)
         kernel_client = get_kernel_client()
-        settings = get_settings()
-        try:
-            result = await kernel_client.chat_run(
-                user_id=claims.user_id,
-                message=request.message,
-                session_id=request.session_id,
-                context=kernel_context,
-            )
-        except Exception:
-            if not settings.enable_local_orchestration_fallback:
-                raise
-            result = await _build_local_fallback_result(
-                request_message=request.message,
-                request_session_id=request.session_id,
-                mode=mode,
-                claims=claims,
-            )
-        if settings.enable_local_orchestration_fallback and _is_result_minimal(result):
-            result = await _build_local_fallback_result(
-                request_message=request.message,
-                request_session_id=request.session_id,
-                mode=mode,
-                claims=claims,
-            )
+        result = await kernel_client.chat_run(
+            user_id=claims.user_id,
+            message=request.message,
+            session_id=request.session_id,
+            context=kernel_context,
+        )
         pending_contract = _build_pending_contract(
             result if isinstance(result, dict) else {},
             session_id=request.session_id,
             mode=mode,
         )
         message = result.get("message") or result.get("reply", "")
+        if not _is_non_empty_text(message):
+            message = EMPTY_ASSISTANT_MESSAGE
         if _should_suppress_assistant_message(pending_contract):
             pending_question = _as_object((pending_contract or {}).get("question"))
             current_question = _as_object((pending_contract or {}).get("current_question"))
             message = _to_text((pending_question or {}).get("question_text"))
             if not message:
                 message = _to_text((current_question or {}).get("question_text"))
+        if not _is_non_empty_text(message):
+            message = EMPTY_ASSISTANT_MESSAGE
 
         response = ChatRunResponse(
             message=message,
@@ -547,57 +492,39 @@ async def chat_stream(
             kernel_client = get_kernel_client()
             final_message_chunks: list[str] = []
             done_message: str | None = None
+            emitted_done_event = False
             latest_pending_contract: dict | None = None
-            settings = get_settings()
-            try:
-                async for event in kernel_client.chat_stream(
-                    user_id=claims.user_id,
-                    message=request.message,
+            async for event in kernel_client.chat_stream(
+                user_id=claims.user_id,
+                message=request.message,
+                session_id=request.session_id,
+                context=kernel_context,
+            ):
+                event_type = event.get("type", "message")
+                pending_contract = _build_pending_contract(
+                    event if isinstance(event, dict) else {},
                     session_id=request.session_id,
-                    context=kernel_context,
-                ):
-                    event_type = event.get("type", "message")
-                    pending_contract = _build_pending_contract(
-                        event if isinstance(event, dict) else {},
-                        session_id=request.session_id,
-                        mode=mode,
-                    )
-                    if pending_contract:
-                        latest_pending_contract = pending_contract
-                        event = {**event, **pending_contract}
-                    chunk = _extract_event_chunk(event)
-                    if chunk:
-                        final_message_chunks.append(chunk)
-                    if event_type in ("done", "complete") and isinstance(event.get("message"), str):
-                        done_message = event.get("message")
-                    yield f"event: {event_type}\n"
-                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                    if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
-                        yield "event: next_actions\n"
-                        yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
-            except Exception:
-                if not settings.enable_local_orchestration_fallback:
-                    raise
-                local_result = await _build_local_fallback_result(
-                    request_message=request.message,
-                    request_session_id=request.session_id,
                     mode=mode,
-                    claims=claims,
                 )
-                latest_pending_contract = _as_object(_as_object(local_result.get("metadata") or {}).get("pending_contract"))
-                fallback_message = _to_text(local_result.get("message"))
-                fallback_cards = local_result.get("cards") if isinstance(local_result.get("cards"), list) else []
-                yield "event: content\n"
-                yield f"data: {json.dumps({'type': 'content', 'content': fallback_message}, ensure_ascii=False)}\n\n"
-                if fallback_cards:
-                    yield "event: ui_cards\n"
-                    yield f"data: {json.dumps({'type': 'ui_cards', 'cards': fallback_cards}, ensure_ascii=False)}\n\n"
-                if latest_pending_contract:
+                if pending_contract:
+                    latest_pending_contract = pending_contract
+                    event = {**event, **pending_contract}
+                chunk = _extract_event_chunk(event)
+                if chunk:
+                    final_message_chunks.append(chunk)
+                if event_type in ("done", "complete"):
+                    emitted_done_event = True
+                    done_payload_message = _to_text(event.get("message"))
+                    if _is_non_empty_text(done_payload_message):
+                        done_message = done_payload_message
+                    elif not final_message_chunks:
+                        done_message = EMPTY_ASSISTANT_MESSAGE
+                        event = {**event, "message": done_message}
+                yield f"event: {event_type}\n"
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
                     yield "event: next_actions\n"
-                    yield f"data: {json.dumps(latest_pending_contract, ensure_ascii=False)}\n\n"
-                yield "event: done\n"
-                yield f"data: {json.dumps({'type': 'done', 'message': fallback_message}, ensure_ascii=False)}\n\n"
-                done_message = fallback_message
+                    yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
 
             final_message = done_message or "".join(final_message_chunks)
             if _should_suppress_assistant_message(latest_pending_contract):
@@ -606,6 +533,16 @@ async def chat_stream(
                 final_message = _to_text((pending_question or {}).get("question_text"))
                 if not final_message:
                     final_message = _to_text((current_question or {}).get("question_text"))
+            if not _is_non_empty_text(final_message):
+                final_message = EMPTY_ASSISTANT_MESSAGE
+            if not emitted_done_event:
+                synthetic_done_event = {
+                    "type": "done",
+                    "message": final_message,
+                    "session_id": request.session_id,
+                }
+                yield "event: done\n"
+                yield f"data: {json.dumps(synthetic_done_event, ensure_ascii=False)}\n\n"
             if final_message:
                 await conversation_store.append_exchange(
                     user_id=claims.user_id,

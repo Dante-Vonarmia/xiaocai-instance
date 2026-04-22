@@ -19,6 +19,7 @@ export type BackendRuntime = {
     ) => Promise<{
       sessionId: string
       title: string
+      status: 'active' | 'archived'
     }>
   }
   messageAPI: {

@@ -31,7 +31,7 @@ class SessionListResponse(BaseModel):
 
 
 class SessionCreateRequest(BaseModel):
-    function_type: str = Field(default="requirement_canvas")
+    function_type: str = Field(default="auto")
     title: str = Field(default="新会话")
     project_id: str | None = Field(default=None)
     mode: str | None = Field(default=None)
@@ -46,12 +46,14 @@ class SessionCreateResponse(BaseModel):
 
 
 class SessionUpdateRequest(BaseModel):
-    title: str
+    title: str | None = None
+    status: str | None = None
 
 
 class SessionUpdateResponse(BaseModel):
     sessionId: str
     title: str
+    status: str
 
 
 class MessageListResponse(BaseModel):
@@ -279,13 +281,19 @@ async def update_session(
     request: SessionUpdateRequest,
     claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> SessionUpdateResponse:
+    if request.title is None and request.status is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No update fields provided")
+    if request.status is not None and request.status not in {"active", "archived"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status value")
+
     authz = get_authorization_service()
     await authz.require_conversation_write(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
-    session = await store.update_session_title(
+    session = await store.update_session_fields(
         user_id=claims.user_id,
         session_id=session_id,
         title=request.title,
+        status=request.status,
     )
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -293,6 +301,7 @@ async def update_session(
     return SessionUpdateResponse(
         sessionId=session.session_id,
         title=session.title,
+        status=session.status,
     )
 
 

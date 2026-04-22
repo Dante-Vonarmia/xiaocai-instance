@@ -496,6 +496,62 @@ class ConversationStore:
             )
             return self._row_to_session(row) if row else None
 
+    async def update_session_fields(
+        self,
+        user_id: str,
+        session_id: str,
+        *,
+        title: str | None = None,
+        status: str | None = None,
+    ) -> SessionRecord | None:
+        async with self._lock:
+            row = self._runtime.fetchone(
+                f"""
+                SELECT s.* FROM sessions s
+                WHERE s.session_id = ?
+                  AND {_session_write_clause("s")}
+                LIMIT 1
+                """,
+                (session_id, user_id, user_id),
+            )
+            if row is None:
+                return None
+
+            updates: list[str] = []
+            params: list[str] = []
+            if title is not None:
+                updates.append("title = ?")
+                params.append(title)
+            if status is not None:
+                updates.append("status = ?")
+                params.append(status)
+            if not updates:
+                return self._row_to_session(row)
+
+            updated_at = _now_iso()
+            updates.append("updated_at = ?")
+            params.append(updated_at)
+            params.append(session_id)
+
+            self._runtime.execute(
+                f"""
+                UPDATE sessions
+                SET {", ".join(updates)}
+                WHERE session_id = ?
+                """,
+                tuple(params),
+            )
+            self._runtime.commit()
+            updated = self._runtime.fetchone(
+                """
+                SELECT * FROM sessions
+                WHERE session_id = ?
+                LIMIT 1
+                """,
+                (session_id,),
+            )
+            return self._row_to_session(updated) if updated else None
+
     async def update_session_mode(
         self,
         user_id: str,

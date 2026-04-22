@@ -165,3 +165,36 @@ def test_session_mode_persistence(client):
     )
     assert get_response.status_code == 200
     assert get_response.json()["mode"] == "requirement_canvas"
+
+
+def test_session_patch_supports_status_archive(client):
+    token = _auth_token(client, user_id="archive-user")
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "proj-archive-1"},
+    )
+    assert bind_response.status_code == 200
+
+    create_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "proj-archive-1", "title": "待归档会话"},
+    )
+    assert create_response.status_code == 200
+    session_id = create_response.json()["sessionId"]
+
+    patch_response = client.patch(
+        f"/chat/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "archived"},
+    )
+    assert patch_response.status_code == 200
+    assert patch_response.json()["status"] == "archived"
+
+    get_response = client.get(
+        f"/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_response.status_code == 200
+    assert get_response.json()["status"] == "archived"

@@ -65,6 +65,29 @@ def test_chat_run_success(client, auth_token):
         assert len(data["cards"]) > 0
 
 
+def test_chat_run_uses_neutral_message_when_kernel_reply_is_empty(client, auth_token):
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "",
+            "cards": [],
+            "session_id": "test-session",
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "测试空回复",
+                "session_id": "test-session",
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "当前未生成可展示回复，请重试。"
+
+
 def test_chat_run_without_auth(client):
     """测试未认证的对话请求"""
     response = client.post(
@@ -102,6 +125,48 @@ def test_chat_stream_success(client, auth_token):
         assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
         assert "event: token" in response.text
         assert "data: {\"type\": \"token\"" in response.text
+
+
+def test_chat_stream_uses_neutral_message_when_done_event_has_no_content(client, auth_token):
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def empty_generator():
+            yield {"type": "done"}
+
+        mock_stream.return_value = empty_generator()
+
+        response = client.post(
+            "/chat/stream",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "测试流式空回复",
+                "session_id": "test-stream-empty-session",
+            }
+        )
+
+        assert response.status_code == 200
+        assert "当前未生成可展示回复，请重试。" in response.text
+
+
+def test_chat_stream_emits_synthetic_done_when_kernel_stream_closes_without_done(client, auth_token):
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def empty_generator():
+            if False:
+                yield {"type": "token", "content": "unused"}
+
+        mock_stream.return_value = empty_generator()
+
+        response = client.post(
+            "/chat/stream",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "测试流式空结束",
+                "session_id": "test-stream-synthetic-done-session",
+            }
+        )
+
+        assert response.status_code == 200
+        assert "event: done" in response.text
+        assert "当前未生成可展示回复，请重试。" in response.text
 
 
 def test_chat_with_context(client, auth_token):
@@ -212,7 +277,7 @@ def test_chat_run_injects_requirement_canvas_function_type(client, auth_token):
         mock_chat.assert_called_once()
         call_args = mock_chat.call_args[1]
         assert call_args["context"]["project_id"] == "proj-func-1"
-        assert call_args["context"]["function_type"] == "requirement_canvas"
+        assert call_args["context"]["function_type"] == "auto"
 
 
 def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token):
@@ -252,12 +317,19 @@ def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token
         mock_stream.assert_called_once()
         call_args = mock_stream.call_args[1]
         assert call_args["context"]["project_id"] == "proj-func-2"
-        assert call_args["context"]["function_type"] == "requirement_canvas"
+        assert call_args["context"]["function_type"] == "auto"
         assert "event: token" in response.text
 
 
-def test_kernel_error_handling(client, auth_token):
-    """测试 kernel 错误处理（本地编排兜底）"""
+def test_kernel_error_handling(monkeypatch):
+    """测试 kernel 错误处理（不走本地编排兜底）"""
+    monkeypatch.setenv("ENABLE_LOCAL_ORCHESTRATION_FALLBACK", "true")
+    get_settings.cache_clear()
+    app = create_app()
+    client = TestClient(app)
+    auth_response = client.post("/auth/exchange", json={"mock": True, "mock_user_id": "test-user"})
+    auth_token = auth_response.json()["access_token"]
+
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.side_effect = Exception("Kernel service unavailable")
 
@@ -270,16 +342,19 @@ def test_kernel_error_handling(client, auth_token):
             }
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 500
         data = response.json()
-        assert data["message"]
-        assert data["metadata"]["fallback"] == "local_orchestration"
-        pending_contract = data["metadata"].get("pending_contract", {})
-        assert isinstance(pending_contract.get("missing_fields"), list)
-        assert len(pending_contract.get("missing_fields", [])) > 0
+        assert "Chat failed" in data["detail"]
 
 
-def test_chat_run_local_fallback_produces_rfx_output_when_kernel_fails(client, auth_token):
+def test_chat_run_returns_error_when_kernel_fails_even_if_fallback_enabled(monkeypatch):
+    monkeypatch.setenv("ENABLE_LOCAL_ORCHESTRATION_FALLBACK", "true")
+    get_settings.cache_clear()
+    app = create_app()
+    client = TestClient(app)
+    auth_response = client.post("/auth/exchange", json={"mock": True, "mock_user_id": "test-user"})
+    auth_token = auth_response.json()["access_token"]
+
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.side_effect = Exception("Kernel timeout")
 
@@ -293,10 +368,9 @@ def test_chat_run_local_fallback_produces_rfx_output_when_kernel_fails(client, a
             },
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 500
         data = response.json()
-        assert "RFX策略" in data["message"]
-        assert data["metadata"]["fallback"] == "local_orchestration"
+        assert "Chat failed" in data["detail"]
 
 
 def test_chat_mode_not_allowed(monkeypatch):
@@ -517,7 +591,7 @@ def test_chat_run_auto_creates_session_with_default_function_type(client, auth_t
     )
     assert session_response.status_code == 200
     session_data = session_response.json()
-    assert session_data["function_type"] == "requirement_canvas"
+    assert session_data["function_type"] == "auto"
     assert session_data["project_id"] == "proj-auto-create"
 
 
@@ -774,7 +848,14 @@ def test_chat_stream_appends_exchange_to_session_messages(client, auth_token):
     assert messages[1]["content"] == "hello stream"
 
 
-def test_chat_stream_falls_back_to_local_orchestration_when_kernel_fails(client, auth_token):
+def test_chat_stream_returns_error_event_when_kernel_fails_even_if_fallback_enabled(monkeypatch):
+    monkeypatch.setenv("ENABLE_LOCAL_ORCHESTRATION_FALLBACK", "true")
+    get_settings.cache_clear()
+    app = create_app()
+    client = TestClient(app)
+    auth_response = client.post("/auth/exchange", json={"mock": True, "mock_user_id": "test-user"})
+    auth_token = auth_response.json()["access_token"]
+
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -800,6 +881,5 @@ def test_chat_stream_falls_back_to_local_orchestration_when_kernel_fails(client,
         )
 
         assert response.status_code == 200
-        assert "event: content" in response.text
-        assert "event: done" in response.text
-        assert "已进入需求梳理" in response.text
+        assert "event: error" in response.text
+        assert "kernel stream unavailable" in response.text

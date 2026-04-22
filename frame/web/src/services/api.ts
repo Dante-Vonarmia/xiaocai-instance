@@ -55,6 +55,7 @@ export type SessionListPayload = {
 
 export type SessionUpdatePayload = {
   title?: string
+  status?: 'active' | 'archived'
 }
 
 export type SessionListItem = {
@@ -716,7 +717,7 @@ export const sessionApi = {
   },
   update: async (sessionId: string, payload: SessionUpdatePayload = {}) => {
     const response = await apiClient.patch(`/sessions/${sessionId}`, payload)
-    return response.data as { sessionId: string; title: string }
+    return response.data as { sessionId: string; title: string; status: 'active' | 'archived' }
   },
   delete: async (sessionId: string) => {
     const response = await apiClient.delete(`/sessions/${sessionId}`)
