@@ -473,3 +473,28 @@ body {
   border-color: #8b5cf6 !important;
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
 }
+
+/* User message bubble override (chat-core currently locks default theme tokens) */
+.xiaocai-settings-page .flare-chat-workspace .flare-message-row.is-user .flare-message-bubble.ant-card,
+.xiaocai-chat-page .flare-chat-workspace .flare-message-row.is-user .flare-message-bubble.ant-card {
+  background: #8b5cf6 !important;
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 8px 22px rgba(139, 92, 246, 0.30) !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button,
+.xiaocai-chat-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button {
+  color: rgba(255, 255, 255, 0.96) !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button:hover,
+.xiaocai-chat-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+.xiaocai-settings-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button:focus-visible,
+.xiaocai-chat-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(221, 214, 254, 0.65) !important;
+  outline: none !important;
+}
