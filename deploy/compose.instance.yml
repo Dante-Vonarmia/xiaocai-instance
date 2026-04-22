@@ -105,7 +105,7 @@ services:
       - inst-xiaocai-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "python", "-c", "import sys, urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3); sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,8 +113,8 @@ services:
 
   inst-xiaocai-web:
     build:
-      context: ../..
-      dockerfile: procurement-agents/frame/web/Dockerfile
+      context: ..
+      dockerfile: frame/web/Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_FLARE_CORE_ENTRY_URL: ${VITE_FLARE_CORE_ENTRY_URL}

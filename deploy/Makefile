@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-COMPOSE ?= docker-compose
+COMPOSE ?= docker compose
 ENV_FILE ?= .env
 INSTANCE_PROJECT ?= inst-xiaocai-dev
 INSTANCE_COMPOSE_FILE ?= compose.instance.yml

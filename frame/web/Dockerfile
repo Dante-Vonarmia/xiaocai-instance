@@ -1,12 +1,12 @@
 FROM node:20-alpine AS build
 
-WORKDIR /workspace/procurement-agents/frame/web
+WORKDIR /workspace/frame/web
 
 # 复制 package 清单并安装依赖
-COPY procurement-agents/frame/web/package*.json ./
+COPY frame/web/package*.json ./
 RUN npm ci --no-audit --no-fund
 
-COPY procurement-agents/frame/web ./
+COPY frame/web ./
 
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
@@ -19,7 +19,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-COPY --from=build /workspace/procurement-agents/frame/web/dist /usr/share/nginx/html
+COPY --from=build /workspace/frame/web/dist /usr/share/nginx/html
 
 RUN cat > /etc/nginx/conf.d/default.conf <<'EOF'
 server {
