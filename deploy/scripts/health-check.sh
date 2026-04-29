@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # xiaocai 健康检查脚本
-# 用途: 检查 instance 服务（可选检查 devlib flare）
+# 用途: 检查 instance baseline 服务（默认包含 kernel）
 
 set -e
 
@@ -16,13 +16,12 @@ if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-API_PORT=${API_PORT:-8001}
-WEB_PORT=${WEB_PORT:-3001}
-KERNEL_PORT=${KERNEL_PORT:-8000}
-POSTGRES_PORT=${POSTGRES_PORT:-5432}
-REDIS_PORT=${REDIS_PORT:-6379}
-QDRANT_HTTP_PORT=${QDRANT_HTTP_PORT:-6333}
-ENABLE_DEVLIB_FLARE=${ENABLE_DEVLIB_FLARE:-false}
+API_PORT=28001
+WEB_PORT=23001
+KERNEL_PORT=28000
+POSTGRES_PORT=25432
+REDIS_PORT=26379
+QDRANT_HTTP_PORT=26333
 CHECK_WEB=${CHECK_WEB:-true}
 
 echo "========================================="
@@ -101,13 +100,9 @@ if ! check_service "inst-xiaocai-qdrant" "http://localhost:${QDRANT_HTTP_PORT}/"
     all_ok=false
 fi
 
-if [ "$ENABLE_DEVLIB_FLARE" = true ]; then
-    # 4. 检查 devlib kernel
-    if ! check_service "devlib-flare-kernel" "http://localhost:${KERNEL_PORT}/health"; then
-        all_ok=false
-    fi
-else
-    echo -e "${YELLOW}跳过 devlib flare 健康检查（ENABLE_DEVLIB_FLARE=false）${NC}"
+# 4. 检查 baseline kernel
+if ! check_service "inst-xiaocai-kernel" "http://localhost:${KERNEL_PORT}/kernel/health"; then
+    all_ok=false
 fi
 
 echo ""
@@ -121,6 +116,5 @@ else
     echo ""
     echo "查看详细日志:"
     echo "  make logs-instance"
-    echo "  make logs-devlib"
     exit 1
 fi

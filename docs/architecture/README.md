@@ -13,6 +13,7 @@
 7. [07-flare-instance-boundary.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/07-flare-instance-boundary.md)
 8. [08-xiaocai-instance-technical-scope-and-route-freeze.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/08-xiaocai-instance-technical-scope-and-route-freeze.md)
 9. [09-xiaocai-instance-boundary-and-directory-freeze.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md)
+10. [10-xiaocai-instance-freeze-and-hard-refactor-plan.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/10-xiaocai-instance-freeze-and-hard-refactor-plan.md)
 
 ## 说明
 

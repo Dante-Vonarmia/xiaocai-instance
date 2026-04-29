@@ -1,7 +1,42 @@
-# instance-only compose
-# Production/Delivery baseline: only instance services are deployed.
+# instance baseline compose
+# Production/Delivery baseline: xiaocai instance services, including kernel.
+
+name: ${INSTANCE_PROJECT:-inst-xiaocai-dev}
 
 services:
+  inst-xiaocai-kernel:
+    build:
+      context: ../adapters/kernel
+      dockerfile: Dockerfile
+    container_name: inst-xiaocai-kernel
+    ports:
+      - "28000:8000"
+    environment:
+      - KERNEL_PORT=8000
+      - KERNEL_RUN_PATH=/kernel/run
+      - KERNEL_STREAM_PATH=/kernel/stream
+      - DOMAIN_PACK_ROOT=/domain-packs
+      - FLARE_DOMAIN_PACK_ROOT=/domain-packs
+      - FLARE_POSTGRES_DSN=${FLARE_POSTGRES_DSN:-postgresql://xiaocai:xiaocai_dev_password@inst-xiaocai-postgres:5432/xiaocai}
+      - FLARE_REDIS_URL=${FLARE_REDIS_URL:-redis://inst-xiaocai-redis:6379/0}
+      - FLARE_QDRANT_URL=${FLARE_QDRANT_URL:-http://inst-xiaocai-qdrant:6333}
+      - FLARE_SOURCE_UPLOAD_DIR=${FLARE_SOURCE_UPLOAD_DIR:-/data/sources}
+      - LLM_PROVIDER_BACKEND=${LLM_PROVIDER_BACKEND:-dashscope}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL}
+      - DASHSCOPE_MODEL=${DASHSCOPE_MODEL:-qwen-plus}
+    volumes:
+      - ../docs:/app/docs:ro
+      - ../docs:/usr/local/lib/python3.11/site-packages/docs:ro
+      - ../domain-packs:/domain-packs:ro
+      - inst-xiaocai-api-data:/data
+    depends_on:
+      - inst-xiaocai-postgres
+      - inst-xiaocai-redis
+      - inst-xiaocai-qdrant
+    networks:
+      - inst-xiaocai-net
+    restart: unless-stopped
   inst-xiaocai-postgres:
     image: postgres:15
     container_name: inst-xiaocai-postgres
@@ -10,7 +45,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-xiaocai}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-xiaocai_dev_password}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "25432:5432"
     volumes:
       - inst-xiaocai-postgres-data:/var/lib/postgresql/data
     networks:
@@ -27,7 +62,7 @@ services:
     image: redis:7-alpine
     container_name: inst-xiaocai-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "26379:6379"
     volumes:
       - inst-xiaocai-redis-data:/data
     networks:
@@ -44,8 +79,8 @@ services:
     image: qdrant/qdrant:latest
     container_name: inst-xiaocai-qdrant
     ports:
-      - "${QDRANT_HTTP_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+      - "26333:6333"
+      - "26334:6334"
     volumes:
       - inst-xiaocai-qdrant-data:/qdrant/storage
     networks:
@@ -61,18 +96,18 @@ services:
       - "host.docker.internal:host-gateway"
     container_name: inst-xiaocai-api
     ports:
-      - "${API_PORT:-8001}:8001"
+      - "28001:8001"
     environment:
       - API_HOST=0.0.0.0
       - API_PORT=8001
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3001"]}
       - INSTANCE_JWT_SECRET=${INSTANCE_JWT_SECRET}
-      - KERNEL_RUNTIME_MODE=${KERNEL_RUNTIME_MODE:-local}
-      - KERNEL_BASE_URL=${KERNEL_BASE_URL}
-      - KERNEL_HOST=${KERNEL_HOST:-host.docker.internal}
-      - KERNEL_PORT=${KERNEL_PORT:-8000}
-      - KERNEL_RUN_PATH=${KERNEL_RUN_PATH:-/chat/run}
-      - KERNEL_STREAM_PATH=${KERNEL_STREAM_PATH:-/chat/stream}
+      - KERNEL_RUNTIME_MODE=${KERNEL_RUNTIME_MODE:-http}
+      - KERNEL_BASE_URL=${KERNEL_BASE_URL:-http://inst-xiaocai-kernel:8000}
+      - KERNEL_HOST=${KERNEL_HOST:-inst-xiaocai-kernel}
+      - KERNEL_PORT=8000
+      - KERNEL_RUN_PATH=${KERNEL_RUN_PATH:-/kernel/run}
+      - KERNEL_STREAM_PATH=${KERNEL_STREAM_PATH:-/kernel/stream}
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL}
       - LLM_PROVIDER_BACKEND=${LLM_PROVIDER_BACKEND:-dashscope}
@@ -96,9 +131,11 @@ services:
       - ROOT_AUTH_TOKEN=${ROOT_AUTH_TOKEN}
       - ROOT_USER_ID=${ROOT_USER_ID:-root}
     volumes:
+      - ../docs:/usr/local/lib/python3.11/site-packages/docs:ro
       - ../domain-packs:/domain-packs:ro
       - inst-xiaocai-api-data:/data
     depends_on:
+      - inst-xiaocai-kernel
       - inst-xiaocai-postgres
       - inst-xiaocai-redis
       - inst-xiaocai-qdrant
@@ -121,7 +158,7 @@ services:
         VITE_FLARE_CORE_ENTRY_URL: ${VITE_FLARE_CORE_ENTRY_URL}
     container_name: inst-xiaocai-web
     ports:
-      - "${WEB_PORT:-3001}:80"
+      - "23001:80"
     environment:
       - VITE_API_BASE_URL=/api
     volumes:
@@ -136,8 +173,8 @@ services:
     image: nginx:alpine
     container_name: inst-xiaocai-nginx
     ports:
-      - "${NGINX_PORT:-80}:80"
-      - "${NGINX_HTTPS_PORT:-443}:443"
+      - "10080:80"
+      - "10443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro

@@ -1,5 +1,10 @@
 # Domain Pack to Pack Registry Migration
 
+> Status note (2026-04-29):
+> 本文档保留为历史迁移方案说明。
+> 当前仓库默认执行基线已收敛为 `domain-packs + tenant-config + bindings`；
+> `pack-registry` 目录已删除，不再作为默认运行时主链路。
+
 ## Scope
 
 将当前 `domain-pack` 从“实例配置包”收口到：

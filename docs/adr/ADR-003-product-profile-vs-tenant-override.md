@@ -63,3 +63,15 @@ Accepted
 3. attach private data bindings at runtime
 
 任何阶段都不得将 tenant 私有数据回写到 profile 文件。
+
+## Current Execution Note (2026-04-29)
+
+本 ADR 保留其三层模型决策，作为迁移与边界约束依据；
+但当前实例仓默认执行基线已收敛为：
+
+1. `domain-packs/` 作为领域资产主源
+2. `tenant-config/` 作为 tenant overrides
+3. `bindings/` 作为私有数据绑定描述
+
+`pack-registry/` 已从当前实例仓删除，
+不再作为默认运行时主链路或兼容层保留；除非后续出现明确的 profile 复用或独立 versioning 需求，否则不重新引入该层。

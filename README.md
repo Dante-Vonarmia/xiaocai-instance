@@ -1,4 +1,4 @@
-# xiaocai-instance (采购助手实例仓库)
+# xiaocai-instance 采购助手实例仓库
 
 本仓库是 **xiaocai 的主实例仓库**，不是旧的多仓工作区占位目录。  
 它基于 FLARE 提供的通用能力，承接采购场景下的产品编排、领域语义与交付部署。
@@ -11,7 +11,10 @@
 - ✅ 主要包含：
   - `frame/web`：xiaocai 前端壳（集成 chat-core）
   - `adapters/http_api`：xiaocai instance API（FastAPI）
-  - `domain-packs`：采购领域包（workflow/prompts/knowledge）
+  - `adapters/kernel`：xiaocai 仓内 kernel 服务壳
+  - `domain-packs`：采购领域资产主源（workflow/prompts/knowledge/contracts）
+  - `tenant-config`：tenant override（品牌、术语、开关差异）
+  - `bindings`：tenant 私有数据绑定描述
   - `deploy`：容器编排、发布脚本、Nginx 配置
 - ❌ 不再使用 README 里旧的 `xiaocai-app / xiaocai-api / xiaocai-kernel` 多仓描述
 
@@ -22,12 +25,11 @@
 ```text
 procurement-agents/
 ├── adapters/
-│   └── http_api/                 # xiaocai instance API adapter (FastAPI)
+│   └── http_api/                 # xiaocai instance API adapter, FastAPI
 ├── frame/
 │   └── web/                      # xiaocai 前端壳（Vite + React）
 ├── deploy/                       # compose / env / nginx / 发布脚本
-├── domain-packs/                 # 领域包主源（采购语义）
-├── pack-registry/                # 标准 profile 注册表
+├── domain-packs/                 # 领域资产主源（采购语义）
 ├── tenant-config/                # tenant override
 ├── bindings/                     # tenant 私有数据绑定描述
 ├── docs/
@@ -45,7 +47,7 @@ procurement-agents/
 - Docker Compose v2（`docker compose`）
 - Node.js 18+
 
-### 3.2 一键启动 instance 基线
+### 3.2 一键启动 instance 基线（默认包含 kernel）
 
 ```bash
 cd deploy
@@ -55,8 +57,9 @@ make up-instance
 
 访问地址：
 
-- Web: [http://localhost:3001](http://localhost:3001)
-- API docs: [http://localhost:8001/docs](http://localhost:8001/docs)
+- Web: [http://localhost:23001](http://localhost:23001)
+- API docs: [http://localhost:28001/docs](http://localhost:28001/docs)
+- Kernel health: [http://localhost:28000/kernel/health](http://localhost:28000/kernel/health)
 
 ### 3.3 常用命令
 
@@ -91,7 +94,7 @@ make down-instance
 
 当前推荐路径：
 
-- 后端与中间件：`compose.instance.yml`
+- 后端、中间件与 kernel：`compose.instance.yml`
 - 前端：**本地构建 standalone dist + 服务器主机 nginx**
 - 不依赖远端 `inst-xiaocai-web/inst-xiaocai-nginx` 容器首发
 

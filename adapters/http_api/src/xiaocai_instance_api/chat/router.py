@@ -290,6 +290,32 @@ def _ensure_response_cards(
     return cards
 
 
+def _resolve_stream_terminal_message(
+    event: dict,
+    final_message_chunks: list[str],
+) -> tuple[str | None, dict]:
+    """确保 stream 终态事件尽量携带可展示的 assistant 文本。"""
+    event_message = _to_text(event.get("message"))
+    if _is_non_empty_text(event_message):
+        return event_message, event
+
+    accumulated_message = "".join(final_message_chunks).strip()
+    if _is_non_empty_text(accumulated_message):
+        return accumulated_message, {**event, "message": accumulated_message}
+
+    return None, event
+
+
+def _should_accumulate_stream_chunk(event_type: str, event: dict) -> bool:
+    """仅累计真正的 assistant 文本，避免把 error 文案拼进最终回复。"""
+    if event_type in {"error", "done", "complete"}:
+        return False
+    channel = _to_text(event.get("channel"))
+    if channel and channel != "assistant":
+        return False
+    return True
+
+
 async def _check_mode_allowed(mode: str | None) -> None:
     if not mode:
         return
@@ -539,14 +565,15 @@ async def chat_stream(
                         latest_pending_contract = pending_contract
                         event = {**event, **pending_contract}
                     chunk = _extract_event_chunk(event)
-                    if chunk:
+                    if chunk and _should_accumulate_stream_chunk(event_type, event):
                         final_message_chunks.append(chunk)
                     if event_type in ("done", "complete"):
                         emitted_done_event = True
-                        done_payload_message = _to_text(event.get("message"))
-                        if _is_non_empty_text(done_payload_message):
-                            done_message = done_payload_message
-                        elif not final_message_chunks:
+                        done_message, event = _resolve_stream_terminal_message(
+                            event=event,
+                            final_message_chunks=final_message_chunks,
+                        )
+                        if done_message is None and not final_message_chunks:
                             done_message = EMPTY_ASSISTANT_MESSAGE
                             event = {**event, "message": done_message}
                     yield f"event: {event_type}\n"

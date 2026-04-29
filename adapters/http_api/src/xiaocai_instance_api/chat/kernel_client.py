@@ -26,9 +26,9 @@ class KernelClient:
         self.settings = get_settings()
         self.kernel_base_url = self.settings.kernel_base_url
         self._runtime_mode = (self.settings.kernel_runtime_mode or "http").strip().lower()
-        if self._runtime_mode not in {"http", "local"}:
+        if self._runtime_mode != "http":
             raise ValueError(
-                f"Unsupported KERNEL_RUNTIME_MODE={self._runtime_mode}. Supported: http, local."
+                f"Unsupported KERNEL_RUNTIME_MODE={self._runtime_mode}. Supported: http."
             )
 
     def _build_kernel_url(self, path: str) -> str:
@@ -82,52 +82,6 @@ class KernelClient:
         return request_body
 
     @staticmethod
-    def _build_local_kernel_request(
-        user_id: str,
-        message: str,
-        session_id: str,
-        context: Dict[str, Any] | None,
-    ) -> Dict[str, Any]:
-        context_dict = dict(context) if isinstance(context, dict) else {}
-        payload = context_dict.get("payload")
-        payload_dict = dict(payload) if isinstance(payload, dict) else {}
-        payload_dict["message"] = message
-        payload_dict.setdefault("context", context_dict)
-        payload_dict.setdefault("function_type", context_dict.get("function_type"))
-        request_data: Dict[str, Any] = {
-            "contract_version": context_dict.get("contract_version") or "flare.v1",
-            "client_request_id": context_dict.get("client_request_id"),
-            "tenant_id": context_dict.get("tenant_id") or "default",
-            "instance_id": context_dict.get("instance_id") or "default",
-            "domain_pack_version": context_dict.get("domain_pack_version") or "v1",
-            "session_id": session_id,
-            "last_turn_id": context_dict.get("last_turn_id"),
-            "command": context_dict.get("command"),
-            "intent": context_dict.get("intent") or context_dict.get("function_type"),
-            "intent_override": context_dict.get("intent_override"),
-            "mode": context_dict.get("mode"),
-            "manual_mode": context_dict.get("manual_mode") or context_dict.get("mode"),
-            "current_mode": context_dict.get("current_mode"),
-            "project_id": context_dict.get("project_id"),
-            "user_id": user_id,
-            "retrieval_config": context_dict.get("retrieval_config") or {},
-            "canvas_config": context_dict.get("canvas_config") or {},
-            "plan_config": context_dict.get("plan_config") or {},
-            "payload": payload_dict,
-            "context_refs": context_dict.get("context_refs") or [],
-            "knowledge_refs": context_dict.get("knowledge_refs") or [],
-            "action_key": context_dict.get("action_key"),
-            "target_mode": context_dict.get("target_mode"),
-            "action_status": context_dict.get("action_status"),
-            "action_reason": context_dict.get("action_reason"),
-            "trace_id": context_dict.get("trace_id"),
-            "question_id": context_dict.get("question_id"),
-            "field_key": context_dict.get("field_key"),
-            "field_value": context_dict.get("field_value"),
-        }
-        return request_data
-
-    @staticmethod
     def _parse_sse_event(event_name: str | None, data_lines: list[str]) -> Dict[str, Any]:
         raw_data = "\n".join(data_lines).strip()
         payload: Any = raw_data
@@ -176,34 +130,19 @@ class KernelClient:
         参考: docs/discussions/phase-1-procurement-product-logic.md
               需求梳理、智能寻源等业务逻辑在 kernel 处理
         """
-        if self._runtime_mode == "local":
-            from flare_kernel.contracts.kernel_contract import KernelRequest
-            from flare_kernel.router.kernel import kernel_run
-
-            local_request = KernelRequest(
-                **self._build_local_kernel_request(
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self._build_kernel_url(self.settings.kernel_run_path),
+                json=self._build_request_body(
                     user_id=user_id,
                     message=message,
                     session_id=session_id,
                     context=context,
-                )
+                ),
+                timeout=30.0,
             )
-            kernel_response = await kernel_run(local_request)
-            result = kernel_response.model_dump() if hasattr(kernel_response, "model_dump") else dict(kernel_response)
-        else:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    self._build_kernel_url(self.settings.kernel_run_path),
-                    json=self._build_request_body(
-                        user_id=user_id,
-                        message=message,
-                        session_id=session_id,
-                        context=context,
-                    ),
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                result = response.json()
+            response.raise_for_status()
+            result = response.json()
         if isinstance(result, dict):
             result_payload = result.get("result", {})
             if not isinstance(result_payload, dict):
@@ -351,27 +290,7 @@ class KernelClient:
                     async for line in response.aiter_lines():
                         yield f"{line}\n"
 
-        async def _local_chunks() -> AsyncGenerator[str, None]:
-            from flare_kernel.contracts.kernel_contract import KernelRequest
-            from flare_kernel.router.kernel import kernel_stream
-
-            local_request = KernelRequest(
-                **self._build_local_kernel_request(
-                    user_id=user_id,
-                    message=message,
-                    session_id=session_id,
-                    context=context,
-                )
-            )
-            stream_response = await kernel_stream(local_request)
-            async for chunk in stream_response.body_iterator:
-                if isinstance(chunk, bytes):
-                    yield chunk.decode("utf-8", errors="ignore")
-                else:
-                    yield str(chunk)
-
-        chunk_iter = _local_chunks() if self._runtime_mode == "local" else _http_chunks()
-        async for parsed_event in _parse_sse_chunks(chunk_iter):
+        async for parsed_event in _parse_sse_chunks(_http_chunks()):
             yield parsed_event
 
 

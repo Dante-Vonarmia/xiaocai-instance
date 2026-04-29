@@ -19,8 +19,8 @@ fi
 LOCAL_FLARE_ROOT="${LOCAL_FLARE_ROOT:-$ROOT_DIR/../../../F.L.A.R.E}"
 if [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-core/package.json" ] && [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-ui/package.json" ]; then
   npm install --no-save \
-    @flare/chat-core@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-core" \
-    @flare/chat-ui@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-ui" \
+    flare-chat-core@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-core" \
+    flare-chat-ui@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-ui" \
     flare-canvas-ui@0.2.3 \
     flare-generative-ui@0.2.2
 fi

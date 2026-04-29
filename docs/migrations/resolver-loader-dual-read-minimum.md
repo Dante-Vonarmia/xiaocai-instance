@@ -1,5 +1,9 @@
 # Resolver/Loader Dual-Read (Minimum Integration)
 
+> Status note (2026-04-29):
+> 本文档仅保留为历史双读迁移说明。
+> 当前仓库已删除 `pack-registry` 目录，默认执行基线不再采用该方案。
+
 ## 目标
 
 在不改业务流程逻辑的前提下，为后续迁移提供最小接入规范：
@@ -50,7 +54,7 @@
 1. 同一 `base_profile_id` 可被多个 tenant 引用。
 2. tenant 差异由 override 文件表达，不复制整套 pack。
 3. 私有数据不出现在 profile/override 文件。
-4. `scripts/pack-registry-check.sh` 可在 CI/本地作为前置校验。
+4. 历史上曾使用 `scripts/pack-registry-check.sh` 作为前置校验；当前仓库已删除该脚本。
 
 ## 不在本阶段实施
 

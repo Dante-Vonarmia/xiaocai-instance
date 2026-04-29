@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # xiaocai 启动脚本
-# 用途: 启动实例服务（可选叠加 devlib flare）
+# 用途: 启动实例基线服务（默认包含 kernel）
 
 set -e
 
@@ -45,24 +45,16 @@ fi
 echo -e "${GREEN}1. 构建 instance 镜像...${NC}"
 make build-instance
 
-# 启动服务（instance）
+# 启动服务（instance baseline）
 echo -e "${GREEN}2. 启动 instance 服务...${NC}"
 make up-instance
 
-# 可选启动 devlib flare
-if [ "${ENABLE_DEVLIB_FLARE:-false}" = "true" ]; then
-    echo -e "${GREEN}3. 启动 devlib flare 服务...${NC}"
-    make up-dev
-else
-    echo -e "${YELLOW}3. 跳过 devlib flare（ENABLE_DEVLIB_FLARE=false）${NC}"
-fi
-
 # 等待服务启动
-echo -e "${GREEN}4. 等待服务启动...${NC}"
+echo -e "${GREEN}3. 等待服务启动...${NC}"
 sleep 5
 
 # 健康检查
-echo -e "${GREEN}5. 检查服务状态...${NC}"
+echo -e "${GREEN}4. 检查服务状态...${NC}"
 ./scripts/health-check.sh
 
 echo ""
@@ -70,10 +62,9 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}   instance 服务启动成功！${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-echo -e "前端访问地址: ${GREEN}http://localhost:${WEB_PORT:-3001}${NC}"
-echo -e "API 文档地址: ${GREEN}http://localhost:${API_PORT:-8001}/docs${NC}"
+echo -e "前端访问地址: ${GREEN}http://localhost:23001${NC}"
+echo -e "API 文档地址: ${GREEN}http://localhost:28001/docs${NC}"
 echo ""
 echo -e "查看 instance 日志: ${YELLOW}make logs-instance${NC}"
-echo -e "查看 devlib 日志: ${YELLOW}make logs-devlib${NC}"
 echo -e "停止服务: ${YELLOW}./scripts/stop.sh${NC}"
 echo ""
