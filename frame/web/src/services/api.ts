@@ -424,12 +424,15 @@ function normalizeStreamEvent(
   }
 
   if (normalizedType === 'error') {
-    throw new ApiError(
-      getMessageFromUnknown(payload, '流式请求失败'),
-      {
-        details: payload,
-      },
-    )
+    return {
+      kind: 'error' as const,
+      error: new ApiError(
+        getMessageFromUnknown(payload, '流式请求失败'),
+        {
+          details: payload,
+        },
+      ),
+    }
   }
 
   if (isPlainObject(payload)) {
@@ -481,6 +484,7 @@ async function consumeSseBody(
   let currentEventType = ''
   let currentDataLines: string[] = []
   let textBuffer = ''
+  let streamError: ApiError | null = null
 
   const emitCurrentEvent = () => {
     if (!currentEventType && currentDataLines.length === 0) {
@@ -512,6 +516,8 @@ async function consumeSseBody(
       callbacks.onCard?.(toUiCardsPayload([result.card]), event)
     } else if (result.kind === 'cards') {
       callbacks.onCard?.(toUiCardsPayload(result.cards), event)
+    } else if (result.kind === 'error') {
+      streamError = result.error
     }
 
     return result
@@ -573,6 +579,10 @@ async function consumeSseBody(
     }
 
     throw normalizeAxiosError(error)
+  }
+
+  if (!state.message.trim() && streamError) {
+    throw streamError
   }
 
   const result: ChatRunResponse = {

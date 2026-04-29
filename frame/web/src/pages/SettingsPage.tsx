@@ -1,6 +1,6 @@
 import { FileTextOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
 import { Segmented } from 'antd'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import ProfilePanel from '@/components/settings/ProfilePanel'
 import SystemConfigPanel from '@/components/settings/SystemConfigPanel'
@@ -27,6 +27,39 @@ function SettingsPage({ onLogout }: SettingsPageProps) {
     { label: '个人信息', value: 'profile' },
     { label: '系统配置', value: 'system' },
   ]), [])
+  const handleGoChat = useCallback(() => {
+    navigate(APP_ROUTES.chat)
+  }, [navigate])
+  const handleSegmentChange = useCallback((value: string | number) => {
+    navigate(value === 'system' ? APP_ROUTES.settingsSystem : APP_ROUTES.settingsProfile)
+  }, [navigate])
+  const sectionPanel = useMemo(
+    () => (section === 'profile' ? <ProfilePanel projectId={PROJECT_ID} /> : <SystemConfigPanel />),
+    [section],
+  )
+  const logoutButton = useMemo(() => (
+    onLogout ? (
+      <button
+        onClick={onLogout}
+        title="退出"
+        style={{
+          width: '100%',
+          border: '1px solid #d1d5db',
+          background: '#ffffff',
+          borderRadius: '8px',
+          padding: '8px 0',
+          fontSize: '16px',
+          color: '#6b7280',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+        type="button"
+      >
+        <LogoutOutlined />
+      </button>
+    ) : null
+  ), [onLogout])
 
   return (
     <div className="xiaocai-settings-page" style={{ height: '100vh', display: 'flex', background: '#f6f8fc' }}>
@@ -67,7 +100,7 @@ function SettingsPage({ onLogout }: SettingsPageProps) {
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          onClick={() => navigate(APP_ROUTES.chat)}
+          onClick={handleGoChat}
         >
           <FileTextOutlined />
         </button>
@@ -117,27 +150,7 @@ function SettingsPage({ onLogout }: SettingsPageProps) {
           >
             <UserOutlined />
           </button>
-          {onLogout ? (
-            <button
-              onClick={onLogout}
-              title="退出"
-              style={{
-                width: '100%',
-                border: '1px solid #d1d5db',
-                background: '#ffffff',
-                borderRadius: '8px',
-                padding: '8px 0',
-                fontSize: '16px',
-                color: '#6b7280',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-              type="button"
-            >
-              <LogoutOutlined />
-            </button>
-          ) : null}
+          {logoutButton}
         </div>
       </aside>
 
@@ -147,12 +160,10 @@ function SettingsPage({ onLogout }: SettingsPageProps) {
             <Segmented
               options={options}
               value={section}
-              onChange={(value) => {
-                navigate(value === 'system' ? APP_ROUTES.settingsSystem : APP_ROUTES.settingsProfile)
-              }}
+              onChange={handleSegmentChange}
             />
           </div>
-          {section === 'profile' ? <ProfilePanel projectId={PROJECT_ID} /> : <SystemConfigPanel />}
+          {sectionPanel}
         </SettingsProvider>
       </main>
     </div>

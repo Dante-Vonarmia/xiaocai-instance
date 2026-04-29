@@ -2,7 +2,7 @@ import {
   DEFAULT_CANVAS_UI_LABELS,
   type CanvasUiLabels,
   type StarterPrompt,
-} from '@/pages/chat-page/config/constants'
+} from '@/constants/chat'
 
 export function toText(value: unknown) {
   if (typeof value === 'string' && value.trim()) {

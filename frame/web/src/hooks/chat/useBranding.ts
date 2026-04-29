@@ -10,8 +10,8 @@ import {
   type InteractionMode,
   type ProjectSlot,
   type StarterPrompt,
-} from '@/pages/chat-page/config/constants'
-import { toCanvasUiLabels } from '@/pages/chat-page/config/normalizers'
+} from '@/constants/chat'
+import { toCanvasUiLabels } from '@/hooks/chat/normalizers'
 
 type BrandingState = {
   functionType: string

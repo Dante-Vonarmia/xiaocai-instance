@@ -1,7 +1,7 @@
 import { FileTextOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 
-import { FLARE_VERSION } from '@/pages/chat-page/config/constants'
+import { FLARE_VERSION } from '@/constants/chat'
 
 type ShellProps = {
   onLogout?: () => void
@@ -10,6 +10,30 @@ type ShellProps = {
 }
 
 export function Shell({ onLogout, onProfileClick, workspace }: ShellProps) {
+  const logoutButton = useMemo(() => (
+    onLogout ? (
+      <button
+        onClick={onLogout}
+        title="退出"
+        style={{
+          width: '100%',
+          border: '1px solid #d1d5db',
+          background: '#ffffff',
+          borderRadius: '8px',
+          padding: '8px 0',
+          fontSize: '16px',
+          color: '#6b7280',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+        type="button"
+      >
+        <LogoutOutlined />
+      </button>
+    ) : null
+  ), [onLogout])
+
   return (
     <div className="xiaocai-chat-page" style={{ height: '100vh', display: 'flex', background: '#f6f8fc' }}>
       <aside
@@ -80,27 +104,7 @@ export function Shell({ onLogout, onProfileClick, workspace }: ShellProps) {
           >
             <UserOutlined />
           </button>
-          {onLogout ? (
-            <button
-              onClick={onLogout}
-              title="退出"
-              style={{
-                width: '100%',
-                border: '1px solid #d1d5db',
-                background: '#ffffff',
-                borderRadius: '8px',
-                padding: '8px 0',
-                fontSize: '16px',
-                color: '#6b7280',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-              type="button"
-            >
-              <LogoutOutlined />
-            </button>
-          ) : null}
+          {logoutButton}
         </div>
       </aside>
 

@@ -6,7 +6,7 @@ import {
   DEFAULT_FUNCTION_TYPE,
   DEFAULT_PROJECT_SLOT,
   DEFAULT_SESSION_TITLE,
-} from '@/pages/chat-page/config/constants'
+} from '@/constants/chat'
 
 const appPropsSpy = vi.fn()
 

@@ -3,4 +3,4 @@ export type {
   InteractionMode,
   ProjectSlot,
   StarterPrompt,
-} from '@/pages/chat-page/config/constants'
+} from '@/constants/chat'
