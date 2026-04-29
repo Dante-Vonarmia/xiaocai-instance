@@ -1,8 +1,10 @@
 import { Alert, Empty, Space, Spin } from 'antd'
 import ComponentVisibilityPanel from '@/components/settings/system-config/ComponentVisibilityPanel'
+import ConnectorRegistrySection from '@/components/settings/system-config/ConnectorRegistrySection'
 import DomainModeSelector from '@/components/settings/system-config/DomainModeSelector'
 import KnowledgeConnectorSection from '@/components/settings/system-config/KnowledgeConnectorSection'
 import McpConnectorSection from '@/components/settings/system-config/McpConnectorSection'
+import SearchSourceSection from '@/components/settings/system-config/SearchSourceSection'
 import { useSettingsContext } from '@/context/SettingsContext'
 import { SettingsSystemConfigProvider, useSettingsSystemConfigContext } from '@/context/SettingsSystemConfigContext'
 import type { DomainInjectionMode } from '@/services/settingsApi'
@@ -66,6 +68,9 @@ function SystemConfigPanelContent() {
           orderedMcpKeys={orderedMcpKeys}
         />
       ) : null}
+
+      {!loading ? <ConnectorRegistrySection /> : null}
+      {!loading ? <SearchSourceSection /> : null}
     </Space>
   )
 }

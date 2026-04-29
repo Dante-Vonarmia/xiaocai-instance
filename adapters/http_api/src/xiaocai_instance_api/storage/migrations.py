@@ -403,6 +403,88 @@ def _apply_v4(runtime: SQLRuntime) -> None:
         )
 
 
+def _apply_v5(runtime: SQLRuntime) -> None:
+    runtime.execute(
+        """
+        CREATE TABLE IF NOT EXISTS connector_registry (
+            connector_id TEXT PRIMARY KEY,
+            key TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            connector_type TEXT NOT NULL,
+            driver TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            priority INTEGER NOT NULL DEFAULT 100,
+            scope TEXT NOT NULL DEFAULT 'read',
+            config_json TEXT NOT NULL DEFAULT '{}',
+            tags_json TEXT NOT NULL DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL
+        )
+        """
+    )
+    runtime.execute(
+        """
+        CREATE TABLE IF NOT EXISTS search_source_policies (
+            policy_id TEXT PRIMARY KEY,
+            mode TEXT NOT NULL UNIQUE,
+            default_connector_key TEXT NOT NULL,
+            allow_fallback INTEGER NOT NULL DEFAULT 1,
+            fallback_connector_keys_json TEXT NOT NULL DEFAULT '[]',
+            routing_rules_json TEXT NOT NULL DEFAULT '[]',
+            updated_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL
+        )
+        """
+    )
+
+    default_registry_rows = [
+        ("conn_xiaocai_db", "xiaocai_db", "Xiaocai Database", "database", "xiaocai_db", 1, 10, "read_write"),
+        ("conn_external_search", "external_search", "External Search", "search", "external_search", 0, 20, "read"),
+        ("conn_mcp_gateway", "mcp_gateway", "MCP Gateway", "mcp", "mcp_gateway", 0, 30, "read"),
+    ]
+    for connector_id, key, name, connector_type, driver, enabled, priority, scope in default_registry_rows:
+        existing = runtime.fetchone(
+            "SELECT connector_id FROM connector_registry WHERE key = ? LIMIT 1",
+            (key,),
+        )
+        if existing is not None:
+            continue
+        runtime.execute(
+            """
+            INSERT INTO connector_registry (
+                connector_id, key, name, connector_type, driver,
+                enabled, priority, scope, config_json, tags_json,
+                created_at, updated_at, updated_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', '[]', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+            """,
+            (connector_id, key, name, connector_type, driver, enabled, priority, scope, "system"),
+        )
+
+    default_policy = runtime.fetchone(
+        "SELECT policy_id FROM search_source_policies WHERE mode = ? LIMIT 1",
+        ("intelligent_sourcing",),
+    )
+    if default_policy is None:
+        runtime.execute(
+            """
+            INSERT INTO search_source_policies (
+                policy_id, mode, default_connector_key, allow_fallback,
+                fallback_connector_keys_json, routing_rules_json,
+                updated_at, updated_by
+            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+            """,
+            (
+                "search_policy_intelligent_sourcing",
+                "intelligent_sourcing",
+                "external_search",
+                1,
+                '["mcp_gateway","xiaocai_db"]',
+                "[]",
+                "system",
+            ),
+        )
+
 
 def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     config = resolve_db_config(storage_db_url=db_url, storage_db_path=db_path)
@@ -423,6 +505,9 @@ def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     if current < 4:
         _apply_v4(runtime)
         _mark_version(runtime, 4)
+    if current < 5:
+        _apply_v5(runtime)
+        _mark_version(runtime, 5)
 
     runtime.commit()
-    return 4
+    return 5

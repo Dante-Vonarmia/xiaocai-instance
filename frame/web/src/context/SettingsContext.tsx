@@ -1,9 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { settingsApi, type ConnectorStatus, type DomainInjectionMode } from '@/services/settingsApi'
+import {
+  settingsApi,
+  type ConnectorRegistryItem,
+  type ConnectorStatus,
+  type DomainInjectionMode,
+  type SearchSourcePolicy,
+} from '@/services/settingsApi'
 
 type SettingsContextValue = {
   domainInjectionMode: DomainInjectionMode
   connectors: ConnectorStatus[]
+  connectorRegistry: ConnectorRegistryItem[]
+  searchSourcePolicies: SearchSourcePolicy[]
   loading: boolean
   error: string
   modeUpdating: boolean
@@ -26,6 +34,8 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [domainInjectionMode, setDomainInjectionMode] = useState<DomainInjectionMode>('assist')
   const [connectors, setConnectors] = useState<ConnectorStatus[]>([])
+  const [connectorRegistry, setConnectorRegistry] = useState<ConnectorRegistryItem[]>([])
+  const [searchSourcePolicies, setSearchSourcePolicies] = useState<SearchSourcePolicy[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modeUpdating, setModeUpdating] = useState(false)
@@ -35,9 +45,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setLoading(true)
     setError('')
     try {
-      const payload = await settingsApi.getIntegrations()
+      const [payload, registryPayload, policyPayload] = await Promise.all([
+        settingsApi.getIntegrations(),
+        settingsApi.getConnectorRegistry(),
+        settingsApi.getSearchSourcePolicies(),
+      ])
       setDomainInjectionMode(payload.domain_injection_mode)
       setConnectors(payload.connectors)
+      setConnectorRegistry(registryPayload.connectors)
+      setSearchSourcePolicies(policyPayload.policies)
     } catch (err) {
       setError(normalizeErrorMessage(err, '加载连接配置失败'))
     } finally {
@@ -92,6 +108,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<SettingsContextValue>(() => ({
     domainInjectionMode,
     connectors,
+    connectorRegistry,
+    searchSourcePolicies,
     loading,
     error,
     modeUpdating,
@@ -102,12 +120,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     testConnector,
   }), [
     connectorUpdating,
+    connectorRegistry,
     connectors,
     domainInjectionMode,
     error,
     loading,
     modeUpdating,
     reload,
+    searchSourcePolicies,
     testConnector,
     updateConnectorEnabled,
     updateDomainInjectionMode,

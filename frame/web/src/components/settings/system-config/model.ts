@@ -1,4 +1,4 @@
-import type { ConnectorStatus } from '@/services/settingsApi'
+import type { ConnectorRegistryItem, ConnectorStatus } from '@/services/settingsApi'
 
 export type SystemBlockKey = 'domain_mode' | 'knowledge_connectors' | 'mcp_connectors'
 
@@ -14,7 +14,7 @@ export function isMcpConnector(connector: ConnectorStatus) {
   return key.includes('mcp') || name.includes('mcp')
 }
 
-export function toConnectorDisplayName(connector: ConnectorStatus) {
+export function toConnectorDisplayName(connector: Pick<ConnectorStatus | ConnectorRegistryItem, 'key' | 'name'>) {
   const key = connector.key.toLowerCase()
   if (key === 'xiaocai_db') {
     return '小采数据库'

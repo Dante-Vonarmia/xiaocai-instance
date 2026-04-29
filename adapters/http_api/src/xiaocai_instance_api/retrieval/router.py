@@ -7,6 +7,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from xiaocai_instance_api.retrieval.policy_resolver import resolve_enabled_search_source_policy
+from xiaocai_instance_api.retrieval.route_plan import build_simulated_attempt_results
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
@@ -22,6 +24,7 @@ class RetrievalSearchRequest(BaseModel):
     project_id: str = Field(...)
     query: str = Field(default="")
     limit: int = Field(default=10, ge=1, le=100)
+    mode: str = Field(default="intelligent_sourcing")
 
 
 @router.post("/search")
@@ -39,7 +42,16 @@ async def retrieval_search(
         query=request.query.strip() or None,
     )
     hits = records[: request.limit]
-    retrieval_policy = build_retrieval_policy_signal(records, limit=request.limit)
+    search_source_policy = await resolve_enabled_search_source_policy(request.mode)
+    retrieval_policy = build_retrieval_policy_signal(
+        records,
+        limit=request.limit,
+        search_source_policy=search_source_policy,
+    )
+    retrieval_policy["attempt_results"] = build_simulated_attempt_results(
+        retrieval_policy.get("route_plan", {}),
+        has_hits=bool(hits),
+    )
     return {
         "scope": scope.to_dict(),
         "retrieval_policy": retrieval_policy,
@@ -63,6 +75,7 @@ async def retrieval_search(
 async def retrieval_policy(
     project_id: str,
     limit: int = 20,
+    mode: str = "intelligent_sourcing",
     claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> dict:
     authz = get_authorization_service()
@@ -74,7 +87,12 @@ async def retrieval_policy(
         project_id=project_id,
         query=None,
     )
+    search_source_policy = await resolve_enabled_search_source_policy(mode)
     return {
         "project_id": project_id,
-        "policy": build_retrieval_policy_signal(records, limit=limit),
+        "policy": build_retrieval_policy_signal(
+            records,
+            limit=limit,
+            search_source_policy=search_source_policy,
+        ),
     }

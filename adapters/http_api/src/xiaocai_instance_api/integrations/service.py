@@ -1,32 +1,33 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-from datetime import datetime, timezone
-import time
-
-import httpx
-
 from xiaocai_instance_api.integrations.contracts import IntegrationStatusSummaryItem
-from xiaocai_instance_api.settings import get_settings
-from xiaocai_instance_api.storage.db_runtime import SQLRuntime, resolve_db_config
+from xiaocai_instance_api.integrations.connector_runtime import (
+    build_connector_view,
+    now_iso,
+    resolve_healthcheck_url,
+    sync_connector_status_seed,
+    test_http_connector,
+    test_xiaocai_db,
+    to_legacy_connector,
+    to_search_policy,
+    to_status_seed,
+)
+from xiaocai_instance_api.storage.connector_registry_store import get_connector_registry_store
 from xiaocai_instance_api.storage.integration_store import ConnectorStatus, get_integration_store
+from xiaocai_instance_api.storage.search_source_policy_store import get_search_source_policy_store
 
 
 VALID_DOMAIN_MODES = {"off", "assist", "enforce"}
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class IntegrationService:
     async def get_integrations(self) -> dict:
         store = get_integration_store()
         domain_mode = await store.get_domain_injection_mode()
-        connectors = await store.list_connectors()
+        connectors = await self.get_connector_registry()
         return {
             "domain_injection_mode": domain_mode,
-            "connectors": [asdict(item) for item in connectors],
+            "connectors": [to_legacy_connector(item) for item in connectors],
         }
 
     async def set_domain_injection_mode(self, mode: str, *, updated_by: str) -> str:
@@ -37,194 +38,210 @@ class IntegrationService:
         return await store.set_domain_injection_mode(normalized_mode, updated_by=updated_by)
 
     async def set_connector_enabled(self, key: str, *, enabled: bool, updated_by: str) -> dict | None:
-        store = get_integration_store()
-        connector = await store.set_connector_enabled(key=key, enabled=enabled, updated_by=updated_by)
+        registry_store = get_connector_registry_store()
+        connector = await registry_store.get_connector_by_key(key)
         if connector is None:
             return None
-        return asdict(connector)
+        updated = await registry_store.update_connector(
+            connector.connector_id,
+            name=None,
+            enabled=enabled,
+            priority=None,
+            scope=None,
+            config_json=None,
+            tags_json=None,
+            updated_by=updated_by,
+        )
+        if updated is None:
+            return None
+        await sync_connector_status_seed(updated, updated_by=updated_by)
+        view = await build_connector_view(updated)
+        return to_legacy_connector(view)
 
     async def test_connector(self, key: str, *, updated_by: str) -> dict | None:
-        store = get_integration_store()
-        connector = await store.get_connector(key)
+        registry_store = get_connector_registry_store()
+        connector = await registry_store.get_connector_by_key(key)
+        if connector is None:
+            return None
+        tested = await self.test_connector_registry_item(connector.connector_id, updated_by=updated_by)
+        if tested is None:
+            return None
+        return to_legacy_connector(tested)
+
+    async def get_connector_registry(self) -> list[dict]:
+        registry_store = get_connector_registry_store()
+        registry_items = await registry_store.list_connectors()
+        return [await build_connector_view(item) for item in registry_items]
+
+    async def create_connector_registry_item(
+        self,
+        *,
+        key: str,
+        name: str,
+        connector_type: str,
+        driver: str,
+        enabled: bool,
+        priority: int,
+        scope: str,
+        config_json: dict,
+        tags_json: list[str],
+        updated_by: str,
+    ) -> dict:
+        registry_store = get_connector_registry_store()
+        if await registry_store.get_connector_by_key(key):
+            raise ValueError(f"connector key already exists: {key}")
+        created = await registry_store.create_connector(
+            key=key,
+            name=name,
+            connector_type=connector_type,
+            driver=driver,
+            enabled=enabled,
+            priority=priority,
+            scope=scope,
+            config_json=config_json,
+            tags_json=tags_json,
+            updated_by=updated_by,
+        )
+        await sync_connector_status_seed(created, updated_by=updated_by)
+        return await build_connector_view(created)
+
+    async def update_connector_registry_item(
+        self,
+        connector_id: str,
+        *,
+        name: str | None,
+        enabled: bool | None,
+        priority: int | None,
+        scope: str | None,
+        config_json: dict | None,
+        tags_json: list[str] | None,
+        updated_by: str,
+    ) -> dict | None:
+        registry_store = get_connector_registry_store()
+        updated = await registry_store.update_connector(
+            connector_id,
+            name=name,
+            enabled=enabled,
+            priority=priority,
+            scope=scope,
+            config_json=config_json,
+            tags_json=tags_json,
+            updated_by=updated_by,
+        )
+        if updated is None:
+            return None
+        if enabled is not None:
+            await sync_connector_status_seed(updated, updated_by=updated_by)
+        return await build_connector_view(updated)
+
+    async def reorder_connector_registry_items(
+        self,
+        ordered_connector_ids: list[str],
+        *,
+        updated_by: str,
+    ) -> list[dict]:
+        registry_store = get_connector_registry_store()
+        existing = await registry_store.list_connectors()
+        existing_ids = {item.connector_id for item in existing}
+        if set(ordered_connector_ids) != existing_ids:
+            raise ValueError("ordered_connector_ids must match the full connector registry set")
+        reordered = await registry_store.reorder_connectors(ordered_connector_ids, updated_by=updated_by)
+        return [await build_connector_view(item) for item in reordered]
+
+    async def test_connector_registry_item(self, connector_id: str, *, updated_by: str) -> dict | None:
+        registry_store = get_connector_registry_store()
+        connector = await registry_store.get_connector_by_id(connector_id)
         if connector is None:
             return None
 
+        store = get_integration_store()
+        current_status = await store.get_connector(connector.key)
+        seeded = to_status_seed(connector, current_status)
         if not connector.enabled:
             updated = await store.upsert_connector_status(
                 ConnectorStatus(
-                    key=connector.key,
-                    name=connector.name,
+                    key=seeded.key,
+                    name=seeded.name,
                     enabled=False,
                     status="disconnected",
                     health="down",
                     latency_ms=None,
-                    last_success_at=connector.last_success_at,
+                    last_success_at=seeded.last_success_at,
                     last_error="connector is disabled",
-                    scope=connector.scope,
-                    updated_at=_now_iso(),
+                    scope=seeded.scope,
+                    updated_at=now_iso(),
                     updated_by=updated_by,
                 )
             )
-            return asdict(updated)
+            return await build_connector_view(connector, status_override=updated)
 
-        if key == "xiaocai_db":
-            updated = await self._test_xiaocai_db(connector=connector, updated_by=updated_by)
-            return asdict(updated)
+        if connector.driver == "xiaocai_db":
+            updated = await test_xiaocai_db(connector=seeded, updated_by=updated_by)
+            return await build_connector_view(connector, status_override=updated)
 
-        if key == "mcp_gateway":
-            updated = await self._test_http_connector(
-                connector=connector,
+        if connector.driver in {"mcp_gateway", "external_search"}:
+            updated = await test_http_connector(
+                connector=seeded,
                 updated_by=updated_by,
-                healthcheck_url=get_settings().mcp_healthcheck_url,
+                healthcheck_url=resolve_healthcheck_url(connector),
             )
-            return asdict(updated)
+            return await build_connector_view(connector, status_override=updated)
 
-        if key == "external_search":
-            updated = await self._test_http_connector(
-                connector=connector,
-                updated_by=updated_by,
-                healthcheck_url=get_settings().external_search_healthcheck_url,
-            )
-            return asdict(updated)
+        return await build_connector_view(connector, status_override=seeded)
 
-        return asdict(connector)
+    async def get_search_source_policies(self) -> dict:
+        store = get_search_source_policy_store()
+        policies = await store.list_policies()
+        return {"policies": [to_search_policy(item) for item in policies]}
+
+    async def upsert_search_source_policy(
+        self,
+        *,
+        mode: str,
+        default_connector_key: str,
+        allow_fallback: bool,
+        fallback_connector_keys: list[str],
+        routing_rules: list[dict],
+        updated_by: str,
+    ) -> dict:
+        await self._ensure_connector_keys_exist([default_connector_key, *fallback_connector_keys])
+        store = get_search_source_policy_store()
+        updated = await store.upsert_policy(
+            mode=mode,
+            default_connector_key=default_connector_key,
+            allow_fallback=allow_fallback,
+            fallback_connector_keys=fallback_connector_keys,
+            routing_rules=routing_rules,
+            updated_by=updated_by,
+        )
+        return to_search_policy(updated)
 
     async def get_integration_status_summary(self) -> dict:
-        store = get_integration_store()
-        connectors = await store.list_connectors()
+        connectors = await self.get_connector_registry()
         summary = [
             IntegrationStatusSummaryItem(
-                key=item.key,
-                enabled=item.enabled,
-                status=item.status,
-                health=item.health,
-                latency_ms=item.latency_ms,
-                updated_at=item.updated_at,
+                key=str(item["key"]),
+                enabled=bool(item["enabled"]),
+                status=str(item["status"]),
+                health=str(item["health"]),
+                latency_ms=item.get("latency_ms"),
+                updated_at=str(item["updated_at"]),
             ).model_dump()
             for item in connectors
         ]
         return {
             "connectors": summary,
-            "generated_at": _now_iso(),
+            "generated_at": now_iso(),
         }
 
-    async def _test_xiaocai_db(self, *, connector: ConnectorStatus, updated_by: str) -> ConnectorStatus:
-        store = get_integration_store()
-        settings = get_settings()
-        start = time.perf_counter()
-        try:
-            config = resolve_db_config(storage_db_url=settings.storage_db_url, storage_db_path=settings.storage_db_path)
-            runtime = SQLRuntime(config)
-            runtime.fetchone("SELECT 1 AS ok")
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            now_iso = _now_iso()
-            return await store.upsert_connector_status(
-                ConnectorStatus(
-                    key=connector.key,
-                    name=connector.name,
-                    enabled=connector.enabled,
-                    status="connected",
-                    health="up",
-                    latency_ms=elapsed_ms,
-                    last_success_at=now_iso,
-                    last_error="",
-                    scope=connector.scope,
-                    updated_at=now_iso,
-                    updated_by=updated_by,
-                )
-            )
-        except Exception as exc:
-            return await store.upsert_connector_status(
-                ConnectorStatus(
-                    key=connector.key,
-                    name=connector.name,
-                    enabled=connector.enabled,
-                    status="error",
-                    health="down",
-                    latency_ms=None,
-                    last_success_at=connector.last_success_at,
-                    last_error=str(exc),
-                    scope=connector.scope,
-                    updated_at=_now_iso(),
-                    updated_by=updated_by,
-                )
-            )
-
-    async def _test_http_connector(self, *, connector: ConnectorStatus, updated_by: str, healthcheck_url: str) -> ConnectorStatus:
-        store = get_integration_store()
-        target_url = (healthcheck_url or "").strip()
-        if not target_url:
-            return await store.upsert_connector_status(
-                ConnectorStatus(
-                    key=connector.key,
-                    name=connector.name,
-                    enabled=connector.enabled,
-                    status="disconnected",
-                    health="down",
-                    latency_ms=None,
-                    last_success_at=connector.last_success_at,
-                    last_error="healthcheck url is not configured",
-                    scope=connector.scope,
-                    updated_at=_now_iso(),
-                    updated_by=updated_by,
-                )
-            )
-
-        start = time.perf_counter()
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(target_url)
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            if response.status_code >= 400:
-                return await store.upsert_connector_status(
-                    ConnectorStatus(
-                        key=connector.key,
-                        name=connector.name,
-                        enabled=connector.enabled,
-                        status="error",
-                        health="down",
-                        latency_ms=elapsed_ms,
-                        last_success_at=connector.last_success_at,
-                        last_error=f"healthcheck failed: HTTP {response.status_code}",
-                        scope=connector.scope,
-                        updated_at=_now_iso(),
-                        updated_by=updated_by,
-                    )
-                )
-
-            now_iso = _now_iso()
-            return await store.upsert_connector_status(
-                ConnectorStatus(
-                    key=connector.key,
-                    name=connector.name,
-                    enabled=connector.enabled,
-                    status="connected",
-                    health="up",
-                    latency_ms=elapsed_ms,
-                    last_success_at=now_iso,
-                    last_error="",
-                    scope=connector.scope,
-                    updated_at=now_iso,
-                    updated_by=updated_by,
-                )
-            )
-        except Exception as exc:
-            return await store.upsert_connector_status(
-                ConnectorStatus(
-                    key=connector.key,
-                    name=connector.name,
-                    enabled=connector.enabled,
-                    status="error",
-                    health="down",
-                    latency_ms=None,
-                    last_success_at=connector.last_success_at,
-                    last_error=str(exc),
-                    scope=connector.scope,
-                    updated_at=_now_iso(),
-                    updated_by=updated_by,
-                )
-            )
-
+    async def _ensure_connector_keys_exist(self, keys: list[str]) -> None:
+        registry_store = get_connector_registry_store()
+        missing: list[str] = []
+        for key in keys:
+            if not await registry_store.get_connector_by_key(key):
+                missing.append(key)
+        if missing:
+            raise ValueError(f"unknown connector keys: {', '.join(missing)}")
 
 _service: IntegrationService | None = None
 

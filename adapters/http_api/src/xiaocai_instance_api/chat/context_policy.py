@@ -8,6 +8,7 @@ Chat kernel context policy helpers.
 
 from __future__ import annotations
 
+from xiaocai_instance_api.retrieval.policy_resolver import resolve_enabled_search_source_policy
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.source_policy import build_retrieval_policy_signal
@@ -31,8 +32,12 @@ async def enrich_kernel_context_with_retrieval_policy(
         project_id=project_id.strip(),
         query=None,
     )
-    policy = build_retrieval_policy_signal(records, limit=limit)
+    search_source_policy = await resolve_enabled_search_source_policy(kernel_context.get("mode"))
+    policy = build_retrieval_policy_signal(
+        records,
+        limit=limit,
+        search_source_policy=search_source_policy,
+    )
     kernel_context["retrieval_policy"] = policy
     kernel_context["context_refs"] = policy.get("context_refs", [])
     return kernel_context
-

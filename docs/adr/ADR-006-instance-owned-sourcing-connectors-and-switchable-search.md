@@ -157,6 +157,69 @@ kernel 消费这些信号，但不拥有采购业务上的 source ownership。
    - settings 页面展示与编辑入口
    - status / health / priority / selected source 展示
 
+## Extraction Guidance
+
+本 ADR 明确以下提炼口径：
+
+### 1. 当前阶段默认留在 xiaocai instance
+
+以下能力当前默认归属 xiaocai instance，不上提到 FLARE：
+
+- connector registry 的产品配置语义
+- search source 的默认值、fallback、优先级、场景路由
+- `intelligent_sourcing` 的 source selection 策略
+- settings 页面上的 connector / search source 配置入口
+- procurement sourcing 的 evidence / ranking / projection 语义
+
+原因：
+
+1. 这些能力当前仍带有明显的 procurement / instance / UI 语义。
+2. 这些能力当前仍直接服务 xiaocai 的产品闭环，而不是平台通用闭环。
+3. 当前 contract、字段和页面交互仍处于演进中，尚未达到平台级冻结条件。
+
+### 2. 未来可以提炼的仅是通用 capability
+
+未来若要上提到 FLARE，只允许提炼以下“去业务化”的通用能力：
+
+- 通用 connector registry primitive
+- 通用 connector health / status contract
+- 通用 source selection / fallback carrier
+- 通用 retrieval policy routing primitive
+
+明确不提炼：
+
+- procurement-specific source routing
+- `intelligent_sourcing` 命名与模式语义
+- supplier sourcing 策略
+- xiaocai settings / workbench 的页面投影语义
+
+### 3. 提炼前置条件
+
+只有同时满足以下条件，才应考虑把能力从 xiaocai 上提到 FLARE：
+
+1. 至少两个 instance 存在真实复用需求。
+2. 能力本身不再依赖采购业务词汇。
+3. 不再依赖 xiaocai settings 页面交互语义。
+4. 输入输出 contract 已稳定，可脱离 xiaocai 单独解释。
+5. 上提后不会把 FLARE 变成产品层或行业层实现。
+
+若任一条件不满足，则继续保留在 xiaocai instance。
+
+### 4. 当前执行策略：先在 xiaocai 完成功能，再决定是否迁移
+
+本 ADR 进一步冻结当前执行顺序：
+
+1. 先在 xiaocai instance 内完成 connector registry、search source policy、settings 配置入口、runtime routing hint、以及 sourcing 相关产品闭环。
+2. 当前阶段不以“能否立即迁移到 FLARE”作为实现前置条件。
+3. 只要能力仍主要服务 xiaocai 的 procurement 产品流程，就允许继续在 xiaocai 侧补全。
+4. 等到 xiaocai 内部能力稳定、跨 instance 复用需求明确后，再单独发起提炼评估与迁移设计。
+
+这意味着：
+
+- **当前优先级是把 xiaocai 功能做完整**
+- **迁移到 FLARE 是后续可选动作，不是本阶段阻塞项**
+- **不得为了“提前抽象”牺牲当前产品闭环与交付效率**
+
 ## Related
 
 - `/Users/dantevonalcatraz/Development/procurement-agents/docs/adr/ADR-004-instance-api-execution-baseline.md`

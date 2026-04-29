@@ -10,6 +10,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from xiaocai_instance_api.retrieval.route_plan import (
+    build_initial_attempt_results,
+    build_search_route_plan,
+)
 from xiaocai_instance_api.storage.source_store import SourceRecord
 
 
@@ -39,6 +43,7 @@ def build_retrieval_policy_signal(
     records: list[SourceRecord],
     *,
     limit: int = 20,
+    search_source_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     considered = records[: max(1, limit)]
     weights_by_type: dict[str, float] = {}
@@ -66,10 +71,27 @@ def build_retrieval_policy_signal(
         for key, value in sorted(weights_by_type.items(), key=lambda kv: kv[1], reverse=True)
     }
     preferred_sources = list(source_weights.keys())
+    resolved_search_policy = dict(search_source_policy) if isinstance(search_source_policy, dict) else {}
+    default_connector_key = str(resolved_search_policy.get("default_connector_key") or "").strip()
+    fallback_connector_keys = [
+        item
+        for item in resolved_search_policy.get("fallback_connector_keys", [])
+        if isinstance(item, str) and item.strip()
+    ]
+    allow_fallback = bool(resolved_search_policy.get("allow_fallback"))
+    route_plan = build_search_route_plan(resolved_search_policy)
+    selected_connector_keys = route_plan.get("ordered_connector_keys", [])
+    attempt_results = build_initial_attempt_results(route_plan)
 
     return {
         "preferred_sources": preferred_sources,
         "source_weights": source_weights,
         "context_refs": context_refs,
+        "default_connector_key": default_connector_key,
+        "fallback_connector_keys": fallback_connector_keys,
+        "allow_fallback": allow_fallback,
+        "routing_rules": resolved_search_policy.get("routing_rules", []),
+        "selected_connector_keys": selected_connector_keys,
+        "route_plan": route_plan,
+        "attempt_results": attempt_results,
     }
-
