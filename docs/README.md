@@ -17,7 +17,8 @@
 
 1. [Domain Standards](./domain-standards/README.md)
 2. [Architecture](./architecture/README.md)
-3. [Benchmark](./benchmark/README.md)
+3. [ADR](./adr/)
+4. [Benchmark](./benchmark/README.md)
 
 ---
 

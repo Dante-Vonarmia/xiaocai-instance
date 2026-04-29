@@ -16,7 +16,6 @@
   - `tenant-config`：tenant override（品牌、术语、开关差异）
   - `bindings`：tenant 私有数据绑定描述
   - `deploy`：容器编排、发布脚本、Nginx 配置
-- ❌ 不再使用 README 里旧的 `xiaocai-app / xiaocai-api / xiaocai-kernel` 多仓描述
 
 ---
 
