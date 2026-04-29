@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useInRouterContext, useNavigate } from 'react-router-dom'
-import { App as FlareChatCoreApp } from 'flare-chat-core'
+import { App as FlareChatCoreApp } from 'flare-chat-ui'
 
 import { APP_ROUTES } from '@/constants/routes'
 import { DEFAULT_FUNCTION_TYPE, DEFAULT_PROJECT_SLOT, DEFAULT_SESSION_TITLE } from '@/constants/chat'

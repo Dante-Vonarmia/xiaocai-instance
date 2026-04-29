@@ -1,7 +1,7 @@
 import { FileTextOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { App as FlareChatCoreApp } from 'flare-chat-core'
+import { App as FlareChatCoreApp } from 'flare-chat-ui'
 import { APP_ROUTES } from '@/constants/routes'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
 import { XIAOCAI_CHAT_THEME_TOKENS } from '@/theme/chatTheme'

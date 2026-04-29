@@ -10,7 +10,7 @@ import {
 
 const appPropsSpy = vi.fn()
 
-vi.mock('flare-chat-core', () => ({
+vi.mock('flare-chat-ui', () => ({
   App: (props: Record<string, unknown>) => {
     appPropsSpy(props)
     return <div data-testid="mock-core-app">core app</div>
@@ -27,7 +27,7 @@ vi.mock('@/services/api', async () => {
 })
 
 describe('ChatPage', () => {
-  it('将 core 所需参数透传到 flare-chat-core App', () => {
+  it('将 core 所需参数透传到 flare-chat-ui App', () => {
     render(<ChatPage />)
 
     expect(screen.getByTestId('mock-core-app')).toBeInTheDocument()
