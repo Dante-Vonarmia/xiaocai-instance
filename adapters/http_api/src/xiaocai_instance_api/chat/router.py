@@ -19,6 +19,7 @@ from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
+from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 import json
@@ -405,6 +406,7 @@ async def chat_run(
         kernel_context = await enrich_kernel_context_with_retrieval_policy(
             claims=claims,
             kernel_context=kernel_context,
+            user_message=request.message,
         )
         kernel_context.setdefault("function_type", session.function_type)
         kernel_context.setdefault("intake_session_id", request.session_id)
@@ -421,6 +423,14 @@ async def chat_run(
                 raise
         pending_contract = _build_pending_contract(
             result if isinstance(result, dict) else {},
+            session_id=request.session_id,
+            mode=mode,
+        )
+        pending_contract = apply_confidence_policy_to_pending_contract(
+            pending_contract=pending_contract,
+            confidence_policy=kernel_context.get("confidence_policy"),
+            clarification_policy=kernel_context.get("clarification_policy"),
+            category_prior=kernel_context.get("category_prior"),
             session_id=request.session_id,
             mode=mode,
         )
@@ -521,6 +531,7 @@ async def chat_stream(
             kernel_context = await enrich_kernel_context_with_retrieval_policy(
                 claims=claims,
                 kernel_context=kernel_context,
+                user_message=request.message,
             )
             kernel_context.setdefault("function_type", session.function_type)
             kernel_context.setdefault("intake_session_id", request.session_id)
@@ -541,6 +552,14 @@ async def chat_stream(
                     event_type = event.get("type", "message")
                     pending_contract = _build_pending_contract(
                         event if isinstance(event, dict) else {},
+                        session_id=request.session_id,
+                        mode=mode,
+                    )
+                    pending_contract = apply_confidence_policy_to_pending_contract(
+                        pending_contract=pending_contract,
+                        confidence_policy=kernel_context.get("confidence_policy"),
+                        clarification_policy=kernel_context.get("clarification_policy"),
+                        category_prior=kernel_context.get("category_prior"),
                         session_id=request.session_id,
                         mode=mode,
                     )

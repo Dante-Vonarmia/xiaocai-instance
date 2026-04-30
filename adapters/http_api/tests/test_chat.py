@@ -205,6 +205,43 @@ def test_chat_with_context(client, auth_token):
         assert call_args["context"]["project_id"] == "proj-123"
 
 
+def test_chat_run_injects_procurement_prior_context(client, auth_token):
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "已按需求分析模板生成建议",
+            "cards": [],
+            "session_id": "test-prior-session",
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "请帮我做需求分析",
+                "session_id": "test-prior-session",
+                "context": {
+                    "mode": "requirement_canvas",
+                    "采购目的": "支持新品发布活动落地",
+                    "使用场景": "新品发布会",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        kwargs = mock_chat.await_args.kwargs
+        kernel_context = kwargs["context"]
+
+        assert "analysis_template" in kernel_context
+        assert "sections" in kernel_context["analysis_template"]
+        assert "rfx_template" in kernel_context
+        assert "domain_prior" in kernel_context
+        assert kernel_context["domain_prior"]["active_stage"] == "requirement-collection"
+        assert kernel_context["domain_prior"]["preferred_output_template_key"] == "analysis_template"
+        assert "采购目的" in kernel_context["domain_prior"]["filled_fields"]
+        assert "项目名称" in kernel_context["domain_prior"]["missing_fields"]
+
+
 def test_chat_run_intelligent_sourcing_keeps_empty_cards_when_kernel_returns_none(client, auth_token):
     bind_response = client.post(
         "/projects/bind",

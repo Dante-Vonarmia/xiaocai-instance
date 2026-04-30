@@ -1,0 +1,14 @@
+pack_id: shared_confidence_threshold_rules
+version: v1
+scope: p0
+
+thresholds:
+  category_confidence_gte_for_direct_commit: 0.55
+  readiness_score_gte_for_direct_commit: 0.35
+  category_confidence_lt_for_category_clarification: 0.40
+  readiness_score_lt_for_requirement_clarification: 0.35
+
+policies:
+  when_low_category_confidence: clarify_category_first
+  when_low_readiness_score: clarify_requirement_first
+  when_no_relevant_chat_fields: defer_to_canvas
