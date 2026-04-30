@@ -486,6 +486,57 @@ def _apply_v5(runtime: SQLRuntime) -> None:
         )
 
 
+def _apply_v6(runtime: SQLRuntime) -> None:
+    session_context_default = (
+        '{"context_revision_id":"","session_summary":"","user_focus":[],"response_priorities":[],"confirmed_fields":{},'
+        '"missing_fields":[],"notes":[],"turns":[],"evidence":[],"facts":[],"inferences":[],"unknowns":[],'
+        '"source_attributions":[],"artifact_context":[],"sourcing_results":[],"analysis_results":[],'
+        '"rank_profile":{},"rank_feedback_log":[],"updated_at":""}'
+    )
+    if _table_exists(runtime, "sessions") and not _column_exists(runtime, "sessions", "title_source"):
+        runtime.execute("ALTER TABLE sessions ADD COLUMN title_source TEXT NOT NULL DEFAULT 'default'")
+    if _table_exists(runtime, "sessions") and not _column_exists(runtime, "sessions", "context"):
+        runtime.execute(
+            f"""
+            ALTER TABLE sessions
+            ADD COLUMN context TEXT NOT NULL DEFAULT '{session_context_default}'
+            """
+        )
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "attachments"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]'")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "context_refs"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN context_refs TEXT NOT NULL DEFAULT '[]'")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "knowledge_refs"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN knowledge_refs TEXT NOT NULL DEFAULT '[]'")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "agent_status"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN agent_status TEXT NULL")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "thinking_trace"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN thinking_trace TEXT NOT NULL DEFAULT ''")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "execution_trace"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN execution_trace TEXT NULL")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "knowledge_search"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN knowledge_search TEXT NULL")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "sourcing_candidates"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN sourcing_candidates TEXT NULL")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "knowledge_citation"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN knowledge_citation TEXT NULL")
+    if _table_exists(runtime, "messages") and not _column_exists(runtime, "messages", "context_usage"):
+        runtime.execute("ALTER TABLE messages ADD COLUMN context_usage TEXT NULL")
+
+
+def _apply_v7(runtime: SQLRuntime) -> None:
+    if _table_exists(runtime, "projects") and not _column_exists(runtime, "projects", "project_name"):
+        runtime.execute("ALTER TABLE projects ADD COLUMN project_name TEXT NOT NULL DEFAULT ''")
+    if _table_exists(runtime, "projects"):
+        runtime.execute(
+            """
+            UPDATE projects
+            SET project_name = project_id
+            WHERE project_name IS NULL OR project_name = ''
+            """
+        )
+
+
 def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     config = resolve_db_config(storage_db_url=db_url, storage_db_path=db_path)
     runtime = SQLRuntime(config)
@@ -508,6 +559,12 @@ def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     if current < 5:
         _apply_v5(runtime)
         _mark_version(runtime, 5)
+    if current < 6:
+        _apply_v6(runtime)
+        _mark_version(runtime, 6)
+    if current < 7:
+        _apply_v7(runtime)
+        _mark_version(runtime, 7)
 
     runtime.commit()
-    return 5
+    return 7

@@ -9,6 +9,10 @@ SRC_ROOT = Path(__file__).resolve().parents[1] / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+FLARE_KERNEL_SRC_ROOT = Path(__file__).resolve().parents[3].parent / "F.L.A.R.E" / "packages" / "flare-kernel" / "src"
+if FLARE_KERNEL_SRC_ROOT.exists() and str(FLARE_KERNEL_SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(FLARE_KERNEL_SRC_ROOT))
+
 from xiaocai_instance_api.settings import get_settings
 
 

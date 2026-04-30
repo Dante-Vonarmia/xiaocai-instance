@@ -41,6 +41,7 @@ class OwnershipStore:
             """
             CREATE TABLE IF NOT EXISTS projects (
                 project_id TEXT PRIMARY KEY,
+                project_name TEXT NOT NULL DEFAULT '',
                 tenant_id TEXT NULL,
                 org_id TEXT NULL,
                 status TEXT NOT NULL DEFAULT 'active',
@@ -325,6 +326,37 @@ class OwnershipStore:
             )
             return [str(row["project_id"]) for row in rows]
 
+    async def list_user_project_records(self, user_id: str) -> list[dict[str, str]]:
+        async with self._lock:
+            rows = self._runtime.fetchall(
+                """SELECT p.project_id, p.project_name, p.status, p.created_at, p.updated_at AS latest_updated_at
+                FROM projects p WHERE p.project_id IN (
+                    SELECT project_id FROM project_members WHERE user_id = ? AND status = 'active'
+                    UNION SELECT project_id FROM project_ownership WHERE user_id = ?
+                ) ORDER BY p.project_id ASC""",
+                (user_id, user_id),
+            )
+            return [{**row, "project_name": str(row.get("project_name") or row["project_id"])} for row in rows]
+
+    async def upsert_project_profile(self, user_id: str, project_id: str, project_name: str | None, status: str) -> dict[str, str]:
+        await self.add_project_ownership(user_id=user_id, project_id=project_id)
+        normalized_name = str(project_name or "").strip() or project_id
+        async with self._lock:
+            now = _now_iso()
+            self._runtime.execute(
+                "UPDATE projects SET project_name = ?, status = ?, updated_at = ? WHERE project_id = ?",
+                (normalized_name, status, now, project_id),
+            )
+            row = self._runtime.fetchone(
+                """SELECT project_id, project_name, status, created_at, updated_at AS latest_updated_at
+                FROM projects WHERE project_id = ? LIMIT 1""",
+                (project_id,),
+            )
+            self._runtime.commit()
+            if row is None:
+                return {"project_id": project_id, "project_name": normalized_name, "status": status, "created_at": "", "latest_updated_at": now}
+            return {**row, "project_name": str(row.get("project_name") or project_id)}
+
     async def get_project_member_role(self, user_id: str, project_id: str) -> str | None:
         async with self._lock:
             row = self._runtime.fetchone(
@@ -351,12 +383,9 @@ class OwnershipStore:
                 (user_id,),
             )
             return [str(row["knowledge_id"]) for row in rows]
-
-
 # 全局单例
 _store: OwnershipStore | None = None
 _store_db_key: tuple[str, str] | None = None
-
 
 def get_ownership_store() -> OwnershipStore:
     global _store, _store_db_key

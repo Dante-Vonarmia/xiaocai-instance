@@ -39,6 +39,32 @@ def test_project_bind_and_list(client):
     assert "proj-123" in mine_response.json()["project_ids"]
 
 
+def test_project_name_update_persists(client):
+    token = _token_for(client, "user-project-name")
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "proj-name-123"},
+    )
+    assert bind_response.status_code == 200
+
+    update_response = client.put(
+        "/projects/proj-name-123",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_name": "测试项目名称", "status": "active"},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["project_name"] == "测试项目名称"
+
+    projects_response = client.get(
+        "/projects",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert projects_response.status_code == 200
+    matching = next(item for item in projects_response.json()["projects"] if item["project_id"] == "proj-name-123")
+    assert matching["project_name"] == "测试项目名称"
+
+
 def test_chat_requires_project_ownership(client):
     owner_token = _token_for(client, "owner-user")
     stranger_token = _token_for(client, "stranger-user")
