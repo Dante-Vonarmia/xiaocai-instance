@@ -1,5 +1,7 @@
 .env
 deploy/.env
+deploy/.env.bak
+deploy/.env.*.bak
 node_modules/
 __pycache__/
 *.log

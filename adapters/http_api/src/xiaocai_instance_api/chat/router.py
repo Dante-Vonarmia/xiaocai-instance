@@ -17,10 +17,6 @@ from xiaocai_instance_api.contracts.chat_contract import (
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
-from xiaocai_instance_api.chat.fallback_bridge import (
-    build_chat_run_fallback_response,
-    build_chat_stream_fallback_done_event,
-)
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.settings import get_settings
@@ -48,8 +44,8 @@ def _extract_project_id(context: dict | None) -> str | None:
 
 
 def _should_use_local_fallback() -> bool:
-    """控制 kernel 不可用时是否允许回退到本地编排。"""
-    return bool(get_settings().enable_local_orchestration_fallback)
+    """当前实例不启用本地编排兜底，kernel 异常应直接显式返回。"""
+    return False
 
 
 async def _check_project_access(claims: AuthClaims, context: dict | None) -> None:
@@ -423,19 +419,6 @@ async def chat_run(
         except Exception:
             if not _should_use_local_fallback():
                 raise
-            response = build_chat_run_fallback_response(
-                message=request.message,
-                session_id=request.session_id,
-                mode=mode,
-                empty_message=EMPTY_ASSISTANT_MESSAGE,
-            )
-            await conversation_store.append_exchange(
-                user_id=claims.user_id,
-                session_id=request.session_id,
-                user_message=request.message,
-                assistant_message=response.message,
-            )
-            return response
         pending_contract = _build_pending_contract(
             result if isinstance(result, dict) else {},
             session_id=request.session_id,
@@ -584,28 +567,6 @@ async def chat_stream(
             except Exception:
                 if not _should_use_local_fallback():
                     raise
-                fallback_done_event = build_chat_stream_fallback_done_event(
-                    message=request.message,
-                    session_id=request.session_id,
-                    mode=mode,
-                    empty_message=EMPTY_ASSISTANT_MESSAGE,
-                )
-                latest_pending_contract = fallback_done_event.get("metadata", {}).get("pending_contract")
-                done_message = _to_text(fallback_done_event.get("message"))
-                emitted_done_event = True
-                if latest_pending_contract:
-                    yield "event: next_actions\n"
-                    yield f"data: {json.dumps(latest_pending_contract, ensure_ascii=False)}\n\n"
-                yield "event: done\n"
-                yield f"data: {json.dumps(fallback_done_event, ensure_ascii=False)}\n\n"
-                if done_message:
-                    await conversation_store.append_exchange(
-                        user_id=claims.user_id,
-                        session_id=request.session_id,
-                        user_message=request.message,
-                        assistant_message=done_message,
-                    )
-                return
 
             final_message = done_message or "".join(final_message_chunks)
             if _should_suppress_assistant_message(latest_pending_contract):

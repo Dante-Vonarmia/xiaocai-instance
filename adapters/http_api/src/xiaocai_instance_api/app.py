@@ -8,7 +8,6 @@ FastAPI 应用工厂
 4. 配置全局异常处理
 """
 
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -42,20 +41,15 @@ def create_app() -> FastAPI:
         FastAPI: 配置好的应用实例
     """
     settings = get_settings()
-
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        run_storage_migrations(
-            db_path=settings.storage_db_path,
-            db_url=settings.storage_db_url,
-        )
-        yield
+    run_storage_migrations(
+        db_path=settings.storage_db_path,
+        db_url=settings.storage_db_url,
+    )
 
     app = FastAPI(
         title="xiaocai Instance API",
         description="xiaocai 采购助手 HTTP API（基于 FLARE kernel）",
         version="0.1.0",
-        lifespan=lifespan,
     )
 
     # 配置 CORS

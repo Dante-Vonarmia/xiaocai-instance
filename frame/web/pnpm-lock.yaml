@@ -20,6 +20,9 @@ importers:
       axios:
         specifier: ^1.6.0
         version: 1.15.2
+      flare-chat-core:
+        specifier: 0.2.7
+        version: 0.2.7(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       flare-chat-ui:
         specifier: 0.3.0
         version: 0.3.0(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -1535,6 +1538,20 @@ packages:
 
   flare-canvas-ui@0.2.3:
     resolution: {integrity: sha512-Mes33dFrjllPGh0yFYOIraVGrR8RlAjZ1G3Vzmn6PL+U6im4kywF9XEkjImrw0plvjBZPgt8+xlsoI6OBR1t3Q==}
+    peerDependencies:
+      '@ant-design/icons': ^6.0.0
+      antd: ^6.0.0
+      react: ^18.0.0
+
+  flare-chat-core@0.2.7:
+    resolution: {integrity: sha512-BatYTcrmdx3bXb8GcRyshrYmKh3ewZxDEQ5z5B5L6Tjaa6iOblGNRxR95g59OTa/TXQ76kTTasBKLkZVe4qvhw==}
+    peerDependencies:
+      '@ant-design/icons': ^6.0.0
+      antd: ^6.0.0
+      react: ^18.0.0
+
+  flare-chat-ui@0.2.6:
+    resolution: {integrity: sha512-otzEkj5qaaDZrmovUmxX0AzhrD9Tiz7fx0rKlR7StSe5y5/Aydnchen5zlUfOFgpOQcJis9mhR4e0kCyA4OrqQ==}
     peerDependencies:
       '@ant-design/icons': ^6.0.0
       antd: ^6.0.0
@@ -4098,6 +4115,28 @@ snapshots:
       react: 18.3.1
       react-markdown: 10.1.0(@types/react@18.3.28)(react@18.3.1)
       remark-gfm: 4.0.1
+    transitivePeerDependencies:
+      - '@types/react'
+      - supports-color
+
+  flare-chat-core@0.2.7(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@ant-design/icons': 6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      antd: 6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      flare-chat-ui: 0.2.6(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      flare-generative-ui: 0.2.2(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      react: 18.3.1
+    transitivePeerDependencies:
+      - '@types/react'
+      - supports-color
+
+  flare-chat-ui@0.2.6(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@ant-design/icons': 6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      antd: 6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      flare-canvas-ui: 0.2.3(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      flare-generative-ui: 0.2.2(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      react: 18.3.1
     transitivePeerDependencies:
       - '@types/react'
       - supports-color

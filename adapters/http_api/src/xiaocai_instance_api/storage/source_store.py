@@ -40,9 +40,9 @@ def _new_id(prefix: str) -> str:
 
 def _normalize_source_status(value: object) -> str:
     normalized = str(value or "").strip().lower()
-    if normalized == "available":
-        return "ready"
-    return normalized or "ready"
+    if normalized == "ready":
+        return "available"
+    return normalized or "available"
 
 
 def _source_access_clause(alias: str = "ps") -> str:
@@ -172,7 +172,7 @@ class SourceStore:
     def _sync_legacy_columns(self) -> None:
         column_names = self._get_column_names()
         if "status" not in column_names:
-            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN status TEXT NOT NULL DEFAULT 'ready'")
+            self._runtime.execute("ALTER TABLE project_sources ADD COLUMN status TEXT NOT NULL DEFAULT 'available'")
         if "folder_name" not in column_names:
             self._runtime.execute("ALTER TABLE project_sources ADD COLUMN folder_name TEXT NOT NULL DEFAULT '默认文件夹'")
         if "owner_user_id" not in column_names:
@@ -206,8 +206,8 @@ class SourceStore:
         self._runtime.execute(
             """
             UPDATE project_sources
-            SET status = 'ready'
-            WHERE status = 'available'
+            SET status = 'available'
+            WHERE status = 'ready'
             """
         )
 
@@ -363,7 +363,7 @@ class SourceStore:
                 time_bucket=_derive_time_bucket(),
                 context_priority=context_priority,
                 storage_path=str(target_path),
-                status="ready",
+                status="available",
                 created_at=created_at,
             )
             self._runtime.execute(

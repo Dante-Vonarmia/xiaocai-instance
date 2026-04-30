@@ -25,7 +25,7 @@ export default defineConfig({
   },
 
   resolve: {
-    preserveSymlinks: true,
+    preserveSymlinks: false,
     dedupe: ['react', 'react-dom', 'antd', '@ant-design/icons'],
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -10,7 +10,7 @@ import {
 
 const appPropsSpy = vi.fn()
 
-vi.mock('flare-chat-ui', () => ({
+vi.mock('flare-chat-core', () => ({
   App: (props: Record<string, unknown>) => {
     appPropsSpy(props)
     return <div data-testid="mock-core-app">core app</div>
