@@ -267,5 +267,6 @@ ssh aliyun-xiaocai "REPO_DIR=/root/mnt/xiaocai-instance FRONTEND_API_BASE_URL=/a
 - 服务器代码来源固定为 Git，避免本地未提交文件与线上状态漂移
 - 远端只有 `docker compose`，没有 `docker-compose`
 - 发布默认重建 `inst-xiaocai-kernel` 与 `inst-xiaocai-api`，避免旧镜像继续运行
+- Docker build 默认保留镜像源，并额外使用 PyPI 官方源兜底，避免镜像同步滞后卡新版本
 - standalone 前端在服务器基于已 pull 的代码构建，避免本地 dist 直传
 - 默认 `API_UPSTREAM_URL=http://127.0.0.1:28001`，匹配 compose 中 API 宿主机端口

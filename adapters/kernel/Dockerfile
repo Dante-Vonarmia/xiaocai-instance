@@ -8,12 +8,16 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_RETRIES=10
 
 ARG PIP_INDEX_URL=""
+ARG PIP_EXTRA_INDEX_URL=""
 ARG PIP_TRUSTED_HOST=""
 
 RUN set -eux; \
     set -- pip install --no-cache-dir --timeout 600 --retries 10; \
     if [ -n "$PIP_INDEX_URL" ]; then \
         set -- "$@" --index-url "$PIP_INDEX_URL"; \
+    fi; \
+    if [ -n "$PIP_EXTRA_INDEX_URL" ]; then \
+        set -- "$@" --extra-index-url "$PIP_EXTRA_INDEX_URL"; \
     fi; \
     if [ -n "$PIP_TRUSTED_HOST" ]; then \
         set -- "$@" --trusted-host "$PIP_TRUSTED_HOST"; \
