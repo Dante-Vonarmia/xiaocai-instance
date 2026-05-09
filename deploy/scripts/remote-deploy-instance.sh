@@ -8,6 +8,7 @@ set -euo pipefail
 REPO_DIR=${REPO_DIR:-$HOME/mnt/xiaocai-instance}
 DEPLOY_DIR="$REPO_DIR/deploy"
 SKIP_API_SMOKE=${SKIP_API_SMOKE:-false}
+SKIP_DATA_VISIBILITY_SMOKE=${SKIP_DATA_VISIBILITY_SMOKE:-false}
 FRONTEND_DEPLOY_MODE=${FRONTEND_DEPLOY_MODE:-standalone}
 FORCE_REBUILD=${FORCE_REBUILD:-true}
 FORCE_RECREATE=${FORCE_RECREATE:-true}
@@ -116,6 +117,13 @@ if [ "$SKIP_API_SMOKE" = "true" ]; then
 else
   echo "[deploy] api smoke"
   make api-smoke
+fi
+
+if [ "$SKIP_DATA_VISIBILITY_SMOKE" = "true" ]; then
+  echo "[deploy] skip data visibility smoke (SKIP_DATA_VISIBILITY_SMOKE=true)"
+else
+  echo "[deploy] data visibility smoke"
+  make data-visibility-smoke
 fi
 
 echo "[deploy] completed"

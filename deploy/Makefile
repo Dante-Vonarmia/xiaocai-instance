@@ -12,7 +12,8 @@ DEV_COMPOSE := $(COMPOSE) -p $(INSTANCE_PROJECT) -f $(INSTANCE_COMPOSE_FILE) -f 
 	start stop restart \
 	up-instance up-instance-backend down-instance build-instance ps-instance logs-instance \
 	up-dev down-dev build-dev ps-dev logs-dev logs-devlib \
-	config-instance config-dev db-migrate backup-db restore-db domain-packs-check domain-acceptance health api-smoke acceptance clean-logs
+	config-instance config-dev db-migrate backup-db restore-db domain-packs-check domain-acceptance health api-smoke \
+	data-visibility-smoke acceptance clean-logs
 
 help:
 	@echo "xiaocai deploy targets"
@@ -45,6 +46,7 @@ help:
 	@echo ""
 	@echo "  make health         # run health check"
 	@echo "  make api-smoke      # auth/chat run/chat stream smoke"
+	@echo "  make data-visibility-smoke # verify historical project/session visibility"
 	@echo "  make acceptance     # write Gate logs"
 	@echo "  make clean-logs     # remove generated *.log files"
 
@@ -171,6 +173,9 @@ api-smoke:
 		> chat-stream-test.log; \
 	echo "api smoke logs generated: auth-test.log chat-run-test.log chat-stream-test.log"
 
+data-visibility-smoke:
+	./scripts/data-visibility-smoke.sh
+
 acceptance: env-check
 	$(DEV_COMPOSE) config > config-check.log 2>&1
 	$(DEV_COMPOSE) ps > containers.log
@@ -181,4 +186,4 @@ acceptance: env-check
 	@echo "acceptance logs generated in deploy/"
 
 clean-logs:
-	rm -f config-check.log containers.log health.log service.log frontend.log auth-test.log chat-run-test.log chat-stream-test.log
+	rm -f config-check.log containers.log health.log service.log frontend.log auth-test.log chat-run-test.log chat-stream-test.log data-visibility-smoke.log
