@@ -37,6 +37,10 @@ export default defineConfig({
         __dirname,
         './src/shims/renderModeArtifactBlock.jsx'
       ),
+      '@rc-component/context': path.resolve(
+        __dirname,
+        './node_modules/@rc-component/context/es/index.js'
+      ),
     },
   },
 
