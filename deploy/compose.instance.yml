@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-}
-        PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-https://pypi.org/simple/}
+        PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple/}
         PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-}
     container_name: inst-xiaocai-kernel
     ports:
@@ -98,7 +98,7 @@ services:
       dockerfile: Dockerfile
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-}
-        PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-https://pypi.org/simple/}
+        PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple/}
         PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
