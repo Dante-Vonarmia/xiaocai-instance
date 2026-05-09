@@ -72,6 +72,7 @@ class ChatStreamRequest(_ChatRequestCompatMixin):
     """
     message: str = Field(..., description="用户消息")
     session_id: str = Field(..., description="会话 ID")
+    command: str | None = Field(default=None, description="FLARE chat-core 兼容命令")
     context: Dict[str, Any] = Field(default_factory=dict, description="上下文信息")
 
 

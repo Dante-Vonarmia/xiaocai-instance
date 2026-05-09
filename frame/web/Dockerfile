@@ -7,13 +7,12 @@ COPY frame/web/package*.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY frame/web ./
+COPY domain-packs/branding ./domain-packs/branding
 
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ARG VITE_FLARE_CORE_ENTRY_URL
 ENV VITE_FLARE_CORE_ENTRY_URL=${VITE_FLARE_CORE_ENTRY_URL}
-
-RUN node ./scripts/patch-flare-chat-core.cjs
 
 RUN npm run build
 

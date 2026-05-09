@@ -10,7 +10,9 @@
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import 'flare-chat-ui/style.css'
 import './index.css'
+import './theme/xiaocaiFlareTheme.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

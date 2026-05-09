@@ -11,9 +11,11 @@ type ChatPageProps = {
   onLogout?: () => void
 }
 
-function ChatPage({ onLogout }: ChatPageProps) {
-  const inRouterContext = useInRouterContext()
-  const navigate = inRouterContext ? useNavigate() : null
+type ChatPageViewProps = ChatPageProps & {
+  navigate?: ReturnType<typeof useNavigate>
+}
+
+function ChatPageView({ onLogout, navigate }: ChatPageViewProps) {
   const accessToken = getAccessToken()
   const currentUserId = getCurrentUserId() || 'anonymous-user'
   const handleProfileClick = useCallback(() => {
@@ -39,6 +41,22 @@ function ChatPage({ onLogout }: ChatPageProps) {
       workspace={workspace}
     />
   )
+}
+
+function ChatPageWithRouter({ onLogout }: ChatPageProps) {
+  const navigate = useNavigate()
+
+  return <ChatPageView onLogout={onLogout} navigate={navigate} />
+}
+
+function ChatPage({ onLogout }: ChatPageProps) {
+  const inRouterContext = useInRouterContext()
+
+  if (inRouterContext) {
+    return <ChatPageWithRouter onLogout={onLogout} />
+  }
+
+  return <ChatPageView onLogout={onLogout} />
 }
 
 export default ChatPage

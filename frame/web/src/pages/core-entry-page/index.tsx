@@ -1,9 +1,11 @@
 import { FileTextOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { App as FlareChatCoreApp } from 'flare-chat-core'
 import { APP_ROUTES } from '@/constants/routes'
+import { useBranding } from '@/hooks/chat/useBranding'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
+import { createBackendRuntime } from '@/services/backendRuntime'
 import { XIAOCAI_CHAT_THEME_TOKENS } from '@/theme/chatTheme'
 import './styles.css'
 
@@ -19,8 +21,12 @@ const FLARE_VERSION = '0.2.8'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const navigate = useNavigate()
+  const branding = useBranding()
   const accessToken = getAccessToken()
   const currentUserId = getCurrentUserId() || 'anonymous-user'
+  const backendRuntime = useMemo(() => createBackendRuntime(), [])
+  const projectSlot = branding.projectSlot
+  const uiLabels = branding.uiLabels
   const handleGoSettings = useCallback(() => {
     navigate(APP_ROUTES.settingsProfile)
   }, [navigate])
@@ -39,8 +45,8 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
     <div className="xiaocai-settings-page core-entry-page">
       <aside className="core-entry-sidebar">
         <div className="core-entry-branding">
-          <div className="core-entry-branding__title">小采</div>
-          <div className="core-entry-branding__subtitle">AI智能采购助手</div>
+          <div className="core-entry-branding__title">{uiLabels.product_name}</div>
+          <div className="core-entry-branding__subtitle">{uiLabels.brand_tag}</div>
         </div>
 
         <div className="core-entry-sidebar-divider" />
@@ -64,7 +70,7 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
 
         <div className="core-entry-sidebar-footer">
           <div className="core-entry-sidebar-version">
-            FLARE {FLARE_VERSION}
+            {uiLabels.product_name} {FLARE_VERSION}
           </div>
           <button
             className="core-entry-sidebar-action"
@@ -83,10 +89,18 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
           apiBaseUrl={API_BASE_URL}
           apiToken={accessToken}
           backendMode="real"
+          defaultProjectName={projectSlot.name}
           defaultSessionTitle={DEFAULT_SESSION_TITLE}
           functionType={FUNCTION_TYPE}
-          projectId={DEFAULT_PROJECT_ID}
+          messageAPI={backendRuntime.messageAPI}
+          projectId={projectSlot.project_id || DEFAULT_PROJECT_ID}
+          projectAPI={backendRuntime.projectAPI}
+          productName={uiLabels.product_name}
+          productTag={uiLabels.brand_tag}
+          sessionAPI={backendRuntime.sessionAPI}
+          starterScenarios={branding.starterPrompts}
           themeTokens={XIAOCAI_CHAT_THEME_TOKENS}
+          uiLabels={uiLabels}
           userId={currentUserId}
         />
       </main>

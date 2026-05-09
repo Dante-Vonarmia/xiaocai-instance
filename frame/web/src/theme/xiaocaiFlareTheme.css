@@ -1,0 +1,164 @@
+.xiaocai-chat-page,
+.xiaocai-settings-page {
+  --xiaocai-primary: #8b5cf6;
+  --xiaocai-primary-hover: #7c3aed;
+  --xiaocai-primary-strong: #6d28d9;
+  --xiaocai-primary-dark: #4c1d95;
+  --xiaocai-primary-soft: #f5f3ff;
+  --xiaocai-primary-soft-hover: #ede9fe;
+  --xiaocai-primary-border: #d8b4fe;
+  --xiaocai-primary-border-strong: #c084fc;
+  --xiaocai-focus-ring: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+
+.xiaocai-chat-page .flare-chat-standalone-surface,
+.xiaocai-chat-page .flare-chat-workspace,
+.xiaocai-settings-page .flare-chat-standalone-surface,
+.xiaocai-settings-page .flare-chat-workspace {
+  --flare-accent: var(--xiaocai-primary) !important;
+  --flare-accent-hover: var(--xiaocai-primary-hover) !important;
+  --flare-focus-outline: var(--xiaocai-focus-ring) !important;
+  --flare-hover-bg: var(--xiaocai-primary-soft) !important;
+  --flare-scrollbar-thumb: #ddd6fe !important;
+  --flare-surface-bg-active: var(--xiaocai-primary-soft) !important;
+  --flare-surface-border-active: var(--xiaocai-primary) !important;
+  --flare-seg-track-bg: var(--xiaocai-primary-soft) !important;
+  --flare-seg-track-border: #ddd6fe !important;
+  --flare-seg-item-color: #7c6f9f !important;
+  --flare-seg-item-hover-color: var(--xiaocai-primary-strong) !important;
+  --flare-seg-item-selected-color: var(--xiaocai-primary-dark) !important;
+  --flare-seg-item-selected-bg: #ffffff !important;
+  background: #ffffff !important;
+}
+
+.xiaocai-chat-page .flare-chat-ui,
+.xiaocai-chat-page .flare-source-drop-zone,
+.xiaocai-chat-page .flare-source-drop-zone-inner,
+.xiaocai-settings-page .flare-chat-ui,
+.xiaocai-settings-page .flare-source-drop-zone,
+.xiaocai-settings-page .flare-source-drop-zone-inner {
+  background: #ffffff !important;
+}
+
+.xiaocai-chat-page .flare-message-row.is-user .flare-message-bubble,
+.xiaocai-settings-page .flare-message-row.is-user .flare-message-bubble {
+  background: var(--xiaocai-primary) !important;
+  border-color: var(--xiaocai-primary) !important;
+}
+
+.xiaocai-chat-page .ant-btn-primary,
+.xiaocai-settings-page .ant-btn-primary,
+.xiaocai-chat-page .flare-send-button.ant-btn-primary,
+.xiaocai-settings-page .flare-send-button.ant-btn-primary {
+  background: var(--xiaocai-primary) !important;
+  border-color: var(--xiaocai-primary) !important;
+  color: #ffffff !important;
+}
+
+.xiaocai-chat-page .ant-btn-primary:hover,
+.xiaocai-settings-page .ant-btn-primary:hover,
+.xiaocai-chat-page .flare-send-button.ant-btn-primary:hover,
+.xiaocai-settings-page .flare-send-button.ant-btn-primary:hover {
+  background: var(--xiaocai-primary-hover) !important;
+  border-color: var(--xiaocai-primary-hover) !important;
+  color: #ffffff !important;
+}
+
+.xiaocai-chat-page .flare-project-row:focus-visible,
+.xiaocai-chat-page .flare-session-item:focus-visible,
+.xiaocai-settings-page .flare-project-row:focus-visible,
+.xiaocai-settings-page .flare-session-item:focus-visible {
+  box-shadow: var(--xiaocai-focus-ring) !important;
+  outline: 2px solid var(--xiaocai-primary) !important;
+  outline-offset: 2px;
+}
+
+.xiaocai-chat-page .flare-project-row.is-active .flare-project-row-icon,
+.xiaocai-chat-page .flare-project-row.is-active .flare-project-row-title.ant-typography,
+.xiaocai-settings-page .flare-project-row.is-active .flare-project-row-icon,
+.xiaocai-settings-page .flare-project-row.is-active .flare-project-row-title.ant-typography {
+  color: var(--xiaocai-primary) !important;
+}
+
+.xiaocai-chat-page .flare-session-item.is-active::before,
+.xiaocai-settings-page .flare-session-item.is-active::before {
+  background: var(--xiaocai-primary) !important;
+}
+
+.xiaocai-chat-page .flare-session-run-indicator,
+.xiaocai-settings-page .flare-session-run-indicator {
+  background: rgba(139, 92, 246, 0.10) !important;
+  border-color: rgba(139, 92, 246, 0.22) !important;
+  color: var(--xiaocai-primary-strong) !important;
+}
+
+.xiaocai-chat-page .flare-composer-box.is-loading,
+.xiaocai-settings-page .flare-composer-box.is-loading {
+  border-color: rgba(139, 92, 246, 0.42) !important;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.12), 0 8px 22px rgba(139, 92, 246, 0.14) !important;
+}
+
+.xiaocai-chat-page .flare-composer-loading-placeholder,
+.xiaocai-settings-page .flare-composer-loading-placeholder {
+  color: var(--xiaocai-primary-strong) !important;
+}
+
+.xiaocai-chat-page .flare-composer-loading-dots > span,
+.xiaocai-settings-page .flare-composer-loading-dots > span {
+  background: var(--xiaocai-primary) !important;
+}
+
+.xiaocai-chat-page .flare-thinking-status-pill.is-running,
+.xiaocai-chat-page .flare-thinking-process-status.is-running,
+.xiaocai-settings-page .flare-thinking-status-pill.is-running,
+.xiaocai-settings-page .flare-thinking-process-status.is-running {
+  background: rgba(139, 92, 246, 0.14) !important;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.12) !important;
+  color: var(--xiaocai-primary-strong) !important;
+}
+
+.xiaocai-chat-page .flare-workflow-metrics .is-eligible,
+.xiaocai-settings-page .flare-workflow-metrics .is-eligible {
+  color: var(--xiaocai-primary-strong) !important;
+}
+
+.xiaocai-chat-page .flare-workflow-checkpoint.is-active,
+.xiaocai-settings-page .flare-workflow-checkpoint.is-active {
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.14), rgba(196, 181, 253, 0.10)) !important;
+  border-color: rgba(139, 92, 246, 0.34) !important;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.12), 0 6px 18px rgba(139, 92, 246, 0.16) !important;
+}
+
+.xiaocai-chat-page .flare-workflow-status.status-running,
+.xiaocai-chat-page .flare-workflow-status.status-waiting_user,
+.xiaocai-chat-page .flare-workflow-status.status-partial,
+.xiaocai-settings-page .flare-workflow-status.status-running,
+.xiaocai-settings-page .flare-workflow-status.status-waiting_user,
+.xiaocai-settings-page .flare-workflow-status.status-partial {
+  background: rgba(139, 92, 246, 0.14) !important;
+  color: var(--xiaocai-primary-strong) !important;
+}
+
+.xiaocai-chat-page .flare-workflow-question,
+.xiaocai-settings-page .flare-workflow-question {
+  border-left-color: rgba(139, 92, 246, 0.40) !important;
+}
+
+.xiaocai-chat-page .flare-workflow-task-dot.status-running,
+.xiaocai-chat-page .flare-workflow-task-dot.status-waiting_user,
+.xiaocai-chat-page .flare-workflow-task-dot.status-partial,
+.xiaocai-settings-page .flare-workflow-task-dot.status-running,
+.xiaocai-settings-page .flare-workflow-task-dot.status-waiting_user,
+.xiaocai-settings-page .flare-workflow-task-dot.status-partial {
+  background: var(--xiaocai-primary) !important;
+}
+
+.xiaocai-chat-page .flare-source-drop-zone.is-drag-over,
+.xiaocai-settings-page .flare-source-drop-zone.is-drag-over {
+  background: rgba(139, 92, 246, 0.06) !important;
+}
+
+.xiaocai-chat-page .flare-source-drop-zone.is-drag-over::after,
+.xiaocai-settings-page .flare-source-drop-zone.is-drag-over::after {
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.14) !important;
+}

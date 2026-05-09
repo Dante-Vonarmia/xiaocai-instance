@@ -1,9 +1,11 @@
+import { ConfigProvider } from 'antd'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthScreen } from '@/components/auth-screen'
 import { APP_ROUTES } from '@/constants/routes'
 import { AppAuthProvider, useAppAuth } from '@/context/AppAuthContext'
 import CoreEntryPage from '@/pages/core-entry-page'
 import SettingsPage from '@/pages/SettingsPage'
+import { XIAOCAI_CHAT_ANTD_THEME } from '@/theme/chatTheme'
 
 function AppRoutes() {
   const {
@@ -45,11 +47,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AppAuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AppAuthProvider>
+    <ConfigProvider theme={XIAOCAI_CHAT_ANTD_THEME}>
+      <AppAuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AppAuthProvider>
+    </ConfigProvider>
   )
 }
 

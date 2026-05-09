@@ -16,6 +16,9 @@ from xiaocai_instance_api.auth.router import router as auth_router
 from xiaocai_instance_api.chat.router import router as chat_router
 from xiaocai_instance_api.projects.router import router as projects_router
 from xiaocai_instance_api.sessions.router import router as sessions_router, chat_compat_router
+from xiaocai_instance_api.sessions.message_compat import router as chat_message_compat_router
+from xiaocai_instance_api.sessions.lifecycle_compat import router as chat_lifecycle_compat_router
+from xiaocai_instance_api.sessions.list_events import router as chat_list_events_router
 from xiaocai_instance_api.sources.router import (
     router as sources_router,
     project_compat_router as sources_project_compat_router,
@@ -67,6 +70,9 @@ def create_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(sessions_router)
     app.include_router(chat_compat_router)
+    app.include_router(chat_message_compat_router)
+    app.include_router(chat_lifecycle_compat_router)
+    app.include_router(chat_list_events_router)
     app.include_router(sources_router)
     app.include_router(sources_project_compat_router)
     app.include_router(sources_chat_project_compat_router)

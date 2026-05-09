@@ -1,0 +1,61 @@
+version: "v0"
+owner: "xiaocai"
+status: "draft"
+description: "Xiaocai instance analysis template registry for kernel runtime."
+
+defaults:
+  requirement_template_id: "xiaocai.requirement.procurement.v1"
+  sourcing_template_id: "xiaocai.sourcing.default.v1"
+
+templates:
+  - template_id: "xiaocai.requirement.procurement.v1"
+    analysis_type: "requirement"
+    locale: "zh-CN"
+    sections:
+      - key: "project_understanding"
+        title: "项目理解与核心需求"
+        required_slots: ["goal_summary", "scope", "target_object"]
+      - key: "market_status"
+        title: "市场现状和分析"
+        required_slots: ["market_snapshot", "supply_status"]
+      - key: "cost_structure"
+        title: "成本结构分析"
+        required_slots: ["cost_drivers", "budget_hint"]
+      - key: "risk"
+        title: "项目风险分析"
+        required_slots: ["risk_list", "mitigations"]
+      - key: "strategy"
+        title: "采购策略分析"
+        required_slots: ["priority_weights", "constraints"]
+      - key: "supplier_suggestion"
+        title: "供应商选择建议"
+        required_slots:
+          - "vendor_capability_requirements"
+          - "admission_rules"
+          - "preference_rules"
+      - key: "execution"
+        title: "项目实施计划与执行建议"
+        required_slots: ["next_steps", "decision_points"]
+
+  - template_id: "xiaocai.sourcing.default.v1"
+    analysis_type: "sourcing"
+    locale: "zh-CN"
+    sections:
+      - key: "sourcing_goal"
+        title: "寻源需求分析"
+        required_slots: ["goal_summary", "sourcing_scope"]
+      - key: "market_status"
+        title: "市场现状和分析"
+        required_slots: ["market_snapshot", "supply_status"]
+      - key: "cost_structure"
+        title: "成本结构分析"
+        required_slots: ["price_band", "cost_drivers"]
+      - key: "risk"
+        title: "项目风险分析"
+        required_slots: ["risk_list", "mitigations"]
+      - key: "sourcing_strategy"
+        title: "寻源策略分析"
+        required_slots: ["priority_weights", "sourcing_constraints"]
+      - key: "supplier_profile"
+        title: "供应商画像"
+        required_slots: ["vendor_profile", "admission_rules", "preference_rules"]

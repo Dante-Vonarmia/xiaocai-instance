@@ -100,7 +100,9 @@ export function SettingsSystemConfigProvider({
         if (target < 0 || target >= next.length) {
           return prev
         }
-        ;[next[index], next[target]] = [next[target], next[index]]
+        const current = next[index]
+        next[index] = next[target]
+        next[target] = current
         return next
       })
     },

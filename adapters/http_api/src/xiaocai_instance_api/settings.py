@@ -58,8 +58,8 @@ class Settings(BaseSettings):
     )
     kernel_host: str = Field(default="localhost", description="FLARE kernel 地址")
     kernel_port: int = Field(default=8000, description="FLARE kernel 端口")
-    kernel_run_path: str = Field(default="/chat/run", description="Kernel 同步对话路径")
-    kernel_stream_path: str = Field(default="/chat/stream", description="Kernel 流式对话路径")
+    kernel_run_path: str = Field(default="/kernel/run", description="Kernel 同步对话路径")
+    kernel_stream_path: str = Field(default="/kernel/stream", description="Kernel 流式对话路径")
 
     # Domain Pack 配置（domain-packs）
     flare_domain_pack_root: str = Field(default=".", description="领域资产根目录（domain-packs）")

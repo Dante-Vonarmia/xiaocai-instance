@@ -129,7 +129,7 @@ function SettingsPage({ onLogout }: SettingsPageProps) {
 
         <div style={{ marginTop: 'auto', width: '100%' }}>
           <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginBottom: '8px' }}>
-            FLARE {FLARE_VERSION}
+            小采 {FLARE_VERSION}
           </div>
           <button
             type="button"

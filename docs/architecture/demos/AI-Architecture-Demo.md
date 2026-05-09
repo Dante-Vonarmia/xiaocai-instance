@@ -1,146 +1,98 @@
-# 小采1.0 企业级AI工作流架构
+# 小采 AI 助手 1.0 企业级 AI 工作流架构（FLARE 对齐版）
 
-**演示文档** | 2026-02-15
-**用途**：客户演示 - 生产级AI系统架构 + 技术拓扑 + 可观测性
-**架构等级**：企业级（Production-Ready）
+**演示文档** | 2026-05-08  
+**用途**：客户演示 / 内部评审 - FLARE kernel-first、orchestration-first、contract-driven 架构  
+**架构等级**：Production-Ready Baseline + Engine Boundary Realignment
 
 ---
 
-## 全局技术栈架构图
+## 1. 架构定位
 
-```
-╔════════════╤══════════════════════════════════════════════════════════════════════════════╤═══════════════════╗
-║            │                                                                              │                   ║
-║  应用层     │  [需求梳理] [智能寻源] [Project] [知识库] [使用量管理] [对话界面]                    │                   ║
-║Application │  [业务入口] -> [界面交互] -> [请求发起]                                          │                   ║
-║            │                                                                              │                   ║
-╠════════════╪══════════════════════════════════════════════════════════════════════════════╪═══════════════════╣
-║            │                                                                              │                   ║
-║  展现层    │  [React 18] [TypeScript] [SSE Stream] [Web UI] [Vite Build]                  │  [Distributed]    ║
-║Presentation│  [Presentation/UI Engine] -> [页面交互] -> [结果展示] -> [实时回传]              │  [  Tracing  ]    ║
-║            │                                                                              │  [ trace_id  ]    ║
-╠════════════╪══════════════════════════════════════════════════════════════════════════════╪═══════════════════╣
-║            │                                                                              │                   ║
-║  网关层    │  [ FastAPI ] [ API Gateway ] [ SSE ] [ Auth ] [ 系统对接 ]                    │  [Structured]     ║
-║   API      │  [请求入口] -> [身份承接] -> [接口服务] -> [结果返回 / 实时输出]                  │  [  Logging ]     ║
-║  Gateway   │                                                                              │  [JSON logs]      ║
-║            │                                                                              │                   ║
-╠════════════╪══════════════════════════════════════════════════════════════════════════════╪═══════════════════╣
-║            │        ╔═════════════════ Project Agent + Kernel ═════════════════╗          │                   ║
-║ AI编排核心层  │        ║  Project Agent: workflow / subagent / policy            ║          │  [  Metrics ]     ║
-║Orchestration│        ║  ─────────────────────────────────────────────────────   ║          │  [ Dashboard]     ║
-║   Core      │        ║  Decision Engine : 路由 / 规划 / 条件判断 / 策略选择      ║          │  [Prometheus]     ║
-║   Layer     │        ║  Execution Engine: 状态流转 / 执行推进 / 流式输出 / 重试   ║          │  [ Grafana  ]     ║
-║            │        ║  Skills          : 可插拔业务动作单元 / 原子能力调用         ║          │                   ║
-║            │        ║                  : 例：字段确认 / 寻源分析 / 结果生成         ║          │  [ Alerting ]     ║
-║            │        ║  LangGraph       : 有状态工作流编排 / 节点执行 / 流程推进     ║          │  [  & SLO   ]     ║
-║            │        ║                  : 例：需求梳理流 / 寻源处理流 / 结果承接流    ║          │  [ Cost / Usage ] ║
-║            │        ╚══════════════════════════════════════════════════════════╝          │                   ║
-║            │                                                                              │                   ║
-╠════════════╪══════════════════════════════════════════════════════════════════════════════╪═══════════════════╣
-║            │   [主力大模型] [备用模型] [Embedding 服务] [向量检索] [模型路由]                 │                   ║
-║ AI模型服务层 │   [模型选择] -> [模型推理] -> [知识检索] -> [结果生成 / 降级切换]                │  [Config Git]     ║
-║ Model Layer│                                                                              │  [ Version  ]     ║
-║            │                                                                              │  [ Control  ]     ║
-║            │                                                                              │                   ║
-╠════════════╪══════════════════════════════════════════════════════════════════════════════╪═══════════════════╣
-║            │                                                                              │                   ║
-║ 数据存储层 │  [Ingestion: 文件接入] -> [Context: 知识组织] -> [Memory: 会话记忆]               │  [   RBAC   ]     ║
-║   Data     │  [Observation: 过程追踪] -> [PostgreSQL / Qdrant / Redis]                      │  [ API Keys ]     ║
-║  Storage   │  [文件资料] [知识内容] [结构化结果] [Project归属] [结果承接] [运行状态]            │  [ Security ]     ║
-║   Layer    │                                                                              │                   ║
-║            │                                                                              │                   ║
-╠════════════╪══════════════════════════════════════════════════════════════════════════════╪═══════════════════╣
-║            │  [Docker Compose] [服务编排] [运行环境] [日志] [监控] [上线部署]                  │                   ║
-║  基础设施层  │  [部署承载] -> [服务运行] -> [日志监控] -> [上线交付]                            │                   ║
-║   Infra    │                                                                              │                   ║
-║-structure  │                                                                              │                   ║
-║   Layer    │                                                                              │                   ║
-║            │                                                                              │                   ║
-╚════════════╧══════════════════════════════════════════════════════════════════════════════╧═══════════════════╝
-```
+小采 AI 助手 1.0 采用 FLARE 架构原则：
 
-## 核心调用拓扑图
+- **Kernel 负责权威工作流状态与编排推进**。
+- **Engines 负责可复用、确定性的能力函数与契约输出**。
+- **Domain Pack / Instance Config 负责业务词汇、流程配置、模板、字段和策略参数**。
+- **Runtime / Provider Adapters 负责外部副作用**，包括 LangGraph、Skills、LLM、OCR、Embedding、Search、MCP 等。
+- **Storage 只负责持久化承载**，不拥有 workflow 决策。
+- **UI 只渲染后端 canonical projection**，不猜测 authoritative state。
 
-```
-[应用模块]
-[需求梳理] [智能寻源] [Project] [知识库] [使用量管理] [对话界面]
+---
+
+## 2. 更新后的全局拓扑
+
+```text
+[Application / Web UI]
+  需求梳理 / 智能寻源 / Project / 知识库 / 使用量管理 / 对话界面
         |
         v
-[Presentation Engine / UI Engine]
-[React] [Web UI] [SSE Stream] [结果展示] [页面交互]
+[Transport / API Gateway]
+  FastAPI / Auth / Request Mapping / SSE Framing / Response Mapping
         |
         v
-[API Gateway / FastAPI]
-[请求入口] [身份承接] [实时输出] [系统对接]
+[Kernel / Orchestration Core]
+  Canonical State / Workflow Progression / Stream Patch Ownership / Error & Retry Policy
+        |
+        +------------------------------+
+        |                              |
+        v                              v
+[flare-engines]                  [Runtime Adapters]
+  Ingestion / Context              LangGraph Runtime
+  Memory / Observation             Skills / Tool Actions
+  Decision / Execution             Provider Invocation Boundary
+  Presentation
+  + Analysis / Document Understanding / Ranking / Reasoning / Track Reasoning
+        ^                              |
+        |                              v
+[Domain Pack / Instance Config]   [Provider Adapters]
+  workflow / modes / fields         LLM / OCR / Embedding
+  templates / policy config         Search / MCP / External APIs
         |
         v
-+-------------------------------------------------------------+
-|              Project Agent + Kernel                         |
-|                                                             |
-|  [Decision Engine] ---> [Execution Engine] ---> [Skills]    |
-|   路由/规划/策略选择      状态流转/执行推进      可插拔动作单元  |
-|                                            \-->  字段确认      |
-|                                            \-->  寻源分析      |
-|                                            \-->  结果生成      |
-|                                                             |
-|  [LangGraph] 有状态工作流编排 / 节点执行 / 流程推进 / 流式输出  |
-|              例：需求梳理流 / 寻源处理流 / 结果承接流            |
-+-------------------------------------------------------------+
-        |
-        v
-[AI Model Layer]
-[主力大模型] [备用模型] [模型路由] [Embedding] [向量检索]
-        |
-        v
-+------------------------------------------------------------------+
-|                Knowledge / Data Support                          |
-|                                                                  |
-| [Ingestion Engine] ---> 文件接入 / 数据导入 / 资料承接            |
-| [Context Engine]   ---> 知识组织 / 上下文拼装 / 引用组织          |
-| [Memory Engine]    ---> 会话记忆 / Project归属 / 结果承接         |
-| [Observation Eng.] ---> 过程追踪 / 指标记录 / 运行状态            |
-|                                                                  |
-| [PostgreSQL] [Qdrant] [Redis] [文件资料] [知识内容] [结构化结果]   |
-+------------------------------------------------------------------+
-        |
-        v
-[Infrastructure Layer]
-[Docker Compose] [服务编排] [运行环境] [日志] [监控] [上线部署]
+[Storage Ports -> Storage]
+  PostgreSQL / Qdrant / Redis / Files / Project Artifacts
 ```
 
 ---
 
-## 核心技术亮点
+## 3. 核心调用链
 
-**1. 七层引擎架构作为核心底座**
-- 以统一 Kernel 承接公共能力
-- 七层 Engine 分布在不同处理层中协同运行，而不是集中在单一模块内
-- Presentation Engine 对应前端结果组织与 UI 展现承接
-- Decision / Execution 位于编排核心层，负责主动作链推进
-- Ingestion / Context / Memory / Observation 位于知识与数据承接侧，负责输入、上下文、记忆与追踪
-- Decision / Execution 形成主动作链，Skills 挂接在执行链路上
-- AI 能力由 AI 编排核心层与 AI 模型服务层共同承接
-
-**2. Project Agent 与业务主线承接**
-- Project Agent 负责装配 workflow、subagent 和业务流程
-- 需求梳理、智能寻源、知识库、Project 和使用量管理在统一主线上运行
-- 结果可持续归属到 Project 并继续使用
-
-**3. 知识与结果持续承接**
-- 平台预设知识与用户业务资料共同支撑当前处理结果
-- 需求结果可进入智能寻源流程
-- 寻源结果、知识内容和会话内容可持续归属和调用
-
-**4. 生产可用的技术拓扑**
-- 前端、接口、智能编排、模型服务、知识数据和部署运行各层分工明确
-- 支持流式输出、结构化存储、知识检索和运行状态支撑
-- 支持联调、部署和首版上线实施
+1. **UI 发起请求**：用户从对话、需求梳理、智能寻源、Project 或知识库进入。
+2. **API 做 transport 映射**：只负责校验、鉴权、SSE/response framing，不做业务编排。
+3. **Kernel 推进工作流**：读取 canonical state，调用 engines，决定 runtime adapter 与 patch/event 输出。
+4. **Engines 输出标准 contract**：所有能力返回明确 result / event / patch / decision / readiness / confidence。
+5. **Domain Pack 注入业务语义**：业务触发词、字段、模板、ranking 权重、mode 映射来自配置。
+6. **Adapters 执行外部副作用**：模型、搜索、OCR、Embedding、MCP、LangGraph、Skills 均在 adapter 层。
+7. **Storage 持久化承载**：保存会话、知识、向量、Project 归属、结果和运行记录。
+8. **Observation 横切可观测**：trace_id 串联日志、事件、成本、健康度和告警。
 
 ---
 
-**文档状态**: 已完成（分层架构图）
-**用途**: 客户演示材料 - 七层引擎架构 + 技术拓扑 + 智能处理链路
-**技术负责人**: CTO
-**更新时间**: 2026-02-15
-**架构等级**: Production-Ready
+## 4. 七层 Engines 当前职责
+
+| Engine | 责任 | 禁止项 |
+|---|---|---|
+| Ingestion | 输入标准化、资料接入状态、候选归一化策略 | 不做 provider 调用，不写数据库 |
+| Context | 上下文 envelope、token 估算、budget、layer inclusion | 不做 retrieval/provider 决策 |
+| Memory | recall 归一化、source refs、dedup、citation | 不实现持久化 |
+| Observation | trace/event/citation contract 组装 | 不替代日志平台/监控系统 |
+| Presentation | response/event payload 组装 | 不做前端 UI 渲染 |
+| Decision | mode/state/policy/readiness/selected_action | 不硬编码业务词 |
+| Execution | execution artifact / plan / event assembly | 不直接绑定 LangGraph/Skills SDK |
+
+---
+
+## 5. 与旧图的关键差异
+
+- Presentation Engine 不再等同于 UI Engine；UI 是 presentation layer，engine 是后端 payload assembly。
+- Ingestion / Context / Memory / Observation 不再放在“数据存储层”；它们是 reusable capability engines。
+- Decision / Execution 不再描述成 Kernel 内部硬编码模块；Kernel 调用 engines public API。
+- LangGraph / Skills 不再画进 Execution Engine 内部；它们属于 runtime adapter。
+- 业务词汇、触发规则、模板、字段、ranking task profile 由 Domain Pack / Instance Config 提供。
+
+---
+
+**文档状态**：已更新（FLARE 边界对齐版）  
+**更新时间**：2026-05-08  
+**技术负责人**：CTO  
+**用途**：客户演示 / 内部架构评审 / Engine 迁移验收基线

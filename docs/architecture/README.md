@@ -14,6 +14,8 @@
 8. [08-xiaocai-instance-technical-scope-and-route-freeze.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/08-xiaocai-instance-technical-scope-and-route-freeze.md)
 9. [09-xiaocai-instance-boundary-and-directory-freeze.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md)
 10. [10-xiaocai-instance-freeze-and-hard-refactor-plan.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/10-xiaocai-instance-freeze-and-hard-refactor-plan.md)
+11. [11-xiaocai-flare-db-mcp-integration-plan.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/11-xiaocai-flare-db-mcp-integration-plan.md)
+12. [12-documentation-system-governance.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/architecture/12-documentation-system-governance.md)
 
 ## 说明
 

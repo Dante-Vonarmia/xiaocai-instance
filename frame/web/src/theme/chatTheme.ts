@@ -8,7 +8,7 @@ export const XIAOCAI_CHAT_ANTD_THEME = {
 } as const
 
 export const XIAOCAI_CHAT_THEME_TOKENS = {
-  appBg: '#eef2ff',
+  appBg: '#ffffff',
   appBorder: '#ddd6fe',
   appShadow: '0 16px 40px rgba(76, 29, 149, 0.10)',
   sidebarBg: '#faf5ff',

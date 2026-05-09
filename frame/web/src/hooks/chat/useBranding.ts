@@ -11,7 +11,7 @@ import {
   type ProjectSlot,
   type StarterPrompt,
 } from '@/constants/chat'
-import { toCanvasUiLabels } from '@/hooks/chat/normalizers'
+import { isObject, toCanvasUiLabels, toStarterPrompts, toText } from '@/hooks/chat/normalizers'
 
 type BrandingState = {
   functionType: string
@@ -22,6 +22,10 @@ type BrandingState = {
 }
 
 type BrandingPayload = {
+  instance?: {
+    displayName?: unknown
+    subtitle?: unknown
+  }
   ui?: {
     chat?: {
       functionType?: unknown
@@ -29,6 +33,7 @@ type BrandingPayload = {
       projectSlot?: unknown
       uiLabels?: unknown
       starterPrompts?: unknown[]
+      welcomeMessage?: unknown
     }
   }
 }
@@ -47,18 +52,29 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     return DEFAULT_BRANDING_STATE
   }
 
-  const normalizedUiLabels = toCanvasUiLabels(chatConfig.uiLabels)
+  const rawUiLabels = isObject(chatConfig.uiLabels) ? chatConfig.uiLabels : {}
+  const normalizedUiLabels = toCanvasUiLabels(rawUiLabels)
+  const productName = toText(rawUiLabels.product_name)
+    || toText(payload?.instance?.displayName)
+    || DEFAULT_CANVAS_UI_LABELS.product_name
+  const brandTag = toText(rawUiLabels.brand_tag)
+    || toText(payload?.instance?.subtitle)
+    || DEFAULT_CANVAS_UI_LABELS.brand_tag
+  const starterPrompts = toStarterPrompts(chatConfig.starterPrompts)
   return {
     functionType: DEFAULT_FUNCTION_TYPE,
     interactionMode: DEFAULT_INTERACTION_MODE,
     projectSlot: DEFAULT_PROJECT_SLOT,
     uiLabels: {
-      ...DEFAULT_CANVAS_UI_LABELS,
-      product_name: normalizedUiLabels.product_name,
-      brand_tag: normalizedUiLabels.brand_tag,
-      project_title: normalizedUiLabels.project_title,
+      ...normalizedUiLabels,
+      product_name: productName,
+      brand_tag: brandTag,
+      empty_state_title: toText(rawUiLabels.empty_state_title) || `欢迎来到${productName}`,
+      empty_state_description: toText(rawUiLabels.empty_state_description)
+        || toText(chatConfig.welcomeMessage)
+        || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
     },
-    starterPrompts: DEFAULT_STARTER_PROMPTS,
+    starterPrompts: starterPrompts.length > 0 ? starterPrompts : DEFAULT_STARTER_PROMPTS,
   }
 }
 

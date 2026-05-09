@@ -20,6 +20,7 @@ from xiaocai_instance_api.security.authorization import get_authorization_servic
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
+from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 import json
@@ -535,8 +536,9 @@ async def chat_stream(
             )
             kernel_context.setdefault("function_type", session.function_type)
             kernel_context.setdefault("intake_session_id", request.session_id)
+            client_handles_writeback = _is_non_empty_text(request.command)
             kernel_client = get_kernel_client()
-            final_message_chunks: list[str] = []
+            text_accumulator = StreamTextAccumulator()
             done_message: str | None = None
             emitted_done_event = False
             latest_pending_contract: dict | None = None
@@ -568,14 +570,21 @@ async def chat_stream(
                         event = {**event, **pending_contract}
                     chunk = _extract_event_chunk(event)
                     if chunk and _should_accumulate_stream_chunk(event_type, event):
-                        final_message_chunks.append(chunk)
+                        event, chunk_delta, should_emit_event = text_accumulator.normalize_event(
+                            event_type=event_type,
+                            event=event,
+                            chunk=chunk,
+                        )
+                        if not should_emit_event:
+                            continue
+                        text_accumulator.append(chunk_delta)
                     if event_type in ("done", "complete"):
                         emitted_done_event = True
                         done_message, event = _resolve_stream_terminal_message(
                             event=event,
-                            final_message_chunks=final_message_chunks,
+                            final_message_chunks=text_accumulator.chunks,
                         )
-                        if done_message is None and not final_message_chunks:
+                        if done_message is None and not text_accumulator.chunks:
                             done_message = EMPTY_ASSISTANT_MESSAGE
                             event = {**event, "message": done_message}
                     yield f"event: {event_type}\n"
@@ -587,7 +596,7 @@ async def chat_stream(
                 if not _should_use_local_fallback():
                     raise
 
-            final_message = done_message or "".join(final_message_chunks)
+            final_message = done_message or text_accumulator.final_message()
             if _should_suppress_assistant_message(latest_pending_contract):
                 pending_question = _as_object((latest_pending_contract or {}).get("question"))
                 current_question = _as_object((latest_pending_contract or {}).get("current_question"))
@@ -604,7 +613,7 @@ async def chat_stream(
                 }
                 yield "event: done\n"
                 yield f"data: {json.dumps(synthetic_done_event, ensure_ascii=False)}\n\n"
-            if final_message:
+            if final_message and not client_handles_writeback:
                 await conversation_store.append_exchange(
                     user_id=claims.user_id,
                     session_id=request.session_id,
