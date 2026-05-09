@@ -73,6 +73,14 @@ class SessionDeleteResponse(BaseModel):
     deleted: bool
 
 
+def _session_list_function_type_filter(function_type: str | None) -> str | None:
+    """Treat the generic auto mode as unscoped so legacy sessions remain visible."""
+    value = function_type.strip() if function_type else None
+    if value == "auto":
+        return None
+    return value
+
+
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
     function_type: str | None = None,
@@ -88,14 +96,15 @@ async def list_sessions(
     store = get_conversation_store()
     safe_page = max(page, 1)
     safe_page_size = max(1, min(page_size, 100))
+    function_type_filter = _session_list_function_type_filter(function_type)
     total = await store.count_sessions(
         user_id=claims.user_id,
-        function_type=function_type,
+        function_type=function_type_filter,
         project_id=project_id,
     )
     sessions = await store.list_sessions(
         user_id=claims.user_id,
-        function_type=function_type,
+        function_type=function_type_filter,
         project_id=project_id,
         offset=(safe_page - 1) * safe_page_size,
         limit=safe_page_size,
