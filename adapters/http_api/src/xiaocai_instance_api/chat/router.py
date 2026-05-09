@@ -20,6 +20,7 @@ from xiaocai_instance_api.security.authorization import get_authorization_servic
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
+from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
@@ -394,6 +395,21 @@ async def chat_run(
                 session_id=request.session_id,
                 mode=mode,
             ) or session
+        guard = evaluate_request_guard(request.message)
+        if not guard.allowed:
+            response = ChatRunResponse(
+                message=guard.message,
+                cards=[],
+                session_id=request.session_id,
+                metadata={"request_guard": guard.to_metadata()},
+            )
+            await conversation_store.append_exchange(
+                user_id=claims.user_id,
+                session_id=request.session_id,
+                user_message=request.message,
+                assistant_message=response.message,
+            )
+            return response
         kernel_context = dict(request.context) if isinstance(request.context, dict) else {}
         if session.project_id and not kernel_context.get("project_id"):
             kernel_context["project_id"] = session.project_id
@@ -519,6 +535,44 @@ async def chat_stream(
                     session_id=request.session_id,
                     mode=mode,
                 ) or session
+            client_handles_writeback = _is_non_empty_text(request.command)
+            guard = evaluate_request_guard(request.message)
+            if not guard.allowed:
+                guard_event = {
+                    "type": "content",
+                    "channel": "assistant",
+                    "content": guard.message,
+                    "session_id": request.session_id,
+                    "request_guard": guard.to_metadata(),
+                }
+                done_event = {
+                    "type": "done",
+                    "status": "done",
+                    "message": guard.message,
+                    "session_id": request.session_id,
+                    "request_guard": guard.to_metadata(),
+                }
+                complete_event = {
+                    "type": "complete",
+                    "status": "done",
+                    "message": guard.message,
+                    "session_id": request.session_id,
+                    "request_guard": guard.to_metadata(),
+                }
+                yield "event: content\n"
+                yield f"data: {json.dumps(guard_event, ensure_ascii=False)}\n\n"
+                yield "event: done\n"
+                yield f"data: {json.dumps(done_event, ensure_ascii=False)}\n\n"
+                yield "event: complete\n"
+                yield f"data: {json.dumps(complete_event, ensure_ascii=False)}\n\n"
+                if not client_handles_writeback:
+                    await conversation_store.append_exchange(
+                        user_id=claims.user_id,
+                        session_id=request.session_id,
+                        user_message=request.message,
+                        assistant_message=guard.message,
+                    )
+                return
             kernel_context = dict(request.context) if isinstance(request.context, dict) else {}
             if session.project_id and not kernel_context.get("project_id"):
                 kernel_context["project_id"] = session.project_id
@@ -536,7 +590,6 @@ async def chat_stream(
             )
             kernel_context.setdefault("function_type", session.function_type)
             kernel_context.setdefault("intake_session_id", request.session_id)
-            client_handles_writeback = _is_non_empty_text(request.command)
             kernel_client = get_kernel_client()
             text_accumulator = StreamTextAccumulator()
             done_message: str | None = None
