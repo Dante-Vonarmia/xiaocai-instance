@@ -11,16 +11,16 @@ function DomainModeSelector({
   onChange: (mode: DomainInjectionMode) => void
 }) {
   return (
-    <Card title="注入模式" bordered={false}>
-      <Typography.Text>Domain 注入模式</Typography.Text>
+    <Card title="采购知识规则" bordered={false}>
+      <Typography.Text>控制采购场景规则参与对话的强度。</Typography.Text>
       <div style={{ marginTop: 12 }}>
         <Radio.Group
           buttonStyle="solid"
           optionType="button"
           options={[
-            { label: '关闭', value: 'off' },
-            { label: '辅助', value: 'assist' },
-            { label: '强制', value: 'enforce' },
+            { label: '不启用', value: 'off' },
+            { label: '辅助建议', value: 'assist' },
+            { label: '严格执行', value: 'enforce' },
           ]}
           value={value}
           onChange={(event) => onChange(event.target.value as DomainInjectionMode)}

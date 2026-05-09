@@ -37,7 +37,7 @@ function SearchSourceSection() {
         setFallbackConnectorKeys(targetPolicy?.fallback_connector_keys ?? [])
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '加载 search source 配置失败')
+          setError(err instanceof Error ? err.message : '加载寻源策略失败')
         }
       } finally {
         if (!cancelled) {
@@ -80,17 +80,17 @@ function SearchSourceSection() {
       setAllowFallback(updated.allow_fallback)
       setFallbackConnectorKeys(updated.fallback_connector_keys)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '保存 search source 配置失败')
+      setError(err instanceof Error ? err.message : '保存寻源策略失败')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Card title="Search Source 配置" bordered={false}>
+    <Card title="寻源策略" bordered={false}>
       {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 12 }} /> : null}
       {loading ? <Spin /> : null}
-      {!loading && availableConnectors.length === 0 ? <Empty description="暂无可用 connector" /> : null}
+      {!loading && availableConnectors.length === 0 ? <Empty description="暂无可用数据源" /> : null}
       {!loading && availableConnectors.length > 0 ? (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <div>
@@ -108,7 +108,7 @@ function SearchSourceSection() {
           </div>
 
           <div className="settings-visibility-item">
-            <Typography.Text strong>允许 fallback</Typography.Text>
+            <Typography.Text strong>允许备用源</Typography.Text>
             <Switch
               checked={allowFallback}
               checkedChildren="允许"
@@ -118,7 +118,7 @@ function SearchSourceSection() {
           </div>
 
           <div>
-            <Typography.Text strong>Fallback 搜索源</Typography.Text>
+            <Typography.Text strong>备用搜索源</Typography.Text>
             <Select
               disabled={!allowFallback}
               mode="multiple"
@@ -132,10 +132,10 @@ function SearchSourceSection() {
 
           <Space direction="vertical" size={4}>
             <Typography.Text type="secondary">
-              当前模式：{TARGET_MODE}
+              适用场景：智能寻源
             </Typography.Text>
             <Typography.Text type="secondary">
-              规则说明：routing_rules 暂保留后端默认值，本页先提供默认源和 fallback 配置。
+              当前仅配置默认源和备用源，详细路由规则沿用后端配置。
             </Typography.Text>
           </Space>
 
@@ -147,7 +147,7 @@ function SearchSourceSection() {
               void savePolicy()
             }}
           >
-            保存配置
+            保存策略
           </Button>
         </Space>
       ) : null}

@@ -34,7 +34,7 @@ function McpConnectorSection({
   const mcpConnectors = sortByOrder(connectors.filter(isMcpConnector), orderedMcpKeys)
 
   return (
-    <Card title="MCP 连接（可配置优先级）" bordered={false}>
+    <Card title="MCP 服务状态" bordered={false}>
       {mcpConnectors.length === 0 ? <Empty description="暂无 MCP 连接" /> : null}
       {mcpConnectors.length > 0 ? (
         <Space direction="vertical" style={{ width: '100%' }} size={12}>

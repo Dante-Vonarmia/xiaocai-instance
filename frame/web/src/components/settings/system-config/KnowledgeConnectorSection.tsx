@@ -25,7 +25,7 @@ function KnowledgeConnectorSection({
   const knowledgeConnectors = connectors.filter((item) => !isMcpConnector(item))
 
   return (
-    <Card title="资料库连接" bordered={false}>
+    <Card title="资料库状态" bordered={false}>
       {knowledgeConnectors.length === 0 ? <Empty description="暂无资料库连接" /> : null}
       {knowledgeConnectors.length > 0 ? (
         <Space direction="vertical" style={{ width: '100%' }} size={12}>

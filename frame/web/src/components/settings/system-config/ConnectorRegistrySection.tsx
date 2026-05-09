@@ -29,7 +29,7 @@ function ConnectorRegistrySection() {
       const payload = await settingsApi.getConnectorRegistry()
       setItems([...payload.connectors].sort((a, b) => a.priority - b.priority))
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载 connector registry 失败')
+      setError(err instanceof Error ? err.message : '加载数据源配置失败')
     } finally {
       setLoading(false)
     }
@@ -55,7 +55,7 @@ function ConnectorRegistrySection() {
       const updated = await settingsApi.patchConnectorRegistryItem(connectorId, payload)
       setItems((prev) => prev.map((item) => (item.connector_id === connectorId ? updated : item)))
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新 connector 失败')
+      setError(err instanceof Error ? err.message : '更新数据源失败')
     } finally {
       markBusy(busyKey, false)
     }
@@ -68,7 +68,7 @@ function ConnectorRegistrySection() {
       const updated = await settingsApi.testConnectorRegistryItem(connectorId)
       setItems((prev) => prev.map((item) => (item.connector_id === connectorId ? updated : item)))
     } catch (err) {
-      setError(err instanceof Error ? err.message : '测试 connector 失败')
+      setError(err instanceof Error ? err.message : '测试连接失败')
     } finally {
       markBusy(busyKey, false)
     }
@@ -117,7 +117,7 @@ function ConnectorRegistrySection() {
 
   return (
     <Card
-      title="Connector Registry"
+      title="数据源管理"
       bordered={false}
       extra={(
         <Button
@@ -135,13 +135,13 @@ function ConnectorRegistrySection() {
             })
           }}
         >
-          新增 Connector
+          新增数据源
         </Button>
       )}
     >
       {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 12 }} /> : null}
       {loading ? <Spin /> : null}
-      {!loading && orderedItems.length === 0 ? <Empty description="暂无 connector registry 配置" /> : null}
+      {!loading && orderedItems.length === 0 ? <Empty description="暂无数据源配置" /> : null}
       {!loading && orderedItems.length > 0 ? (
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           {orderedItems.map((item, index) => (
@@ -207,7 +207,7 @@ function ConnectorRegistrySection() {
       <Modal
         destroyOnClose
         open={createOpen}
-        title="新增 Connector"
+        title="新增数据源"
         onCancel={() => setCreateOpen(false)}
         footer={[
           <Button key="cancel" onClick={() => setCreateOpen(false)}>
@@ -219,7 +219,7 @@ function ConnectorRegistrySection() {
         ]}
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="Key" name="key" rules={[{ required: true, message: '请输入 key' }]}>
+          <Form.Item label="标识 Key" name="key" rules={[{ required: true, message: '请输入 key' }]}>
             <Input />
           </Form.Item>
           <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
@@ -228,14 +228,14 @@ function ConnectorRegistrySection() {
           <Form.Item label="类型" name="connector_type" rules={[{ required: true, message: '请选择类型' }]}>
             <Select
               options={[
-                { label: 'MCP', value: 'mcp' },
-                { label: 'Search', value: 'search' },
-                { label: 'Database', value: 'database' },
-                { label: 'Knowledge', value: 'knowledge' },
+                { label: 'MCP 服务', value: 'mcp' },
+                { label: '检索 Search', value: 'search' },
+                { label: '数据库 Database', value: 'database' },
+                { label: '知识库 Knowledge', value: 'knowledge' },
               ]}
             />
           </Form.Item>
-          <Form.Item label="Driver" name="driver" rules={[{ required: true, message: '请输入 driver' }]}>
+          <Form.Item label="驱动 Driver" name="driver" rules={[{ required: true, message: '请输入 driver' }]}>
             <Input />
           </Form.Item>
           <Form.Item label="优先级" name="priority" rules={[{ required: true, message: '请输入优先级' }]}>
