@@ -5,8 +5,6 @@ set -euo pipefail
 # 目标：避免上线后因过滤字段/默认模式变化，导致历史项目或会话“数据未丢但不可见”。
 
 python3 - <<'PY'
-from __future__ import annotations
-
 import json
 import os
 import sys
@@ -15,7 +13,7 @@ import urllib.parse
 import urllib.request
 
 
-def load_dotenv(path: str = ".env") -> None:
+def load_dotenv(path=".env"):
     if not os.path.exists(path):
         return
     with open(path, "r", encoding="utf-8") as handle:
@@ -27,19 +25,19 @@ def load_dotenv(path: str = ".env") -> None:
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def bool_env(name: str, default: bool = False) -> bool:
+def bool_env(name, default=False):
     value = os.getenv(name)
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def int_env(name: str, default: int) -> int:
+def int_env(name, default):
     value = os.getenv(name, "").strip()
     return int(value) if value else default
 
 
-def request_json(url: str, *, token: str | None = None, payload: dict | None = None) -> dict:
+def request_json(url, token=None, payload=None):
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     headers = {"Content-Type": "application/json"}
     if token:
@@ -54,8 +52,8 @@ def request_json(url: str, *, token: str | None = None, payload: dict | None = N
         raise RuntimeError(f"{method} {url} failed: HTTP {exc.code} {body}") from exc
 
 
-def parse_project_specs(raw_value: str) -> list[tuple[str, int]]:
-    specs: list[tuple[str, int]] = []
+def parse_project_specs(raw_value):
+    specs = []
     for raw_item in raw_value.split(","):
         item = raw_item.strip()
         if not item:
@@ -68,7 +66,7 @@ def parse_project_specs(raw_value: str) -> list[tuple[str, int]]:
     return specs
 
 
-def fail(message: str, summary: dict) -> None:
+def fail(message, summary):
     summary["ok"] = False
     summary["error"] = message
     with open("data-visibility-smoke.log", "w", encoding="utf-8") as handle:
@@ -79,7 +77,7 @@ def fail(message: str, summary: dict) -> None:
 
 load_dotenv()
 
-summary: dict = {
+summary = {
     "ok": True,
     "enabled": bool_env("DATA_VISIBILITY_SMOKE_ENABLED"),
     "projects": [],
