@@ -16,7 +16,7 @@ fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-COMPOSE=${COMPOSE:-docker-compose}
+COMPOSE=${COMPOSE:-"docker compose"}
 PROJECT=${INSTANCE_PROJECT:-inst-xiaocai-dev}
 DB_NAME=${POSTGRES_DB:-xiaocai}
 DB_USER=${POSTGRES_USER:-xiaocai}

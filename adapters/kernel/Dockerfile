@@ -18,7 +18,7 @@ RUN set -eux; \
     if [ -n "$PIP_TRUSTED_HOST" ]; then \
         set -- "$@" --trusted-host "$PIP_TRUSTED_HOST"; \
     fi; \
-    set -- "$@" "flare-kernel==0.2.8" "uvicorn>=0.30,<1.0"; \
+    set -- "$@" "flare-kernel==0.2.9" "uvicorn>=0.30,<1.0"; \
     "$@"
 
 EXPOSE 8000

@@ -24,11 +24,11 @@ importers:
         specifier: ^1.16.0
         version: 1.16.0
       flare-chat-core:
-        specifier: 0.2.9
-        version: 0.2.9(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: 0.2.10
+        version: 0.2.10(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       flare-chat-ui:
-        specifier: 0.3.3
-        version: 0.3.3(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+        specifier: 0.3.4
+        version: 0.3.4(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -1572,13 +1572,13 @@ packages:
       antd: ^6.0.0
       react: ^18.0.0
 
-  flare-chat-core@0.2.9:
-    resolution: {integrity: sha512-xoXJQ9fg0CLExs3nKwKGwIRHAJ9fVY83xqaI8753M/8vDWt/NGK2+fE/SCbTZEHg9fGYCd9Flp2BhWM3RqjNbQ==}
+  flare-chat-core@0.2.10:
+    resolution: {integrity: sha512-PKIRlM85QTMecGgn278PrWQ7bNTdJe21OG6QyEsiWmhJIqzyYcWv0Fu9JXa1DVWlKRf59QtTLZ51hzDaXGMKbA==}
     peerDependencies:
       react: ^18.0.0
 
-  flare-chat-ui@0.3.3:
-    resolution: {integrity: sha512-NME1ijbN63cebZRzqVztmGgkcL0AquXxlSvov+u+5duJCRSYeC7w8T3WASGQ/XYgp1U4//etzjAf9QDB0iKAbg==}
+  flare-chat-ui@0.3.4:
+    resolution: {integrity: sha512-T0FHF02CvNGK/HOXS55Wa2bIWbDprNiTecl21lv5ygZ5S8g2pTZYjKXIb0cpczvEPIC+4qYlQk6lWaox0to2Sw==}
     peerDependencies:
       '@ant-design/icons': ^6.0.0
       antd: ^6.0.0
@@ -4244,11 +4244,11 @@ snapshots:
       - '@types/react'
       - supports-color
 
-  flare-chat-core@0.2.9(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  flare-chat-core@0.2.10(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@ant-design/icons': 6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       antd: 6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      flare-chat-ui: 0.3.3(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      flare-chat-ui: 0.3.4(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       react: 18.3.1
     transitivePeerDependencies:
       - '@types/react'
@@ -4258,7 +4258,7 @@ snapshots:
       - react-dom
       - supports-color
 
-  flare-chat-ui@0.3.3(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
+  flare-chat-ui@0.3.4(@ant-design/icons@6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.28)(antd@6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
     dependencies:
       '@ant-design/icons': 6.2.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       antd: 6.3.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

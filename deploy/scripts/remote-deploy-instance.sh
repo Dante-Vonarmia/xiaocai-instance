@@ -3,12 +3,14 @@ set -euo pipefail
 
 # 在服务器上执行 instance 部署（仅 instance，不启 devlib）
 # 用法:
-#   REPO_DIR=/opt/xiaocai-instance ./deploy/scripts/remote-deploy-instance.sh
+#   REPO_DIR=/root/mnt/xiaocai-instance ./deploy/scripts/remote-deploy-instance.sh
 
 REPO_DIR=${REPO_DIR:-$HOME/mnt/xiaocai-instance}
 DEPLOY_DIR="$REPO_DIR/deploy"
 SKIP_API_SMOKE=${SKIP_API_SMOKE:-false}
 FRONTEND_DEPLOY_MODE=${FRONTEND_DEPLOY_MODE:-standalone}
+FORCE_REBUILD=${FORCE_REBUILD:-true}
+FORCE_RECREATE=${FORCE_RECREATE:-true}
 
 if [ ! -d "$DEPLOY_DIR" ]; then
   echo "deploy dir not found: $DEPLOY_DIR"
@@ -65,6 +67,18 @@ fi
 echo "[deploy] config check"
 make config-instance
 
+if [ "$FORCE_REBUILD" = "true" ]; then
+  if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
+    echo "[deploy] force rebuild backend images"
+    docker compose -p "${INSTANCE_PROJECT:-inst-xiaocai-dev}" -f compose.instance.yml build inst-xiaocai-kernel inst-xiaocai-api
+  else
+    echo "[deploy] force rebuild instance images"
+    make build-instance
+  fi
+else
+  echo "[deploy] skip image rebuild (FORCE_REBUILD=false)"
+fi
+
 echo "[deploy] attempt backup before cutover (skip on first deployment)"
 if ! make backup-db; then
   echo "[deploy] backup skipped (no running stack or first deployment)"
@@ -73,12 +87,18 @@ fi
 echo "[deploy] stop old instance stack"
 make down-instance || true
 
+UP_FLAGS="-d"
+if [ "$FORCE_RECREATE" = "true" ]; then
+  UP_FLAGS="${UP_FLAGS} --force-recreate"
+fi
+
 if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
   echo "[deploy] start backend-only instance stack (frontend via host nginx)"
-  make up-instance-backend
+  docker compose -p "${INSTANCE_PROJECT:-inst-xiaocai-dev}" -f compose.instance.yml up $UP_FLAGS \
+    inst-xiaocai-kernel inst-xiaocai-postgres inst-xiaocai-redis inst-xiaocai-qdrant inst-xiaocai-api
 else
   echo "[deploy] start full instance stack"
-  make up-instance
+  docker compose -p "${INSTANCE_PROJECT:-inst-xiaocai-dev}" -f compose.instance.yml up $UP_FLAGS
 fi
 
 echo "[deploy] run migrations"

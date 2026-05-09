@@ -3,11 +3,11 @@ set -euo pipefail
 
 # 从本地上传 xiaocai instance 仓库到远端（默认 aliyun-xiaocai）
 # 用法:
-#   REMOTE_HOST=aliyun-xiaocai REMOTE_DIR=~/mnt/xiaocai-instance ./scripts/upload-instance-to-aliyun-xiaocai.sh
+#   REMOTE_HOST=aliyun-xiaocai REMOTE_DIR=/root/mnt/xiaocai-instance ./scripts/upload-instance-to-aliyun-xiaocai.sh
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
-REMOTE_DIR=${REMOTE_DIR:-~/mnt/xiaocai-instance}
+REMOTE_DIR=${REMOTE_DIR:-/root/mnt/xiaocai-instance}
 export COPYFILE_DISABLE=1
 
 echo "[upload] ensure remote dir: ${REMOTE_HOST}:${REMOTE_DIR}"

@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # 用法:
-#   TAG=v1.0.0 REMOTE_HOST=aliyun-xiaocai REMOTE_DIR=/opt/xiaocai-instance \
+#   TAG=v1.0.0 REMOTE_HOST=aliyun-xiaocai REMOTE_DIR=/root/mnt/xiaocai-instance \
 #   ./deploy/scripts/deploy-from-ghcr.sh
 
 TAG=${TAG:-latest}
 REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
-REMOTE_DIR=${REMOTE_DIR:-/opt/xiaocai-instance}
+REMOTE_DIR=${REMOTE_DIR:-/root/mnt/xiaocai-instance}
 PROJECT=${PROJECT:-inst-xiaocai-test}
 IMAGE=${IMAGE:-ghcr.io/dante-vonarmia/xiaocai-instance-api:${TAG}}
 
@@ -31,7 +31,7 @@ ssh "${REMOTE_HOST}" "
   docker compose -p '${PROJECT}' -f compose.instance.yml pull inst-xiaocai-api
   docker compose -p '${PROJECT}' -f compose.instance.yml up -d --no-build inst-xiaocai-api
   docker compose -p '${PROJECT}' -f compose.instance.yml run --rm --no-deps inst-xiaocai-api python -m xiaocai_instance_api.storage.migrate
-  curl -sS http://127.0.0.1:\${API_PORT:-8001}/health
+  curl -sS http://127.0.0.1:\${API_PORT:-28001}/health
   echo
 "
 

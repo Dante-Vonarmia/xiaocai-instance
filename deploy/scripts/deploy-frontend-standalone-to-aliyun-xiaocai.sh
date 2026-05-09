@@ -4,13 +4,13 @@ set -euo pipefail
 # 前端独立部署到远端 Nginx（HTTP 首发）
 # 本地执行，要求 frame/web/dist 已构建
 # 用法:
-#   REMOTE_HOST=aliyun-xiaocai API_UPSTREAM_URL=http://127.0.0.1:8001 SERVER_NAME=_ ./deploy/scripts/deploy-frontend-standalone-to-aliyun-xiaocai.sh
+#   REMOTE_HOST=aliyun-xiaocai API_UPSTREAM_URL=http://127.0.0.1:28001 SERVER_NAME=_ ./deploy/scripts/deploy-frontend-standalone-to-aliyun-xiaocai.sh
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
 REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/var/www/xiaocai-web}
 SERVER_NAME=${SERVER_NAME:-_}
-API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:8001}
+API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:28001}
 export COPYFILE_DISABLE=1
 
 DIST_DIR="$ROOT_DIR/frame/web/dist"

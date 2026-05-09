@@ -206,94 +206,66 @@ cp .env.production.example .env.production
 - `STORAGE_DB_URL` 使用 `postgresql://...`
 - `KERNEL_BASE_URL` 或 `KERNEL_HOST/KERNEL_PORT` 指向真实 kernel
 
-### 8.2 上传代码到服务器
+### 8.2 正规发布链路（必须 commit/push -> server pull）
 
-```bash
-REMOTE_HOST=aliyun-xiaocai \
-REMOTE_DIR=~/mnt/xiaocai-instance \
-./scripts/upload-instance-to-aliyun-xiaocai.sh
-```
-
-如需自动覆盖远端 `deploy/.env`：
-
-```bash
-scp .env.production aliyun-xiaocai:/opt/xiaocai-instance/deploy/.env
-```
-
-### 8.3 远端部署 instance（短停机切换）
-
-在服务器执行：
-
-```bash
-REPO_DIR=~/mnt/xiaocai-instance \
-FRONTEND_DEPLOY_MODE=standalone \
-bash ~/mnt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh
-```
-
-若 kernel 暂时不可达，可先跳过 smoke：
-
-```bash
-REPO_DIR=~/mnt/xiaocai-instance \
-SKIP_API_SMOKE=true \
-FRONTEND_DEPLOY_MODE=standalone \
-bash ~/mnt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh
-```
-
-该脚本包含：
-1. `make config-instance`
-2. `make backup-db`（若已有运行栈）
-3. `make down-instance`
-4. standalone 模式下执行 `make up-instance-backend`
-5. `make db-migrate`
-6. standalone 模式下执行 `CHECK_WEB=false make health`
-7. `make api-smoke`
-
-### 8.4 前端独立部署
-
-本地构建（首发 HTTP）：
-
-```bash
-cd ../frame/web
-API_BASE_URL=http://47.101.138.75:8001 ./scripts/build-standalone.sh
-```
-
-上传并安装远端 Nginx 配置：
-
-```bash
-cd ../../deploy
-REMOTE_HOST=aliyun-xiaocai \
-API_UPSTREAM_URL=http://127.0.0.1:8001 \
-SERVER_NAME=_ \
-./scripts/deploy-frontend-standalone-to-aliyun-xiaocai.sh
-```
-
-Nginx 模板：`deploy/nginx/frontend-standalone-http.conf.template`
-
-### 8.5 一键串联发布（正式推荐）
+生产更新默认走 Git 链路，不再把本地仓库直接上传覆盖到服务器：
 
 ```bash
 cd /Users/dantevonalcatraz/Development/procurement-agents
 
-FRONTEND_API_BASE_URL=/api \
-API_UPSTREAM_URL=http://127.0.0.1:8001 \
+git status --short
+git add <changed-files>
+git commit -m "chore: align xiaocai release"
+git push origin main
+
 REMOTE_HOST=aliyun-xiaocai \
-REMOTE_DIR=~/mnt/xiaocai-instance \
+REMOTE_DIR=/root/mnt/xiaocai-instance \
 FRONTEND_DEPLOY_MODE=standalone \
-COPY_PROD_ENV=true \
+FORCE_REBUILD=true \
+FORCE_RECREATE=true \
 ./deploy/scripts/release-to-aliyun-xiaocai.sh
 ```
 
-注意：
-- `COPY_PROD_ENV=true` 前需要本地存在 `deploy/.env.production`
-- 若你不希望脚本覆盖远端 `.env`，把 `COPY_PROD_ENV` 设为 `false`
-- `FRONTEND_DEPLOY_MODE=standalone` 是当前推荐默认值
+`release-to-aliyun-xiaocai.sh` 会执行：
+1. 确认本地工作区干净，且本地 HEAD 已 push 到 `origin/main`
+2. 服务器进入 `/root/mnt/xiaocai-instance` 后执行 `git pull --ff-only`
+3. 远端重建 `inst-xiaocai-kernel` 与 `inst-xiaocai-api` 镜像
+4. 强制重建 backend 容器并执行迁移/health/smoke
+5. 远端执行 `npm ci`、构建前端，并安装到 `/var/www/xiaocai-web`
+6. 重新生成并 reload 宿主机 Nginx 配置
 
-### 8.6 当前推荐路径为什么更稳
+注意：该链路不复制、不覆盖服务器 `deploy/.env`。
+
+### 8.3 手动拆步发布
+
+服务器拉取最新代码：
+
+```bash
+ssh aliyun-xiaocai "cd /root/mnt/xiaocai-instance && git reset --hard HEAD && git pull --ff-only origin main"
+```
+
+远端部署 backend/kernel：
+
+```bash
+ssh aliyun-xiaocai "REPO_DIR=/root/mnt/xiaocai-instance FRONTEND_DEPLOY_MODE=standalone FORCE_REBUILD=true FORCE_RECREATE=true bash /root/mnt/xiaocai-instance/deploy/scripts/remote-deploy-instance.sh"
+```
+
+远端构建并部署 standalone 前端：
+
+```bash
+ssh aliyun-xiaocai "REPO_DIR=/root/mnt/xiaocai-instance FRONTEND_API_BASE_URL=/api API_UPSTREAM_URL=http://127.0.0.1:28001 SERVER_NAME=_ bash /root/mnt/xiaocai-instance/deploy/scripts/remote-deploy-frontend-standalone.sh"
+```
+
+### 8.4 旧上传脚本仅作应急
+
+`upload-instance-to-aliyun-xiaocai.sh` 只保留为无法访问 Git 远端时的应急工具。常规生产更新不得使用上传覆盖路径。
+
+### 8.5 当前推荐路径为什么更稳
 
 这条链路专门规避了最近已经踩过的几个问题：
 
+- 服务器代码来源固定为 Git，避免本地未提交文件与线上状态漂移
 - 远端只有 `docker compose`，没有 `docker-compose`
-- 远端 repo 目录名变化导致 web Dockerfile 路径失效
-- 远端 web 镜像构建依赖 Docker Hub，容易超时
-- 首次前端部署时 `nginx -s reload` 可能因为 pid 不存在失败
-- standalone 前端上传时 macOS xattr 会产生无意义 tar 警告
+- 发布默认重建 `inst-xiaocai-kernel` 与 `inst-xiaocai-api`，避免旧镜像继续运行
+- standalone 前端在服务器基于已 pull 的代码构建，避免本地 dist 直传
+- 默认 `API_UPSTREAM_URL=http://127.0.0.1:28001`，匹配 compose 中 API 宿主机端口
