@@ -3,7 +3,7 @@
 """
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 import asyncio
 
 from xiaocai_instance_api.settings import get_settings
@@ -326,17 +326,39 @@ class OwnershipStore:
             )
             return [str(row["project_id"]) for row in rows]
 
-    async def list_user_project_records(self, user_id: str) -> list[dict[str, str]]:
+    async def list_user_project_records(self, user_id: str) -> list[dict[str, Any]]:
         async with self._lock:
             rows = self._runtime.fetchall(
-                """SELECT p.project_id, p.project_name, p.status, p.created_at, p.updated_at AS latest_updated_at
-                FROM projects p WHERE p.project_id IN (
-                    SELECT project_id FROM project_members WHERE user_id = ? AND status = 'active'
-                    UNION SELECT project_id FROM project_ownership WHERE user_id = ?
-                ) ORDER BY p.project_id ASC""",
+                """WITH accessible_projects AS (
+                    SELECT project_id, user_id FROM project_members WHERE user_id = ? AND status = 'active'
+                    UNION
+                    SELECT project_id, user_id FROM project_ownership WHERE user_id = ?
+                )
+                SELECT
+                    p.project_id,
+                    p.project_name,
+                    p.status,
+                    p.created_at,
+                    COALESCE(MAX(s.updated_at), p.updated_at) AS latest_updated_at,
+                    COUNT(s.session_id) AS session_count
+                FROM accessible_projects ap
+                JOIN projects p ON p.project_id = ap.project_id
+                LEFT JOIN sessions s
+                    ON s.project_id = ap.project_id
+                    AND s.owner_user_id = ap.user_id
+                    AND s.status = 'active'
+                GROUP BY p.project_id, p.project_name, p.status, p.created_at, p.updated_at
+                ORDER BY latest_updated_at DESC, p.project_id ASC""",
                 (user_id, user_id),
             )
-            return [{**row, "project_name": str(row.get("project_name") or row["project_id"])} for row in rows]
+            return [
+                {
+                    **row,
+                    "project_name": str(row.get("project_name") or row["project_id"]),
+                    "session_count": int(row.get("session_count") or 0),
+                }
+                for row in rows
+            ]
 
     async def upsert_project_profile(self, user_id: str, project_id: str, project_name: str | None, status: str) -> dict[str, str]:
         await self.add_project_ownership(user_id=user_id, project_id=project_id)

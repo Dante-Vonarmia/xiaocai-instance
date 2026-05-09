@@ -65,6 +65,32 @@ def test_project_name_update_persists(client):
     assert matching["project_name"] == "测试项目名称"
 
 
+def test_project_list_includes_session_count_and_latest_activity(client):
+    token = _token_for(client, "user-project-activity")
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "proj-activity-123"},
+    )
+    assert bind_response.status_code == 200
+
+    create_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "proj-activity-123", "title": "测试会话"},
+    )
+    assert create_response.status_code == 200
+
+    projects_response = client.get(
+        "/projects",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert projects_response.status_code == 200
+    matching = next(item for item in projects_response.json()["projects"] if item["project_id"] == "proj-activity-123")
+    assert matching["session_count"] == 1
+    assert matching["latest_updated_at"]
+
+
 def test_chat_requires_project_ownership(client):
     owner_token = _token_for(client, "owner-user")
     stranger_token = _token_for(client, "stranger-user")
