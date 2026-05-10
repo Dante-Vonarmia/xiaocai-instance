@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
+from xiaocai_instance_api.sessions.title_compat import apply_auto_title_after_exchange
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 
 
@@ -44,4 +45,11 @@ async def append_chat_core_messages(
     )
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    await apply_auto_title_after_exchange(
+        store=store,
+        user_id=claims.user_id,
+        session_id=session_id,
+        user_message=request.user_message,
+        assistant_message=request.assistant_message,
+    )
     return {"success": True}

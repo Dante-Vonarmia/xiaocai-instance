@@ -60,15 +60,6 @@ class MessageListResponse(BaseModel):
     messages: list[dict]
 
 
-class AppendExchangeRequest(BaseModel):
-    user_message: str
-    assistant_message: str
-
-
-class AppendExchangeResponse(BaseModel):
-    success: bool
-
-
 class SessionDeleteResponse(BaseModel):
     deleted: bool
 
@@ -212,19 +203,6 @@ async def list_chat_messages(
     return await list_messages(session_id=session_id, claims=claims)
 
 
-@chat_compat_router.post("/sessions/{session_id}/messages/append", response_model=AppendExchangeResponse)
-async def append_chat_exchange(
-    session_id: str,
-    request: AppendExchangeRequest,
-    claims: AuthClaims = Depends(get_current_auth_claims),
-) -> AppendExchangeResponse:
-    return await append_exchange(
-        session_id=session_id,
-        request=request,
-        claims=claims,
-    )
-
-
 @chat_compat_router.delete("/sessions/{session_id}", response_model=SessionDeleteResponse)
 async def delete_chat_session(
     session_id: str,
@@ -334,26 +312,6 @@ async def list_messages(
             for item in messages
         ]
     )
-
-
-@router.post("/{session_id}/messages/append", response_model=AppendExchangeResponse)
-async def append_exchange(
-    session_id: str,
-    request: AppendExchangeRequest,
-    claims: AuthClaims = Depends(get_current_auth_claims),
-) -> AppendExchangeResponse:
-    authz = get_authorization_service()
-    await authz.require_conversation_write(claims=claims, conversation_id=session_id)
-    store = get_conversation_store()
-    success = await store.append_exchange(
-        user_id=claims.user_id,
-        session_id=session_id,
-        user_message=request.user_message,
-        assistant_message=request.assistant_message,
-    )
-    if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-    return AppendExchangeResponse(success=True)
 
 
 @router.delete("/{session_id}", response_model=SessionDeleteResponse)

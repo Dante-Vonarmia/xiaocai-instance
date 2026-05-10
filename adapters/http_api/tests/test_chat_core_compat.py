@@ -43,3 +43,31 @@ def test_chat_core_list_events_compat_returns_sse():
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
     assert "polling fallback" in response.text
+
+
+def test_chat_core_message_writeback_updates_default_session_title():
+    client = TestClient(create_app())
+    token = _token(client, user_id="compat-title-user")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_response = client.post(
+        "/chat/sessions",
+        headers=headers,
+        json={"function_type": "auto", "title": "新会话"},
+    )
+    assert create_response.status_code == 200
+    session_id = create_response.json()["sessionId"]
+
+    append_response = client.post(
+        f"/chat/sessions/{session_id}/messages",
+        headers=headers,
+        json={
+            "user_message": "需要采购办公椅",
+            "assistant_message": "已收到，我会继续梳理需求。",
+        },
+    )
+    assert append_response.status_code == 200
+
+    get_response = client.get(f"/chat/sessions/{session_id}", headers=headers)
+    assert get_response.status_code == 200
+    assert get_response.json()["title"] == "需要采购办公椅"

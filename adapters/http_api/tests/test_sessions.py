@@ -90,6 +90,34 @@ def test_chat_run_writes_messages(client):
     assert messages[1]["role"] == "assistant"
 
 
+def test_append_exchange_updates_default_session_title(client):
+    token = _auth_token(client, user_id="title-user")
+    create_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"title": "新会话", "function_type": "auto"},
+    )
+    assert create_response.status_code == 200
+    session_id = create_response.json()["sessionId"]
+
+    append_response = client.post(
+        f"/sessions/{session_id}/messages/append",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "user_message": "采购100个保温杯",
+            "assistant_message": "好的，我来帮你梳理采购需求。",
+        },
+    )
+    assert append_response.status_code == 200
+
+    get_response = client.get(
+        f"/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_response.status_code == 200
+    assert get_response.json()["title"] == "采购100个保温杯"
+
+
 def test_session_list_pagination_and_delete(client):
     token = _auth_token(client, user_id="page-user")
     bind_response = client.post(
