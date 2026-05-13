@@ -32,12 +32,37 @@ class _ChatRequestCompatMixin(BaseModel):
         context = normalized.get("context")
         context_dict = dict(context) if isinstance(context, dict) else {}
 
-        for key in ("project_id", "user_id", "context_refs", "knowledge_refs", "intent", "tenant_id", "instance_id", "domain_pack_version"):
+        for key in (
+            "project_id",
+            "user_id",
+            "context_refs",
+            "knowledge_refs",
+            "intent",
+            "tenant_id",
+            "instance_id",
+            "domain_pack_version",
+            "mode",
+            "manual_mode",
+            "current_mode",
+            "target_mode",
+            "action_key",
+        ):
             if key in normalized and key not in context_dict:
                 context_dict[key] = normalized[key]
 
         if payload_dict:
-            for key in ("project_id", "user_id", "entities", "context_refs", "knowledge_refs"):
+            for key in (
+                "project_id",
+                "user_id",
+                "entities",
+                "context_refs",
+                "knowledge_refs",
+                "mode",
+                "manual_mode",
+                "current_mode",
+                "target_mode",
+                "action_key",
+            ):
                 if key in payload_dict and key not in context_dict:
                     context_dict[key] = payload_dict[key]
 

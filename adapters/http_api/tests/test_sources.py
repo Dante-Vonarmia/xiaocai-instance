@@ -40,7 +40,7 @@ def test_source_upload_list_delete(client):
     )
     assert upload_response.status_code == 200
     source_id = upload_response.json()["source_id"]
-    assert upload_response.json()["status"] == "available"
+    assert upload_response.json()["status"] == "ready"
     assert upload_response.json()["folder_name"] == "合同资料"
 
     list_response = client.get(
@@ -50,6 +50,7 @@ def test_source_upload_list_delete(client):
     )
     assert list_response.status_code == 200
     assert len(list_response.json()["sources"]) == 1
+    assert list_response.json()["sources"][0]["status"] == "ready"
 
     delete_response = client.delete(
         f"/sources/{source_id}",
@@ -110,7 +111,7 @@ def test_source_search_folder_and_mark_referenced(client):
         params={"project_id": "proj-source-3"},
     )
     assert mark_response.status_code == 200
-    assert mark_response.json()["status"] == "referenced"
+    assert mark_response.json()["status"] == "ready"
 
     folder_summary_response = client.get(
         "/sources/folders",

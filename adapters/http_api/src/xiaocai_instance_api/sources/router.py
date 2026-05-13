@@ -16,6 +16,7 @@ from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.sources.response import serialize_source_record, source_status_for_client
 from xiaocai_instance_api.storage.source_store import get_source_store
 
 
@@ -52,27 +53,7 @@ async def list_project_sources(
         "project_id": project_id,
         "query": q or "",
         "folder_name": folder_name or "",
-        "sources": [
-            {
-                "source_id": item.source_id,
-                "project_id": item.project_id,
-                "user_id": item.user_id,
-                "owner_user_id": item.owner_user_id,
-                "visibility": item.visibility,
-                "session_id": item.session_id,
-                "folder_name": item.folder_name,
-                "file_name": item.file_name,
-                "file_size": item.file_size,
-                "mime_type": item.mime_type,
-                "source_type": item.source_type,
-                "date_bucket": item.date_bucket,
-                "time_bucket": item.time_bucket,
-                "context_priority": item.context_priority,
-                "status": item.status,
-                "created_at": item.created_at,
-            }
-            for item in sources
-        ],
+        "sources": [serialize_source_record(item) for item in sources],
     }
 
 
@@ -158,24 +139,7 @@ async def upload_source_file(
         if tmp_path.exists():
             os.unlink(tmp_path)
 
-    return {
-        "source_id": record.source_id,
-        "project_id": record.project_id,
-        "user_id": record.user_id,
-        "owner_user_id": record.owner_user_id,
-        "visibility": record.visibility,
-        "session_id": record.session_id,
-        "folder_name": record.folder_name,
-        "file_name": record.file_name,
-        "file_size": record.file_size,
-        "mime_type": record.mime_type,
-        "source_type": record.source_type,
-        "date_bucket": record.date_bucket,
-        "time_bucket": record.time_bucket,
-        "context_priority": record.context_priority,
-        "status": record.status,
-        "created_at": record.created_at,
-    }
+    return serialize_source_record(record)
 
 
 @router.delete("/{source_id}")
@@ -223,7 +187,7 @@ async def mark_project_source_referenced(
     )
     if not marked:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
-    return {"marked": True, "source_id": source_id, "status": "referenced"}
+    return {"marked": True, "source_id": source_id, "status": source_status_for_client("referenced")}
 
 
 @router.post("/{source_id}/priority")

@@ -28,7 +28,7 @@ services:
       - LLM_PROVIDER_BACKEND=${LLM_PROVIDER_BACKEND:-dashscope}
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL}
-      - DASHSCOPE_MODEL=${DASHSCOPE_MODEL:-qwen3.5-plus}
+      - DASHSCOPE_MODEL=${DASHSCOPE_MODEL:-qwen3.5-plus-2026-04-20}
     volumes:
       - ../docs:/app/docs:ro
       - ../docs:/usr/local/lib/python3.11/site-packages/docs:ro
@@ -118,7 +118,7 @@ services:
       - KERNEL_STREAM_PATH=${KERNEL_STREAM_PATH:-/kernel/stream}
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL}
-      - DASHSCOPE_MODEL=${DASHSCOPE_MODEL:-qwen3.5-plus}
+      - DASHSCOPE_MODEL=${DASHSCOPE_MODEL:-qwen3.5-plus-2026-04-20}
       - LLM_PROVIDER_BACKEND=${LLM_PROVIDER_BACKEND:-dashscope}
       - FLARE_DOMAIN_PACK_ROOT=/domain-packs
       - STORAGE_DB_URL=${STORAGE_DB_URL:-postgresql://xiaocai:xiaocai_dev_password@inst-xiaocai-postgres:5432/xiaocai}

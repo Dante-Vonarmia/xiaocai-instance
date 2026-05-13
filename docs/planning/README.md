@@ -1,6 +1,6 @@
 # xiaocai Planning
 
-最后更新: 2026-05-08
+最后更新: 2026-05-11
 
 ## 1. 目的
 
@@ -50,6 +50,27 @@
 3. 合同变更仍以 FLARE `docs/contracts/` 与 xiaocai `docs/contracts/` 为准。
 4. 如果 planning 与 contracts 冲突，以 contracts 为准；如果 handoff 与 architecture 冲突，先按 architecture 边界复核。
 
+## 2.2 Build / Buy / Glue 排期体现规则
+
+Build / Buy / Glue 是架构决策，不单独维护任务型执行文件。  
+决策依据写入 ADR；具体执行必须直接落到本文件的任务分组。
+
+当前排期体现：
+
+| 排期任务组 | Build / Buy / Glue 口径 | 说明 |
+|---|---|---|
+| `INT-*` | Buy / Glue | MCP、外部 DB、connector 接入不自研基础设施，xiaocai 负责 adapter、normalize、trace |
+| `LLM-FB-*` | Buy / Reuse | LLM provider fallback 复用 FLARE 能力，xiaocai 只消费配置与 trace |
+| `DATA-*` | Build | 数据契约、字段别名、readiness owner 属于 xiaocai 产品真状态 |
+| `CALC-*` | Build + Glue | 权重计算由 xiaocai 承接；模型只参与解释与候选生成 |
+| `SCORE-*` | Build | 供应商门槛、评分、推荐等级属于采购领域规则 |
+| `OUT-*` | Glue | 分析文本由模型生成，但输出 schema、章节、阻断规则归 xiaocai contract |
+| `TEST-*` | Build | 采购 eval / regression case 由 xiaocai 维护 |
+
+冻结 ADR：
+
+- [ADR-008 Build / Buy / Glue And Model-native Boundary](../adr/ADR-008-build-buy-glue-and-model-native-boundary.md)
+
 ## 3. 当前重点排期
 
 | 日期 | 任务 | 关联文档 | 验收 |
@@ -59,6 +80,16 @@
 | 2026-05-13 | mock DB 接入 + provider health/quota 降级 | `manual-public/02-external-data-and-mcp-runbook.md` | DB sample query 通过；disabled/exhausted provider 自动跳过 |
 | 2026-05-14 | mock MCP Gateway + provider timeout/fallback | `manual-public/02-external-data-and-mcp-runbook.md` | MCP JSON-RPC 可调用；fallback 有 trace |
 | 2026-05-15 | 端到端通道验收 | `architecture/11-xiaocai-flare-db-mcp-integration-plan.md` | smoke tests 与手册步骤通过 |
+
+### 3.1 接入后产品闭环排期
+
+| 日期 | 任务 | 关联文档 | 验收 |
+|---|---|---|---|
+| 2026-05-18 | 数据契约字段与别名闭合 | `/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx` | 字段、别名、阶段归属与 domain-pack contract 可追溯 |
+| 2026-05-19 | 权重计算 runtime 化 | `domain-packs/shared/rules/template_recommendation_rules.yaml` | 推荐结果包含命中规则、基础权重、修正因子、最终得分 |
+| 2026-05-20 | 供应商 scorecard 计算闭环 | `domain-packs/*/supplier_scorecard.yaml` | supplier data 可计算门槛、维度得分、总分、推荐等级与解释 |
+| 2026-05-21 | 分析/寻源输出模板补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，缺字段阻断明确 |
+| 2026-05-22 | 契约与权重回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
 
 ## 4. 当前任务分组
 
@@ -82,6 +113,18 @@
 | LLM-FB-004 | timeout/error fallback 回归 | Planned | FLARE + xiaocai | primary timeout/500 返回 fallback 并记录 `provider_trace` |
 | LLM-FB-005 | chat/retrieval 联合验收 | Planned | xiaocai | 回复不中断，降级原因可审计 |
 
+### P0：数据契约与权重计算闭环
+
+| 任务ID | 任务 | 状态 | Owner | 验收 |
+|---|---|---|---|---|
+| DATA-001 | 数据契约字段 source 与别名闭合 | Planned | xiaocai | `数量和单位`、`影响范围`、供应商寻源字段别名有明确映射；source 指向当前契约文件 |
+| DATA-002 | contract loader / prior 使用统一字段口径 | Planned | xiaocai | 推荐规则、缺字段优先级、readiness 计算不再混用中英文字段 |
+| CALC-001 | 模板推荐权重计算 runtime 化 | Planned | xiaocai | 输出命中规则、基础权重、readiness 修正、缺字段惩罚、最终排序 |
+| CALC-002 | 场景过滤与禁用条件执行 | Planned | xiaocai | activity/gift 等规则不会跨场景误命中；禁用条件有可审计原因 |
+| SCORE-001 | 供应商 scorecard calculator | Planned | xiaocai | 基于 hard gates、score dimensions、veto items 生成总分、等级、解释 |
+| OUT-001 | 需求分析与寻源输出模板补齐 | Planned | xiaocai | 需求分析覆盖 7 段，寻源分析覆盖数据契约要求章节 |
+| TEST-001 | 数据契约与权重计算回归测试 | Planned | xiaocai | domain-pack validation、alias、weight、scorecard、output snapshot 测试通过 |
+
 ### P1：文档体系治理
 
 | 任务ID | 任务 | 状态 | Owner | 验收 |
@@ -89,6 +132,7 @@
 | DOC-001 | docs 体系入口冻结 | Done | xiaocai | `docs/README.md` 与 governance 文档已建立 |
 | DOC-002 | planning 入口建立 | Done | xiaocai | `docs/planning/README.md` 成为排期入口 |
 | DOC-003 | 根目录历史文档分批吸收 | Planned | xiaocai | 根目录不再承接新增专题文档 |
+| DOC-004 | Build / Buy / Glue 决策归属冻结 | Done | xiaocai | ADR-008 已建立；具体执行已落入本文件任务组 |
 
 ## 5. 排期维护规则
 

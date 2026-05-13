@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
+from xiaocai_instance_api.contracts.chat_contract import ChatStreamRequest
 
 
 def _token(client: TestClient, user_id: str = "compat-user") -> str:
@@ -71,3 +72,25 @@ def test_chat_core_message_writeback_updates_default_session_title():
     get_response = client.get(f"/chat/sessions/{session_id}", headers=headers)
     assert get_response.status_code == 200
     assert get_response.json()["title"] == "需要采购办公椅"
+
+
+def test_chat_core_payload_normalizes_mode_into_context():
+    request = ChatStreamRequest.model_validate({
+        "session_id": "sess-compat-mode",
+        "mode": "requirement_intake",
+        "manual_mode": "requirement_intake",
+        "payload": {
+            "message": "帮我梳理采购需求",
+            "mode": "requirement_intake",
+            "target_mode": "requirement_intake",
+            "action_key": "activate_intake_mode",
+            "project_id": "project-1",
+            "user_id": "user-1",
+        },
+    })
+
+    assert request.message == "帮我梳理采购需求"
+    assert request.context["mode"] == "requirement_intake"
+    assert request.context["manual_mode"] == "requirement_intake"
+    assert request.context["target_mode"] == "requirement_intake"
+    assert request.context["action_key"] == "activate_intake_mode"

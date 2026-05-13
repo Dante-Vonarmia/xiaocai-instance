@@ -7,8 +7,9 @@ httpx>=0.24
 psycopg[binary]>=3.2
 python-multipart>=0.0.9
 sse-starlette>=2.1
-flare-engines==0.2.4
-flare-kernel==0.2.9
-flare-kernel-client-py==0.1.1
+flare-engines==0.2.5
+flare-kernel==0.2.10
+flare-kernel-client-py==0.1.2
+flare-storage-adapters==0.1.2
 pytest>=7.0
 pytest-asyncio>=0.21

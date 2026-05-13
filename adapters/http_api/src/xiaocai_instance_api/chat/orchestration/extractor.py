@@ -28,7 +28,7 @@ def extract_slots(text: str) -> Dict[str, str]:
             slots["交付地点"] = city
             break
 
-    time_match = re.search(r"(\d{1,2}月\d{1,2}[日号]?[前后]?|[下本]月|月底前|月底|本周|下周|月底之前|[0-9]+天内)", text)
+    time_match = re.search(r"(\d{1,2}月\d{1,2}[日号]?[前后]?|[下本]月|月底前|月底|本周|下周|月底之前|[0-9]+[天周月]内)", text)
     if time_match:
         slots["交付时间"] = time_match.group(1)
 
@@ -37,6 +37,10 @@ def extract_slots(text: str) -> Dict[str, str]:
 
     if contains_any(text, ["周年庆", "发布会", "答谢", "活动"]):
         slots["使用场景"] = "市场活动执行"
+
+    scene_match = re.search(r"(?:用于|用来|使用于)([^，。；\n]{2,40})", text)
+    if scene_match:
+        slots["使用场景"] = scene_match.group(1).strip()
 
     for l1, l2 in L1_L2_KEYWORDS:
         if l1 in text:

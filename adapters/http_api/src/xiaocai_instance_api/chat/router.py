@@ -22,6 +22,10 @@ from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
+from xiaocai_instance_api.chat.workbench_projection import (
+    build_intake_workbench_projection,
+    projection_key,
+)
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 import json
@@ -137,6 +141,24 @@ def _as_list(value: object) -> list:
     if isinstance(value, list):
         return value
     return []
+
+
+def _has_usable_canvas_state_event(event: dict) -> bool:
+    """Respect FLARE-native canvas state when it already carries intake UI state."""
+    canvas_state = _as_object(event.get("canvas_state"))
+    if not canvas_state:
+        payload = _as_object(event.get("payload"))
+        canvas_state = _as_object((payload or {}).get("canvas_state"))
+    if not canvas_state:
+        return False
+    if _as_object(canvas_state.get("current_question")):
+        return True
+    if _as_list(canvas_state.get("question_plan")):
+        return True
+    if _as_list(canvas_state.get("collected")) or _as_list(canvas_state.get("missing")):
+        return True
+    progress = canvas_state.get("progress")
+    return isinstance(progress, (int, float)) and progress > 0
 
 
 def _to_text(value: object) -> str:
@@ -273,10 +295,21 @@ def _build_pending_contract(
 
 
 def _should_suppress_assistant_message(pending_contract: dict | None) -> bool:
-    _ = pending_contract
-    # 占位策略：实例层不再压制 assistant 正文，优先透传 FLARE 的建议内容。
-    # 结构化收集信息仍通过 pending_contract / next_actions 保留。
-    return False
+    if not pending_contract:
+        return False
+    if not _is_intake_mode(_to_text(pending_contract.get("mode_key"))):
+        return False
+    current_question = _as_object(pending_contract.get("current_question"))
+    missing_fields = _as_list(pending_contract.get("missing_fields"))
+    gate = _as_object(pending_contract.get("gate")) or {}
+    gate_status = _to_text(gate.get("status")).lower()
+    return bool(current_question or missing_fields or gate_status == "blocked")
+
+
+def _pending_question_text(pending_contract: dict | None) -> str:
+    pending_question = _as_object((pending_contract or {}).get("question"))
+    current_question = _as_object((pending_contract or {}).get("current_question"))
+    return _to_text((pending_question or {}).get("question_text")) or _to_text((current_question or {}).get("question_text"))
 
 
 def _ensure_response_cards(
@@ -596,6 +629,8 @@ async def chat_stream(
             emitted_done_event = False
             latest_pending_contract: dict | None = None
             exchange_persisted = False
+            emitted_projection_keys: set[str] = set()
+            emitted_suppressed_question = False
             try:
                 event_iter = kernel_client.chat_stream(
                     user_id=claims.user_id,
@@ -618,9 +653,44 @@ async def chat_stream(
                         session_id=request.session_id,
                         mode=mode,
                     )
+                    workbench_projection = build_intake_workbench_projection(
+                        pending_contract=pending_contract,
+                        mode=mode,
+                        session_id=request.session_id,
+                        user_message=request.message,
+                    )
+                    projection_events: list[tuple[str, dict]] = []
+                    if workbench_projection:
+                        projected_pending = _as_object(workbench_projection.get("pending_contract"))
+                        if projected_pending:
+                            pending_contract = projected_pending
+                        plan_payload = _as_object(workbench_projection.get("plan_payload"))
+                        canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
+                        if plan_payload:
+                            projection_events.append(("primary_flow_payload", plan_payload))
+                        if canvas_payload:
+                            projection_events.append(("canvas_state", canvas_payload))
+                    has_native_canvas_state = event_type == "canvas_state" and _has_usable_canvas_state_event(event)
+                    if has_native_canvas_state:
+                        projection_events = []
                     if pending_contract:
                         latest_pending_contract = pending_contract
                         event = {**event, **pending_contract}
+                    if event_type == "canvas_state" and workbench_projection and not has_native_canvas_state:
+                        canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
+                        if canvas_payload:
+                            event = canvas_payload
+                            emitted_projection_keys.add(f"canvas_state:{projection_key(canvas_payload)}")
+                    should_suppress_text = _should_suppress_assistant_message(pending_contract)
+                    if should_suppress_text and event_type in ("content", "text.delta", "text.replace"):
+                        for projected_type, projected_payload in projection_events:
+                            event_key = f"{projected_type}:{projection_key(projected_payload)}"
+                            if event_key in emitted_projection_keys:
+                                continue
+                            emitted_projection_keys.add(event_key)
+                            yield f"event: {projected_type}\n"
+                            yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
+                        continue
                     chunk = _extract_event_chunk(event)
                     if chunk and _should_accumulate_stream_chunk(event_type, event):
                         event, chunk_delta, should_emit_event = text_accumulator.normalize_event(
@@ -637,6 +707,20 @@ async def chat_stream(
                             event=event,
                             final_message_chunks=text_accumulator.chunks,
                         )
+                        if _should_suppress_assistant_message(latest_pending_contract or pending_contract):
+                            question_text = _pending_question_text(latest_pending_contract or pending_contract)
+                            if question_text:
+                                done_message = question_text
+                                event = {**event, "message": question_text, "content": question_text}
+                                if not emitted_suppressed_question:
+                                    replacement_event = {
+                                        "type": "text.replace",
+                                        "content": question_text,
+                                        "session_id": request.session_id,
+                                    }
+                                    yield "event: text.replace\n"
+                                    yield f"data: {json.dumps(replacement_event, ensure_ascii=False)}\n\n"
+                                    emitted_suppressed_question = True
                         if done_message is None and not text_accumulator.chunks:
                             done_message = EMPTY_ASSISTANT_MESSAGE
                             event = {**event, "message": done_message}
@@ -645,6 +729,13 @@ async def chat_stream(
                     if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
                         yield "event: next_actions\n"
                         yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
+                    for projected_type, projected_payload in projection_events:
+                        event_key = f"{projected_type}:{projection_key(projected_payload)}"
+                        if event_key in emitted_projection_keys:
+                            continue
+                        emitted_projection_keys.add(event_key)
+                        yield f"event: {projected_type}\n"
+                        yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
             except Exception:
                 if not _should_use_local_fallback():
                     raise

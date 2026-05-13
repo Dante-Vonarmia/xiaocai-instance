@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>小采 AI 助手 1.0 FLARE 架构拓扑图</title>
+  <title>小采 AI 助手 1.0 六层主架构拓扑图</title>
   <style>
     :root {
       --bg: #f5f7fb;
@@ -65,79 +65,92 @@
     .rail { border: 1px solid var(--line); border-radius: 20px; background: var(--soft); padding: 17px 15px; display: grid; gap: 12px; align-content: start; }
     .rail-block { background: #fff; border: 1px solid var(--line); border-radius: 15px; padding: 12px; }
     .rail-block h3 { margin: 0 0 8px; color: var(--accent); font-size: 14px; }
+    .rail-line { margin: 4px 0; color: #334155; font-size: 11.2px; line-height: 1.42; }
+    .rail-line strong { color: var(--accent); }
     .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
     .tag { border: 1px solid #cbd6e4; background: #f8fafc; color: #24324a; border-radius: 999px; padding: 4px 8px; font-size: 11px; }
     .contract-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px; }
     .contract { border: 1px solid #cbd6e4; background: #fff; border-radius: 12px; padding: 9px 10px; text-align:center; font-size: 11.5px; font-weight: 700; color: var(--accent); }
+
+    .control-loop { display: grid; grid-template-columns: 1fr 22px 1fr 22px 1fr 22px 1fr; gap: 8px; align-items: stretch; margin-top: 10px; }
+    .flow-arrow { align-self: center; text-align: center; color: var(--accent); font-weight: 900; font-size: 18px; }
+    .pipeline { border: 1px dashed #b8c7dc; background: #fbfdff; border-radius: 18px; padding: 13px; }
+    .engine-pipeline { display: grid; grid-template-columns: 1fr 18px 1fr 18px 1fr 18px 1fr 18px 1fr 18px 1fr; gap: 7px; align-items: stretch; }
+    .engine.step { min-height: 104px; padding: 11px; }
+    .engine.step h4 { font-size: 12.5px; }
+    .engine.step p { font-size: 11px; }
+    .span-band { margin-top: 10px; border: 1px solid #cbd6e4; border-radius: 13px; background: #fff; padding: 10px 12px; font-size: 11.5px; color: #26344d; }
+    .support-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .contract-strip.six { grid-template-columns: repeat(6, 1fr); }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="header">
       <div>
-        <h1>小采 AI 助手 1.0 · FLARE 架构拓扑图</h1>
-        <p class="subtitle">Kernel-first · Orchestration-first · Contract-driven · Stable core, replaceable edges</p>
+        <h1>小采 AI 助手 1.0 · 六层主架构拓扑图</h1>
+        <p class="subtitle">六层主架构 · Surface 输入 · Runtime 调度 · Field Agent 执行 · Engine 实现</p>
       </div>
       <div class="meta">
         <div>项目：小采 AI 助手 1.0</div>
-        <div>版本：FLARE 边界对齐版 · 2026-05-08</div>
+        <div>版本：Field Agent 协议同步版 · 2026-05-11</div>
         <div>保密级别：内部资料（客户演示与交付评审使用）</div>
       </div>
     </div>
 
     <div class="board">
-      <div class="banner"><span>Enterprise AI Workflow Topology</span><span>Kernel owns state · Engines own reusable capabilities · Domain Pack owns business semantics</span></div>
+      <div class="banner"><span>企业级 AI 工作流拓扑 · 六层主架构</span><span>Kernel 组装调度 · Runtime Agent 管生命周期 · Field Agent 调用 Capability / Engine</span></div>
       <div class="topology">
         <div class="main">
           <div class="row">
-            <div class="lane"><div class="title">应用 / 展现层</div><div class="eyebrow">Application + UI</div><ul><li>需求梳理 / 智能寻源 / Project</li><li>知识库 / 使用量管理 / 对话界面</li></ul></div>
-            <div class="box blue"><div class="title">Web UI / Presentation Layer</div><ul><li>React / TypeScript / SSE Renderer 负责页面交互和结果展示。</li><li>UI 只消费后端 canonical projection，不猜测 authoritative workflow state。</li></ul><div class="contract-strip"><div class="contract">result cards</div><div class="contract">stream render</div><div class="contract">canvas view</div><div class="contract">actions</div><div class="contract">project view</div></div></div>
-            <div class="box"><div class="title">关键输出</div><ul><li>承接业务入口</li><li>展示结果与可操作动作</li><li>实时渲染后端事件</li></ul></div>
+            <div class="lane"><div class="title">1. Surface / 展现层</div><div class="eyebrow">交互入口</div><ul><li>Workbench / Canvas / Inventory</li><li>只呈现 Runtime 投影</li></ul></div>
+            <div class="box blue"><div class="title">Surface 输入输出边界</div><div class="mini-grid"><div class="mini"><h4>输入</h4><p>用户动作、项目上下文、文件与表单</p></div><div class="mini"><h4>Surface</h4><p>展示 Runtime 投影，不发明权威状态</p></div><div class="mini"><h4>输出</h4><p>SurfaceEvent、UserAction、AttachmentRef</p></div><div class="mini"><h4>交接</h4><p>进入 API，映射为 Runtime 请求</p></div></div><div class="contract-strip"><div class="contract">UserAction</div><div class="contract">ProjectContext</div><div class="contract">AttachmentRef</div><div class="contract">RuntimeProjection</div><div class="contract">SurfaceEvent</div></div></div>
+            <div class="box"><div class="title">关键输出</div><ul><li>标准用户动作</li><li>项目上下文引用</li><li>Runtime 投影展示</li></ul></div>
           </div>
           <div class="down">⌄</div>
 
           <div class="row">
-            <div class="lane"><div class="title">Transport / API</div><div class="eyebrow">Gateway Layer</div><ul><li>FastAPI / Auth / SSE</li><li>Request & Response Mapping</li></ul></div>
-            <div class="box"><div class="title">API Gateway / Transport Boundary</div><div class="mini-grid"><div class="mini"><h4>请求校验</h4><p>输入解析与鉴权</p></div><div class="mini"><h4>合同映射</h4><p>DTO / contract mapping</p></div><div class="mini"><h4>SSE Framing</h4><p>流式事件包装</p></div><div class="mini"><h4>响应返回</h4><p>标准输出映射</p></div></div><div class="muted">禁止在 transport 内做业务编排、持久化实现或 provider SDK 细节。</div></div>
-            <div class="box"><div class="title">关键输出</div><ul><li>统一 API 入口</li><li>标准请求对象</li><li>标准响应 / SSE frame</li></ul></div>
+            <div class="lane"><div class="title">2. 传输 / API</div><div class="eyebrow">网关层</div><ul><li>FastAPI / 认证 / SSE</li><li>请求 / 响应映射</li></ul></div>
+            <div class="box"><div class="title">API 网关 / 传输边界</div><div class="mini-grid"><div class="mini"><h4>请求校验</h4><p>输入解析与鉴权</p></div><div class="mini"><h4>契约映射</h4><p>DTO / 契约映射</p></div><div class="mini"><h4>SSE 封装</h4><p>流式事件包装</p></div><div class="mini"><h4>响应返回</h4><p>标准输出映射</p></div></div><div class="muted">禁止在传输层内做业务编排、持久化实现或 Provider SDK 细节。</div></div>
+            <div class="box"><div class="title">关键输出</div><ul><li>统一 API 入口</li><li>标准请求对象</li><li>标准响应 / SSE 帧</li></ul></div>
           </div>
           <div class="down">⌄</div>
 
           <div class="row">
-            <div class="lane"><div class="title">Kernel / 编排核心</div><div class="eyebrow">Orchestration Core</div><ul><li>Canonical State</li><li>Workflow Progression</li><li>Patch/Event Ownership</li></ul></div>
-            <div class="box amber"><div class="title">Kernel owns authoritative workflow state</div><div class="kernel-grid"><div class="mini"><h4>State Progression</h4><p>推进 workflow 阶段、处理失败/重试/部分状态。</p></div><div class="mini"><h4>Orchestration Decisions</h4><p>调用 engines、runtime adapters 和 storage ports。</p></div><div class="mini"><h4>Stream / Patch Contract</h4><p>统一 result、event、patch 输出语义。</p></div><div class="mini"><h4>Rollback Point</h4><p>保留可回退链路和兼容 facade。</p></div></div><div class="muted">Kernel 不实现 provider/persistence 细节，也不承载业务词汇默认值。</div></div>
-            <div class="box"><div class="title">关键输出</div><ul><li>权威状态</li><li>workflow event</li><li>runtime 调用计划</li><li>canonical projection</li></ul></div>
+            <div class="lane"><div class="title">3. Kernel / 编排核心</div><div class="eyebrow">编排核心</div><ul><li>权威状态</li><li>工作流推进</li><li>补丁 / 事件归属</li></ul></div>
+            <div class="box amber"><div class="title">Kernel 组装与调度控制面</div><div class="control-loop"><div class="mini"><h4>输入</h4><p>标准请求、当前状态、Domain Pack 配置</p></div><div class="flow-arrow">›</div><div class="mini"><h4>组装</h4><p>组装 Runtime、Field Agent、Capability、Engine、Surface</p></div><div class="flow-arrow">›</div><div class="mini"><h4>调度</h4><p>向 Runtime Agent 发出 Dispatch / Resume / Recover</p></div><div class="flow-arrow">›</div><div class="mini"><h4>输出</h4><p>状态推进、Event、Patch、Runtime Projection</p></div></div><div class="muted">Kernel 负责组装、调度、状态推进、事件输出和恢复；不把业务流程写成 hardcode。</div></div>
+            <div class="box"><div class="title">关键输出</div><ul><li>RuntimeDispatch</li><li>FieldAgentAssignment</li><li>Event / Patch</li><li>RuntimeProjection</li><li>恢复信号</li></ul></div>
           </div>
           <div class="down">⌄</div>
 
           <div class="row">
-            <div class="lane"><div class="title">flare-engines</div><div class="eyebrow">Reusable Capability Library</div><ul><li>Pure policies</li><li>Contracts / Assemblers</li><li>Stable public API</li></ul></div>
-            <div class="box green"><div class="title">七层 Engines + 相邻能力</div><div class="engine-cluster"><div class="engine-grid"><div class="engine"><h4>Ingestion</h4><p>输入标准化、资料状态、候选归一化</p></div><div class="engine"><h4>Context</h4><p>budget、envelope、usage layers</p></div><div class="engine"><h4>Memory</h4><p>recall、dedup、source refs、citations</p></div><div class="engine"><h4>Observation</h4><p>trace/event/citation contract</p></div><div class="engine"><h4>Presentation</h4><p>response/event payload assembly</p></div><div class="engine"><h4>Decision</h4><p>mode、state、policy、readiness</p></div><div class="engine"><h4>Execution</h4><p>plan/artifact/event assembly</p></div><div class="engine"><h4>Adjacent</h4><p>analysis、document understanding、ranking、reasoning、track</p></div></div></div><div class="contract-strip"><div class="contract">result</div><div class="contract">decision</div><div class="contract">readiness</div><div class="contract">event</div><div class="contract">patch</div></div><div class="muted">业务词汇、触发词、字段、模板、ranking profile 由 Domain Pack / Instance Config 注入。</div></div>
-            <div class="box"><div class="title">关键输出</div><ul><li>可复用能力函数</li><li>标准 Typed Contract</li><li>解释性 score / reason</li><li>无外部副作用</li></ul></div>
+            <div class="lane"><div class="title">4. Runtime Agent / Field Agent</div><div class="eyebrow">协议化执行层</div><ul><li>Runtime 生命周期与事件流</li><li>Field Agent 可实例化交付</li><li>Capability / Engine 绑定</li></ul></div>
+            <div class="box green"><div class="title">Field Agent 标准协议与能力调用链</div><div class="pipeline"><div class="engine-pipeline"><div class="engine step"><h4>1. Runtime Agent</h4><p>接收调度，管理状态、生命周期和事件流</p></div><div class="flow-arrow">›</div><div class="engine step"><h4>2. Field Agent</h4><p>按 manifest 执行业务现场任务</p></div><div class="flow-arrow">›</div><div class="engine step"><h4>3. Capability</h4><p>声明可调用能力合同与输入输出</p></div><div class="flow-arrow">›</div><div class="engine step"><h4>4. Engine</h4><p>检索、分析、OCR、推理、文档生成实现</p></div><div class="flow-arrow">›</div><div class="engine step"><h4>5. Tool / Adapter</h4><p>外部系统与 Provider 接入并归一化</p></div><div class="flow-arrow">›</div><div class="engine step"><h4>6. Agent Result</h4><p>输出结果、失败合同、交接策略</p></div></div><div class="span-band"><strong>Input / Output 标准</strong>：Field Agent 必须声明 input_contract、output_contract、failure_contract、handoff_policy。</div><div class="support-grid"><div class="mini"><h4>Domain Pack</h4><p>注入行业 know-how、字段、规则、SOP 与案例资产。</p></div><div class="mini"><h4>Bindings</h4><p>显式声明 capability_bindings、engine_bindings、tool_bindings。</p></div></div></div><div class="contract-strip six"><div class="contract">input_contract</div><div class="contract">output_contract</div><div class="contract">capability_bindings</div><div class="contract">engine_bindings</div><div class="contract">tool_bindings</div><div class="contract">runtime_contract</div></div><div class="muted">Kernel → RuntimeDispatch → Runtime Agent → Field Agent → CapabilityRequest → Engine / Tool → FieldAgentResult → Event / Patch / Projection。</div></div>
+            <div class="box"><div class="title">关键输出</div><ul><li>FieldAgentResult</li><li>RuntimeEvent / Patch</li><li>FailureContract</li><li>HandoffPolicy</li><li>审计元数据</li></ul></div>
           </div>
           <div class="down">⌄</div>
 
           <div class="row">
-            <div class="lane"><div class="title">Runtime / Provider</div><div class="eyebrow">Replaceable Edges</div><ul><li>LangGraph / Skills</li><li>LLM / OCR / Search / MCP</li></ul></div>
-            <div class="box purple"><div class="title">Adapters own side effects</div><div class="adapter-flow"><div class="mini"><h4>Runtime Adapters</h4><p>LangGraph Runtime / Skills / Tool Actions</p></div><div class="arrow">›</div><div class="mini"><h4>Provider Adapters</h4><p>LLM / OCR / Embedding / Search / MCP</p></div><div class="arrow">›</div><div class="mini"><h4>Normalized Output</h4><p>provider payload 先归一化，再进入 core</p></div></div><div class="muted">Execution Engine 不绑定 LangGraph SDK；Provider payload 不直接作为 domain model。</div></div>
-            <div class="box"><div class="title">关键输出</div><ul><li>外部调用结果</li><li>标准化 provider response</li><li>失败/重试信号</li></ul></div>
+            <div class="lane"><div class="title">5. Tool / Adapter / Provider</div><div class="eyebrow">外部系统边界</div><ul><li>LLM / OCR / Search / MCP</li><li>Provider 返回必须归一化</li></ul></div>
+            <div class="box purple"><div class="title">Provider 接入与归一化边界</div><div class="adapter-flow"><div class="mini"><h4>ToolIntent</h4><p>Field Agent / Capability 产生外部动作意图</p></div><div class="arrow">›</div><div class="mini"><h4>Provider Adapter</h4><p>LLM / OCR / Embedding / Search / MCP</p></div><div class="arrow">›</div><div class="mini"><h4>Normalized Result</h4><p>Provider 返回先归一化，再进入 Runtime</p></div></div><div class="muted">Field Agent 不直接依赖 Provider 原始返回；外部失败必须表达为失败 / 重试信号。</div></div>
+            <div class="box"><div class="title">关键输出</div><ul><li>外部调用结果</li><li>Normalized Provider Result</li><li>失败/重试信号</li></ul></div>
           </div>
           <div class="down">⌄</div>
 
           <div class="row">
-            <div class="lane"><div class="title">Storage / Infra</div><div class="eyebrow">Persistence + Operations</div><ul><li>PostgreSQL / Qdrant / Redis</li><li>Files / Project Artifacts</li></ul></div>
-            <div class="box"><div class="title">Storage Ports -> Storage</div><div class="mini-grid"><div class="mini"><h4>PostgreSQL</h4><p>结构化状态与结果</p></div><div class="mini"><h4>Qdrant</h4><p>向量索引与知识召回</p></div><div class="mini"><h4>Redis</h4><p>缓存、会话、队列状态</p></div><div class="mini"><h4>Files</h4><p>上传资料与产物承载</p></div></div><div class="muted">Repository / storage adapters 负责实现；engines 不直接读写存储。</div></div>
-            <div class="box"><div class="title">关键输出</div><ul><li>Project 归属</li><li>知识内容</li><li>运行记录</li><li>结果承接</li></ul></div>
+            <div class="lane"><div class="title">6. 存储 / 基础设施</div><div class="eyebrow">持久化与运维</div><ul><li>PostgreSQL / Qdrant / Redis</li><li>文件 / 项目产物</li></ul></div>
+            <div class="box"><div class="title">存储端口到存储实现</div><div class="mini-grid"><div class="mini"><h4>PostgreSQL</h4><p>结构化状态与结果</p></div><div class="mini"><h4>Qdrant</h4><p>向量索引与知识召回</p></div><div class="mini"><h4>Redis</h4><p>缓存、会话、队列状态</p></div><div class="mini"><h4>文件</h4><p>上传资料与产物承载</p></div></div><div class="muted">Repository / 存储适配器负责实现；Engine 不直接读写存储。</div></div>
+            <div class="box"><div class="title">关键输出</div><ul><li>项目归属</li><li>知识内容</li><li>运行记录</li><li>结果承接</li></ul></div>
           </div>
         </div>
 
         <div class="rail">
-          <div><div class="title">横切能力</div><div class="eyebrow">Cross-cutting</div></div>
-          <div class="rail-block"><h3>Domain Pack / Config</h3><div class="tag-list"><span class="tag">workflow</span><span class="tag">modes</span><span class="tag">fields</span><span class="tag">templates</span><span class="tag">policy terms</span><span class="tag">ranking profile</span></div></div>
-          <div class="rail-block"><h3>Observability</h3><div class="tag-list"><span class="tag">trace_id</span><span class="tag">structured logs</span><span class="tag">metrics</span><span class="tag">cost</span><span class="tag">usage</span></div></div>
-          <div class="rail-block"><h3>Security</h3><div class="tag-list"><span class="tag">Auth</span><span class="tag">RBAC</span><span class="tag">API Keys</span><span class="tag">tenant isolation</span></div></div>
-          <div class="rail-block"><h3>Quality Gates</h3><div class="tag-list"><span class="tag">explicit contract</span><span class="tag">no provider leakage</span><span class="tag">no UI state guessing</span><span class="tag">tests</span></div></div>
-          <div class="rail-block"><h3>Current Engine Capabilities</h3><p>Context / Memory / Decision / Execution 已具备可复用核心；Presentation 与 Observation 继续补齐 payload 与 trace contract。</p></div>
+          <div><div class="title">横切治理能力</div><div class="eyebrow">覆盖全链路的治理约束与运行保障</div></div>
+          <div class="rail-block"><h3>安全与合规</h3><p class="rail-line"><strong>覆盖</strong>：用户、租户、数据、模型调用与审计。</p><p class="rail-line"><strong>作用</strong>：建立身份、权限、数据边界与审计闭环。</p><div class="tag-list"><span class="tag">身份认证</span><span class="tag">权限控制</span><span class="tag">数据脱敏</span></div></div>
+          <div class="rail-block"><h3>网络与链路监控</h3><p class="rail-line"><strong>覆盖</strong>：浏览器入口、API、SSE、Provider 调用链。</p><p class="rail-line"><strong>作用</strong>：监测链路健康、时延波动、错误分布与外部依赖状态。</p><div class="tag-list"><span class="tag">入口健康</span><span class="tag">链路追踪</span><span class="tag">告警</span></div></div>
+          <div class="rail-block"><h3>性能与链路优化</h3><p class="rail-line"><strong>覆盖</strong>：并发、队列、缓存、模型成本与降级路径。</p><p class="rail-line"><strong>作用</strong>：优化响应时延、吞吐能力、资源利用率与降级策略。</p><div class="tag-list"><span class="tag">缓存</span><span class="tag">限流</span><span class="tag">成本优化</span></div></div>
+          <div class="rail-block"><h3>发布与质量门禁</h3><p class="rail-line"><strong>覆盖</strong>：代码、配置、契约、镜像与上线流程。</p><p class="rail-line"><strong>作用</strong>：约束变更准入、发布节奏、灰度策略与回滚路径。</p><div class="tag-list"><span class="tag">契约校验</span><span class="tag">灰度发布</span><span class="tag">回滚预案</span></div></div>
+          <div class="rail-block"><h3>运行可靠性</h3><p class="rail-line"><strong>覆盖</strong>：容器、日志、资源、备份与故障恢复。</p><p class="rail-line"><strong>作用</strong>：保障服务连续性、故障定位效率与恢复能力。</p><div class="tag-list"><span class="tag">容器状态</span><span class="tag">日志聚合</span><span class="tag">备份恢复</span></div></div>
         </div>
       </div>
     </div>
