@@ -72,7 +72,7 @@ class Settings(BaseSettings):
         description="允许上传的文件扩展名",
     )
     enabled_modes: List[str] = Field(
-        default=["auto", "requirement_canvas", "intelligent_sourcing"],
+        default=["auto", "requirement_canvas", "analysis_mode", "intelligent_sourcing"],
         description="允许的业务模式",
     )
     enable_local_orchestration_fallback: bool = Field(

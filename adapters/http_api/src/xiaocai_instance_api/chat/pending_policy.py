@@ -13,6 +13,11 @@ def _to_text(value: object) -> str:
     return value.strip() if isinstance(value, str) and value.strip() else ""
 
 
+def _is_intake_mode(mode: str | None) -> bool:
+    normalized = _to_text(mode)
+    return normalized == "requirement_canvas" or normalized.startswith("requirement_intake")
+
+
 def _build_category_clarification_pending(
     *,
     confidence_policy: dict,
@@ -152,6 +157,8 @@ def apply_confidence_policy_to_pending_contract(
         merged = dict(pending_contract)
         merged["confidence_policy"] = policy
         return merged
+    if not _is_intake_mode(mode):
+        return pending_contract
 
     action = _to_text(policy.get("action")) or "proceed"
     clarification = _as_dict(clarification_policy)

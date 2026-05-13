@@ -678,6 +678,54 @@ def test_chat_run_keeps_intake_mode_sticky_across_turns(client, auth_token):
     assert call_args["context"]["mode"] == "requirement_canvas"
 
 
+def test_chat_run_allows_analysis_mode_to_override_sticky_intake(client, auth_token):
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"project_id": "proj-analysis-mode"},
+    )
+    assert bind_response.status_code == 200
+
+    session_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "project_id": "proj-analysis-mode",
+            "title": "analysis mode",
+            "mode": "requirement_canvas",
+        },
+    )
+    assert session_response.status_code == 200
+    session_id = session_response.json()["sessionId"]
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "analysis ok",
+            "cards": [],
+            "session_id": session_id,
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "先给我个初步方案框架",
+                "session_id": session_id,
+                "context": {
+                    "project_id": "proj-analysis-mode",
+                    "mode": "analysis_mode",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "analysis ok"
+    assert "pending_contract" not in response.json()["metadata"]
+    call_args = mock_chat.call_args[1]
+    assert call_args["context"]["mode"] == "analysis_mode"
+
+
 def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_token):
     bind_response = client.post(
         "/projects/bind",

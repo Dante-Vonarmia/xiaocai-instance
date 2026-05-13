@@ -127,7 +127,9 @@ def _resolve_effective_mode(request_mode: str | None, session_mode: str | None) 
     if _is_intake_mode(session_mode):
         if _is_intake_mode(request_mode):
             return request_mode
-        return session_mode
+        if not request_mode or request_mode == "auto":
+            return session_mode
+        return request_mode
     return request_mode or session_mode
 
 

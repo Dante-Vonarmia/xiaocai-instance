@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
+from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
 
 
 @pytest.fixture
@@ -113,3 +114,19 @@ def test_chat_run_uses_confidence_policy_to_build_pending_contract(client, auth_
         assert pending_contract["gate"]["reason"] == "low_category_confidence"
         assert pending_contract["current_question"]["field_key"] == "一级品类"
         assert pending_contract["next_actions"][0]["action_key"] == "clarify_category_first"
+
+
+def test_confidence_policy_does_not_create_pending_contract_outside_intake():
+    pending_contract = apply_confidence_policy_to_pending_contract(
+        pending_contract=None,
+        confidence_policy={
+            "action": "clarify_category_first",
+            "rationale": "low_category_confidence",
+        },
+        clarification_policy={},
+        category_prior={},
+        session_id="test-analysis-session",
+        mode="analysis_mode",
+    )
+
+    assert pending_contract is None
