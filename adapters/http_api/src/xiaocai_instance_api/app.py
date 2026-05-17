@@ -37,6 +37,7 @@ from xiaocai_instance_api.tenant_profile.router import router as tenant_profile_
 from xiaocai_instance_api.recommendation_policy.router import router as recommendation_policy_router
 from xiaocai_instance_api.integrations.router import router as integrations_router
 from xiaocai_instance_api.domains.router import router as domains_router
+from xiaocai_instance_api.chat.replay.router import router as chat_replay_router
 from xiaocai_instance_api.storage.migrations import run_storage_migrations
 
 
@@ -91,6 +92,8 @@ def create_app() -> FastAPI:
     app.include_router(recommendation_policy_router)
     app.include_router(integrations_router)
     app.include_router(domains_router)
+    if settings.chat_replay_enabled:
+        app.include_router(chat_replay_router)
 
     # 健康检查端点
     @app.get("/health")

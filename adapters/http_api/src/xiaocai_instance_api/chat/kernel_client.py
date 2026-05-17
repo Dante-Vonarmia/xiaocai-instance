@@ -17,6 +17,11 @@ import httpx
 from typing import Dict, Any, AsyncGenerator
 from functools import lru_cache
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.chat.replay.hooks import (
+    append_kernel_capture,
+    begin_kernel_capture,
+    finish_kernel_capture,
+)
 
 
 class KernelClient:
@@ -130,19 +135,30 @@ class KernelClient:
         参考: docs/discussions/phase-1-procurement-product-logic.md
               需求梳理、智能寻源等业务逻辑在 kernel 处理
         """
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self._build_kernel_url(self.settings.kernel_run_path),
-                json=self._build_request_body(
-                    user_id=user_id,
-                    message=message,
-                    session_id=session_id,
-                    context=context,
-                ),
-                timeout=30.0,
-            )
-            response.raise_for_status()
-            result = response.json()
+        kernel_url = self._build_kernel_url(self.settings.kernel_run_path)
+        request_body = self._build_request_body(
+            user_id=user_id,
+            message=message,
+            session_id=session_id,
+            context=context,
+        )
+        replay = begin_kernel_capture(
+            kind="run",
+            user_id=user_id,
+            session_id=session_id,
+            kernel_url=kernel_url,
+            request_body=request_body,
+        )
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(kernel_url, json=request_body, timeout=30.0)
+                response.raise_for_status()
+                result = response.json()
+        except Exception as exc:
+            append_kernel_capture(replay, "kernel.error", {"message": str(exc)})
+            finish_kernel_capture(replay, status="error", error=str(exc))
+            raise
+        append_kernel_capture(replay, "kernel.response.raw", result)
         if isinstance(result, dict):
             result_payload = result.get("result", {})
             if not isinstance(result_payload, dict):
@@ -201,7 +217,10 @@ class KernelClient:
                 or session_id
             )
             normalized["metadata"] = metadata
+            append_kernel_capture(replay, "kernel.response.normalized", normalized)
+            finish_kernel_capture(replay, status="ok")
             return normalized
+        finish_kernel_capture(replay, status="error", error="Kernel response must be a JSON object")
         raise ValueError("Kernel response must be a JSON object")
 
     async def chat_stream(
@@ -238,6 +257,20 @@ class KernelClient:
         event_name: str | None = None
         data_lines: list[str] = []
         line_buffer = ""
+        kernel_url = self._build_kernel_url(self.settings.kernel_stream_path)
+        request_body = self._build_request_body(
+            user_id=user_id,
+            message=message,
+            session_id=session_id,
+            context=context,
+        )
+        replay = begin_kernel_capture(
+            kind="stream",
+            user_id=user_id,
+            session_id=session_id,
+            kernel_url=kernel_url,
+            request_body=request_body,
+        )
 
         async def _consume_line(line: str) -> AsyncGenerator[Dict[str, Any], None]:
             nonlocal event_name, data_lines
@@ -277,21 +310,23 @@ class KernelClient:
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",
-                    self._build_kernel_url(self.settings.kernel_stream_path),
-                    json=self._build_request_body(
-                        user_id=user_id,
-                        message=message,
-                        session_id=session_id,
-                        context=context,
-                    ),
+                    kernel_url,
+                    json=request_body,
                     timeout=60.0,
                 ) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():
                         yield f"{line}\n"
 
-        async for parsed_event in _parse_sse_chunks(_http_chunks()):
-            yield parsed_event
+        try:
+            async for parsed_event in _parse_sse_chunks(_http_chunks()):
+                append_kernel_capture(replay, "kernel.stream.event", parsed_event)
+                yield parsed_event
+        except Exception as exc:
+            append_kernel_capture(replay, "kernel.error", {"message": str(exc)})
+            finish_kernel_capture(replay, status="error", error=str(exc))
+            raise
+        finish_kernel_capture(replay, status="ok")
 
 
 @lru_cache()

@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     )
     daily_message_limit: int = Field(default=0, description="每日消息上限，0 表示不限制")
     daily_project_message_limit: int = Field(default=0, description="每日单项目消息上限，0 表示不限制")
+    chat_replay_enabled: bool = Field(default=False, description="是否记录 chat kernel replay 调试日志")
+    chat_replay_dir: str = Field(default="/tmp/xiaocai-chat-replays", description="chat replay 调试日志目录")
 
     # 外部连接健康检查
     mcp_healthcheck_url: str = Field(default="", description="MCP 连接健康检查 URL（可选）")
