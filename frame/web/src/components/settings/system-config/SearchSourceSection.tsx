@@ -2,6 +2,7 @@ import { Alert, Button, Card, Empty, Select, Space, Spin, Switch, Typography } f
 import { useEffect, useMemo, useState } from 'react'
 import { settingsApi, type ConnectorRegistryItem, type SearchSourcePolicy } from '@/services/settingsApi'
 import { toConnectorDisplayName } from './model'
+import './search-source-section.css'
 
 const TARGET_MODE = 'intelligent_sourcing'
 
@@ -63,6 +64,24 @@ function SearchSourceSection() {
     })),
     [availableConnectors],
   )
+  const selectedDefaultConnector = useMemo(
+    () => availableConnectors.find((item) => item.key === defaultConnectorKey) || null,
+    [availableConnectors, defaultConnectorKey],
+  )
+  const selectedFallbackKeys = useMemo(
+    () => fallbackConnectorKeys.filter((key) => key !== defaultConnectorKey),
+    [defaultConnectorKey, fallbackConnectorKeys],
+  )
+  const selectedFallbackConnectors = useMemo(
+    () => selectedFallbackKeys
+      .map((key) => availableConnectors.find((item) => item.key === key))
+      .filter((item): item is ConnectorRegistryItem => item !== undefined),
+    [availableConnectors, selectedFallbackKeys],
+  )
+  const fallbackConnectorOptions = useMemo(
+    () => connectorOptions.filter((item) => item.value !== defaultConnectorKey),
+    [connectorOptions, defaultConnectorKey],
+  )
 
   const savePolicy = async () => {
     setSaving(true)
@@ -72,7 +91,7 @@ function SearchSourceSection() {
         mode: TARGET_MODE,
         default_connector_key: defaultConnectorKey,
         allow_fallback: allowFallback,
-        fallback_connector_keys: fallbackConnectorKeys.filter((key) => key !== defaultConnectorKey),
+        fallback_connector_keys: selectedFallbackKeys,
         routing_rules: policy?.routing_rules ?? [],
       })
       setPolicy(updated)
@@ -87,68 +106,120 @@ function SearchSourceSection() {
   }
 
   return (
-    <Card title="寻源策略" bordered={false}>
-      {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 12 }} /> : null}
-      {loading ? <Spin /> : null}
+    <Card
+      className="settings-source-card"
+      title={(
+        <div className="settings-source-title">
+          <Typography.Text strong>寻源策略</Typography.Text>
+          <Typography.Text className="settings-source-title__meta" type="secondary">
+            智能寻源的数据源调度
+          </Typography.Text>
+        </div>
+      )}
+      bordered={false}
+    >
+      {error ? <Alert type="error" showIcon message={error} className="settings-source-alert" /> : null}
+      {loading ? <div className="settings-source-loading"><Spin /></div> : null}
       {!loading && availableConnectors.length === 0 ? <Empty description="暂无可用数据源" /> : null}
       {!loading && availableConnectors.length > 0 ? (
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <div>
-            <Typography.Text strong>默认搜索源</Typography.Text>
-            <Select
-              options={connectorOptions}
-              placeholder="请选择默认搜索源"
-              style={{ display: 'block', marginTop: 8 }}
-              value={defaultConnectorKey || undefined}
-              onChange={(value) => {
-                setDefaultConnectorKey(value)
-                setFallbackConnectorKeys((prev) => prev.filter((item) => item !== value))
+        <Space direction="vertical" size={18} className="settings-source-layout">
+          <div className="settings-source-intro">
+            <div>
+              <Typography.Text strong>搜索顺序</Typography.Text>
+              <Typography.Paragraph type="secondary" className="settings-source-copy">
+                默认源优先执行；开启备用源后，主源不可用或覆盖不足时再补充检索。
+              </Typography.Paragraph>
+            </div>
+            <span className={allowFallback ? 'settings-source-badge is-on' : 'settings-source-badge'}>
+              {allowFallback ? '备用源已启用' : '仅使用默认源'}
+            </span>
+          </div>
+
+          <div className="settings-source-grid">
+            <section className="settings-source-pane settings-source-pane--primary">
+              <div className="settings-source-pane__header">
+                <Typography.Text strong>默认搜索源</Typography.Text>
+                <Typography.Text type="secondary">主链路</Typography.Text>
+              </div>
+              <Select
+                className="settings-source-select"
+                options={connectorOptions}
+                placeholder="请选择默认搜索源"
+                suffixIcon={null}
+                value={defaultConnectorKey || undefined}
+                onChange={(value) => {
+                  setDefaultConnectorKey(value)
+                  setFallbackConnectorKeys((prev) => prev.filter((item) => item !== value))
+                }}
+              />
+              <div className="settings-source-summary">
+                <span className="settings-source-step">1</span>
+                <div>
+                  <Typography.Text strong>
+                    {selectedDefaultConnector ? toConnectorDisplayName(selectedDefaultConnector) : '未选择主源'}
+                  </Typography.Text>
+                  <Typography.Paragraph type="secondary" className="settings-source-copy">
+                    主源承担第一轮供应商、资料库或外部检索命中。
+                  </Typography.Paragraph>
+                </div>
+              </div>
+            </section>
+
+            <section className="settings-source-pane">
+              <div className="settings-source-toggle">
+                <div>
+                  <Typography.Text strong>备用搜索源</Typography.Text>
+                  <Typography.Paragraph type="secondary" className="settings-source-copy">
+                    开启后按优先级作为补充数据源，避免主源覆盖不足。
+                  </Typography.Paragraph>
+                </div>
+                <Switch
+                  checked={allowFallback}
+                  checkedChildren="允许"
+                  unCheckedChildren="关闭"
+                  onChange={setAllowFallback}
+                />
+              </div>
+              <Select
+                className="settings-source-select"
+                disabled={!allowFallback}
+                mode="multiple"
+                options={fallbackConnectorOptions}
+                placeholder="请选择备用搜索源"
+                suffixIcon={null}
+                value={selectedFallbackKeys}
+                onChange={setFallbackConnectorKeys}
+              />
+              <div className="settings-source-chip-list">
+                {selectedFallbackConnectors.length === 0 ? (
+                  <Typography.Text type="secondary">未配置备用源</Typography.Text>
+                ) : selectedFallbackConnectors.map((item, index) => (
+                  <span className="settings-source-chip" key={item.key}>
+                    {index + 2}. {toConnectorDisplayName(item)}
+                  </span>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="settings-source-actions">
+            <div>
+              <Typography.Text type="secondary">适用场景：智能寻源</Typography.Text>
+              <Typography.Paragraph type="secondary" className="settings-source-copy">
+                当前仅配置默认源和备用源，详细路由规则沿用后端配置。
+              </Typography.Paragraph>
+            </div>
+            <Button
+              disabled={!defaultConnectorKey}
+              loading={saving}
+              type="primary"
+              onClick={() => {
+                void savePolicy()
               }}
-            />
+            >
+              保存策略
+            </Button>
           </div>
-
-          <div className="settings-visibility-item">
-            <Typography.Text strong>允许备用源</Typography.Text>
-            <Switch
-              checked={allowFallback}
-              checkedChildren="允许"
-              unCheckedChildren="关闭"
-              onChange={setAllowFallback}
-            />
-          </div>
-
-          <div>
-            <Typography.Text strong>备用搜索源</Typography.Text>
-            <Select
-              disabled={!allowFallback}
-              mode="multiple"
-              options={connectorOptions.filter((item) => item.value !== defaultConnectorKey)}
-              placeholder="请选择 fallback 搜索源"
-              style={{ display: 'block', marginTop: 8 }}
-              value={fallbackConnectorKeys}
-              onChange={setFallbackConnectorKeys}
-            />
-          </div>
-
-          <Space direction="vertical" size={4}>
-            <Typography.Text type="secondary">
-              适用场景：智能寻源
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              当前仅配置默认源和备用源，详细路由规则沿用后端配置。
-            </Typography.Text>
-          </Space>
-
-          <Button
-            disabled={!defaultConnectorKey}
-            loading={saving}
-            type="primary"
-            onClick={() => {
-              void savePolicy()
-            }}
-          >
-            保存策略
-          </Button>
         </Space>
       ) : null}
     </Card>

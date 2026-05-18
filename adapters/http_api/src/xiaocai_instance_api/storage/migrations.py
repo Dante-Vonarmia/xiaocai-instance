@@ -537,6 +537,24 @@ def _apply_v7(runtime: SQLRuntime) -> None:
         )
 
 
+def _apply_v8(runtime: SQLRuntime) -> None:
+    runtime.execute(
+        """
+        CREATE TABLE IF NOT EXISTS configuration_drafts (
+            config_key TEXT NOT NULL,
+            scope TEXT NOT NULL,
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            base_version TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'draft',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL,
+            PRIMARY KEY (config_key, scope)
+        )
+        """
+    )
+
+
 def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     config = resolve_db_config(storage_db_url=db_url, storage_db_path=db_path)
     runtime = SQLRuntime(config)
@@ -565,6 +583,9 @@ def run_storage_migrations(*, db_path: str, db_url: str = "") -> int:
     if current < 7:
         _apply_v7(runtime)
         _mark_version(runtime, 7)
+    if current < 8:
+        _apply_v8(runtime)
+        _mark_version(runtime, 8)
 
     runtime.commit()
-    return 7
+    return 8

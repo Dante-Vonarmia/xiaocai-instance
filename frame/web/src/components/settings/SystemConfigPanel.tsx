@@ -2,6 +2,7 @@ import { Alert, Collapse, Empty, Space, Spin, Typography } from 'antd'
 import type { CollapseProps } from 'antd'
 import { useCallback, useMemo } from 'react'
 import ConnectorRegistrySection from '@/components/settings/system-config/ConnectorRegistrySection'
+import DomainAssetsSection from '@/components/settings/system-config/DomainAssetsSection'
 import DomainModeSelector from '@/components/settings/system-config/DomainModeSelector'
 import KnowledgeConnectorSection from '@/components/settings/system-config/KnowledgeConnectorSection'
 import McpConnectorSection from '@/components/settings/system-config/McpConnectorSection'
@@ -9,6 +10,7 @@ import SearchSourceSection from '@/components/settings/system-config/SearchSourc
 import { useSettingsContext } from '@/context/SettingsContext'
 import { SettingsSystemConfigProvider, useSettingsSystemConfigContext } from '@/context/SettingsSystemConfigContext'
 import type { DomainInjectionMode } from '@/services/settingsApi'
+import './system-config-panel.css'
 
 function SystemConfigPanelContent() {
   const {
@@ -38,7 +40,8 @@ function SystemConfigPanelContent() {
   const items = useMemo<CollapseProps['items']>(() => [
     {
       key: 'basic',
-      label: '常用设置',
+      label: <span className="settings-system-section-label">常用设置</span>,
+      showArrow: false,
       children: (
         <DomainModeSelector
           loading={modeUpdating}
@@ -49,7 +52,8 @@ function SystemConfigPanelContent() {
     },
     {
       key: 'connections',
-      label: '连接状态',
+      label: <span className="settings-system-section-label">连接状态</span>,
+      showArrow: false,
       children: loading ? <Spin /> : (
         <Space direction="vertical" style={{ width: '100%' }} size={16}>
           {connectors.length === 0 ? <Empty description="暂无连接配置" /> : null}
@@ -75,13 +79,21 @@ function SystemConfigPanelContent() {
       ),
     },
     {
+      key: 'domain-assets',
+      label: <span className="settings-system-section-label">字段 / 品类 / 提示词</span>,
+      showArrow: false,
+      children: <DomainAssetsSection />,
+    },
+    {
       key: 'sourcing',
-      label: '寻源策略',
+      label: <span className="settings-system-section-label">寻源策略</span>,
+      showArrow: false,
       children: loading ? <Spin /> : <SearchSourceSection />,
     },
     {
       key: 'advanced',
-      label: '高级管理',
+      label: <span className="settings-system-section-label">高级管理</span>,
+      showArrow: false,
       children: loading ? <Spin /> : (
         <Space direction="vertical" style={{ width: '100%' }} size={16}>
           <ConnectorRegistrySection />
@@ -112,7 +124,8 @@ function SystemConfigPanelContent() {
 
       <Collapse
         bordered={false}
-        defaultActiveKey={['basic']}
+        className="settings-system-collapse"
+        defaultActiveKey={['basic', 'domain-assets']}
         items={items}
       />
     </Space>

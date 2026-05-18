@@ -80,6 +80,26 @@ export type SearchSourcePolicyUpsertRequest = {
   routing_rules: Record<string, unknown>[]
 }
 
+export type ConfigDraft = {
+  config_key: string
+  scope: string
+  payload: Record<string, unknown>
+  base_version: string
+  status: 'draft'
+  updated_at: string
+  updated_by: string
+}
+
+export type ConfigDraftLookupResponse = {
+  draft: ConfigDraft | null
+}
+
+export type ConfigDraftUpsertRequest = {
+  scope: string
+  payload: Record<string, unknown>
+  base_version: string
+}
+
 export const settingsApi = {
   getIntegrations: async () => {
     const response = await apiClient.get('/settings/integrations')
@@ -138,5 +158,24 @@ export const settingsApi = {
   upsertSearchSourcePolicy: async (payload: SearchSourcePolicyUpsertRequest) => {
     const response = await apiClient.put('/settings/search-sources', payload)
     return response.data as SearchSourcePolicy
+  },
+
+  getConfigDraft: async (configKey: string, scope: string) => {
+    const response = await apiClient.get(`/settings/config-drafts/${encodeURIComponent(configKey)}`, {
+      params: { scope },
+    })
+    return response.data as ConfigDraftLookupResponse
+  },
+
+  upsertConfigDraft: async (configKey: string, payload: ConfigDraftUpsertRequest) => {
+    const response = await apiClient.put(`/settings/config-drafts/${encodeURIComponent(configKey)}`, payload)
+    return response.data as ConfigDraft
+  },
+
+  deleteConfigDraft: async (configKey: string, scope: string) => {
+    const response = await apiClient.delete(`/settings/config-drafts/${encodeURIComponent(configKey)}`, {
+      params: { scope },
+    })
+    return response.data as { deleted: boolean }
   },
 }

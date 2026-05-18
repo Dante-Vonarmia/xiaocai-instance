@@ -29,6 +29,19 @@ async function getDomainFields(domain: string): Promise<DomainFieldsResponse> {
   }
 }
 
+async function getDomainPackText(path: string): Promise<string> {
+  const normalized = String(path || '').trim().replace(/^\/+/, '')
+  if (!normalized.startsWith('domain-packs/')) {
+    throw new Error('invalid domain pack path')
+  }
+
+  const response = await fetch(`/${normalized}`)
+  if (!response.ok) {
+    throw new Error(`domain pack asset not found: ${normalized}`)
+  }
+  return response.text()
+}
+
 async function authExchange(
   mode: AuthExchangeMode,
   value: string,
@@ -48,6 +61,7 @@ async function uploadFile(payload: UploadSourcePayload): Promise<Record<string, 
 
 export const instanceApi = {
   getDomainFields,
+  getDomainPackText,
   authExchange,
   uploadFile,
 }
@@ -55,5 +69,5 @@ export const instanceApi = {
 export const instanceSourceApi = {
   ...sourceApi,
   getDomainFields,
+  getDomainPackText,
 }
-

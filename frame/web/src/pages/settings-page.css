@@ -1,0 +1,227 @@
+.settings-page {
+  background: #f6f8fc;
+  display: flex;
+  height: 100vh;
+}
+
+.settings-page-sidebar {
+  align-items: center;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 80px;
+  padding: 24px 14px;
+  width: 80px;
+}
+
+.settings-page-branding {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.settings-page-branding__title {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.settings-page-branding__subtitle {
+  color: #8c8c8c;
+  font-size: 11px;
+  line-height: 1.3;
+  margin-top: 4px;
+}
+
+.settings-page-divider {
+  background: rgba(0, 0, 0, 0.06);
+  height: 1px;
+  margin: 8px 0;
+  width: 40px;
+}
+
+.settings-page-sidebar-button {
+  align-items: center;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  font-size: 22px;
+  height: 52px;
+  justify-content: center;
+  line-height: 0;
+  width: 52px;
+}
+
+.settings-page-sidebar-button--neutral {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+}
+
+.settings-page-sidebar-button--active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  border: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  cursor: default;
+}
+
+.settings-page-sidebar-footer {
+  margin-top: auto;
+  width: 100%;
+}
+
+.settings-page-sidebar-version {
+  color: #9ca3af;
+  font-size: 11px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.settings-page-sidebar-action {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  font-size: 16px;
+  justify-content: center;
+  margin-bottom: 8px;
+  padding: 8px 0;
+  width: 100%;
+}
+
+.settings-page-sidebar-action--idle {
+  cursor: default;
+}
+
+.settings-page-sidebar-action--active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  border: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  cursor: default;
+}
+
+.settings-page-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.settings-page-tabs {
+  margin-bottom: 16px;
+}
+
+.settings-page .ant-select-arrow {
+  inset-inline-end: 12px;
+  inset-inline-start: auto;
+  margin-top: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.settings-page .ant-select-selector {
+  padding-inline-end: 32px !important;
+}
+
+@media (max-width: 768px) {
+  .settings-page {
+    --settings-page-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .settings-page-sidebar {
+    align-items: center;
+    border-right: 0;
+    border-top: 1px solid #e5e7eb;
+    bottom: 0;
+    box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06);
+    flex-direction: row;
+    gap: 10px;
+    height: var(--settings-page-mobile-nav-height);
+    left: 0;
+    min-height: 0;
+    min-width: 0;
+    padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    position: absolute;
+    right: 0;
+    width: 100%;
+    z-index: 30;
+  }
+
+  .settings-page-branding {
+    align-items: flex-start;
+    flex: 1 1 auto;
+    margin-bottom: 0;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .settings-page-branding__title {
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-page-branding__subtitle,
+  .settings-page-divider,
+  .settings-page-sidebar-version {
+    display: none;
+  }
+
+  .settings-page-sidebar-button {
+    border-radius: 10px;
+    flex: 0 0 auto;
+    font-size: 18px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .settings-page-sidebar-footer {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    margin-top: 0;
+    width: auto;
+  }
+
+  .settings-page-sidebar-action {
+    height: 40px;
+    margin-bottom: 0;
+    padding: 0;
+    width: 40px;
+  }
+
+  .settings-page-main {
+    height: 100%;
+    overflow-y: auto;
+    padding: 14px 12px calc(var(--settings-page-mobile-nav-height) + 16px);
+  }
+
+  .settings-page-tabs {
+    margin-bottom: 12px;
+  }
+
+  .settings-page-tabs .ant-segmented {
+    width: 100%;
+  }
+
+  .settings-page-tabs .ant-segmented-item {
+    flex: 1;
+  }
+}
