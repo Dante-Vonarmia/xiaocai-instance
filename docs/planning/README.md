@@ -1,6 +1,6 @@
 # xiaocai Planning
 
-最后更新: 2026-05-11
+最后更新: 2026-05-18
 
 ## 1. 目的
 
@@ -61,17 +61,39 @@ Build / Buy / Glue 是架构决策，不单独维护任务型执行文件。
 |---|---|---|
 | `INT-*` | Buy / Glue | MCP、外部 DB、connector 接入不自研基础设施，xiaocai 负责 adapter、normalize、trace |
 | `LLM-FB-*` | Buy / Reuse | LLM provider fallback 复用 FLARE 能力，xiaocai 只消费配置与 trace |
-| `DATA-*` | Build | 数据契约、字段别名、readiness owner 属于 xiaocai 产品真状态 |
-| `CALC-*` | Build + Glue | 权重计算由 xiaocai 承接；模型只参与解释与候选生成 |
-| `SCORE-*` | Build | 供应商门槛、评分、推荐等级属于采购领域规则 |
+| `DATA-*` | Build | 数据契约、字段别名、字段归属属于 xiaocai 产品真状态 |
+| `CANON-*` | Build + Handoff | readiness、hard blocker、权重口径由 xiaocai contract 冻结；真实运行由 FLARE 消费 |
 | `OUT-*` | Glue | 分析文本由模型生成，但输出 schema、章节、阻断规则归 xiaocai contract |
 | `TEST-*` | Build | 采购 eval / regression case 由 xiaocai 维护 |
+| `HANDOFF-*` | Glue | xiaocai 输出合同与验收包，FLARE 承接 runtime 执行 |
 
 冻结 ADR：
 
 - [ADR-008 Build / Buy / Glue And Model-native Boundary](../adr/ADR-008-build-buy-glue-and-model-native-boundary.md)
 
 ## 3. 当前重点排期
+
+### 3.0 当前执行基线（测试先行）
+
+当前进入“排期对齐 → 测试/验收先行 → 小步实施”的执行方式。  
+任何实现任务开始前，必须先完成以下检查：
+
+1. 任务必须出现在本文件中，且有任务ID、状态、Owner、验收。
+2. 先定义 contract / fixture / 测试命令，再进入代码实现。
+3. 能写自动化测试的任务，先补测试或 fixture，再实现；不能自动化的文档/规划任务，先补验收清单。
+4. 每次实现只允许推进一个小任务，不把结构性重构混进功能实现。
+5. 未通过验收命令或人工验收清单的任务，不标记为 `Done`。
+
+本阶段优先顺序：
+
+```text
+planning/status alignment
+→ canonical quality gates
+→ data contract fixtures
+→ domain-pack regression tests
+→ FLARE handoff package
+→ implementation only after acceptance is explicit
+```
 
 | 日期 | 任务 | 关联文档 | 验收 |
 |---|---|---|---|
@@ -85,11 +107,24 @@ Build / Buy / Glue 是架构决策，不单独维护任务型执行文件。
 
 | 日期 | 任务 | 关联文档 | 验收 |
 |---|---|---|---|
-| 2026-05-18 | 数据契约字段与别名闭合 | `/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx` | 字段、别名、阶段归属与 domain-pack contract 可追溯 |
-| 2026-05-19 | 权重计算 runtime 化 | `domain-packs/shared/rules/template_recommendation_rules.yaml` | 推荐结果包含命中规则、基础权重、修正因子、最终得分 |
-| 2026-05-20 | 供应商 scorecard 计算闭环 | `domain-packs/*/supplier_scorecard.yaml` | supplier data 可计算门槛、维度得分、总分、推荐等级与解释 |
-| 2026-05-21 | 分析/寻源输出模板补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，缺字段阻断明确 |
-| 2026-05-22 | 契约与权重回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
+| 2026-05-18 | planning 状态与测试先行门禁对齐 | `docs/planning/README.md` | 后续任务均有先验收/先测试规则 |
+| 2026-05-19 | 数据契约字段与别名闭合 | `/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx` | 字段、别名、阶段归属与 domain-pack contract 可追溯 |
+| 2026-05-20 | canonical readiness / 权重 contract 固化 | `docs/contracts/xiaocai-canonical-quality-gates-v1.md` | 字段权重、阻断阈值、草稿阈值、可分析阈值可验收；不新增 runtime |
+| 2026-05-21 | 分析/寻源输出模板 contract 补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，字段依赖与缺字段阻断明确 |
+| 2026-05-22 | 契约与 domain-pack 回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
+| 2026-05-25 | FLARE handoff 包整理 | `docs/contracts/xiaocai-canonical-quality-gates-v1.md` | canonical context 示例、字段策略、模板、验收命令可交付 |
+
+### 3.2 采购智能配置中心排期
+
+| 日期 | 任务 | 关联文档 | 验收 |
+|---|---|---|---|
+| 2026-05-25 | 配置中心范围冻结 | `planning/ai-configuration-center-plan.md` | P0 / P1 / P2 范围明确；不以裸 prompt 编辑器作为第一阶段目标 |
+| 2026-05-26 | 品类配置 contract 设计 | `planning/ai-configuration-center-plan.md` | 字段、追问、分析维度、寻源偏好可表达 |
+| 2026-05-27 | 模板配置 contract 设计 | `planning/ai-configuration-center-plan.md` | 章节、变量、字段依赖、草稿/确认态可表达 |
+| 2026-05-28 | AI 规则 contract 设计 | `planning/ai-configuration-center-plan.md` | 全局、品类、模板、任务级规则边界清楚 |
+| 2026-05-29 | 资料库接入边界设计 | `planning/ai-configuration-center-plan.md` | 资料库只作为 evidence/context，不成为真状态 |
+| 2026-06-01 | 设置页 MVP 线框与预览流 | `planning/ai-configuration-center-plan.md` | 可从配置进入一次追问/分析预览 |
+| 2026-06-02 | 开发任务拆分 | `planning/ai-configuration-center-plan.md` | 前端、backend contract、workflow、测试边界明确 |
 
 ## 4. 当前任务分组
 
@@ -113,17 +148,19 @@ Build / Buy / Glue 是架构决策，不单独维护任务型执行文件。
 | LLM-FB-004 | timeout/error fallback 回归 | Planned | FLARE + xiaocai | primary timeout/500 返回 fallback 并记录 `provider_trace` |
 | LLM-FB-005 | chat/retrieval 联合验收 | Planned | xiaocai | 回复不中断，降级原因可审计 |
 
-### P0：数据契约与权重计算闭环
+### P0：数据契约与 canonical 质量门禁（FLARE 执行前置）
+
+> 边界：本组任务只冻结 xiaocai domain contract、字段权重、品类完整性、分析模板和验收 fixture。  
+> 不在 xiaocai 内新增 workflow engine、追问逻辑、stream/canvas/pending runtime；真实执行由 FLARE 更新后承接。
 
 | 任务ID | 任务 | 状态 | Owner | 验收 |
 |---|---|---|---|---|
-| DATA-001 | 数据契约字段 source 与别名闭合 | Planned | xiaocai | `数量和单位`、`影响范围`、供应商寻源字段别名有明确映射；source 指向当前契约文件 |
-| DATA-002 | contract loader / prior 使用统一字段口径 | Planned | xiaocai | 推荐规则、缺字段优先级、readiness 计算不再混用中英文字段 |
-| CALC-001 | 模板推荐权重计算 runtime 化 | Planned | xiaocai | 输出命中规则、基础权重、readiness 修正、缺字段惩罚、最终排序 |
-| CALC-002 | 场景过滤与禁用条件执行 | Planned | xiaocai | activity/gift 等规则不会跨场景误命中；禁用条件有可审计原因 |
-| SCORE-001 | 供应商 scorecard calculator | Planned | xiaocai | 基于 hard gates、score dimensions、veto items 生成总分、等级、解释 |
-| OUT-001 | 需求分析与寻源输出模板补齐 | Planned | xiaocai | 需求分析覆盖 7 段，寻源分析覆盖数据契约要求章节 |
-| TEST-001 | 数据契约与权重计算回归测试 | Planned | xiaocai | domain-pack validation、alias、weight、scorecard、output snapshot 测试通过 |
+| DATA-001 | 数据契约字段 source 与别名闭合 | Done | xiaocai | `数量和单位`、`影响范围`、供应商寻源字段别名有明确映射；source 指向当前契约文件 |
+| DATA-002 | 品类字段完整性矩阵 | Done | xiaocai | 每个一级/二级品类的必问、推荐问、可选字段可追溯，供 FLARE 追问消费 |
+| CANON-001 | canonical readiness / 权重算法确认 | Done | xiaocai | 字段权重、品类字段权重、阻断阈值、草稿阈值、可分析阈值形成稳定 contract |
+| OUT-001 | 需求分析与寻源输出模板 contract 补齐 | Done | xiaocai | 需求分析覆盖 7 段，寻源分析覆盖数据契约要求章节，字段依赖明确 |
+| TEST-001 | 真实采购 case 验收集 | Done | xiaocai | case 覆盖期望追问字段、readiness 分数区间、可进入分析条件、模板段落 |
+| HANDOFF-001 | FLARE 对接包 | Done | xiaocai + FLARE | canonical context 示例、字段策略、模板、验收标准可交给 FLARE 执行 |
 
 ### P1：文档体系治理
 
@@ -134,14 +171,27 @@ Build / Buy / Glue 是架构决策，不单独维护任务型执行文件。
 | DOC-003 | 根目录历史文档分批吸收 | Planned | xiaocai | 根目录不再承接新增专题文档 |
 | DOC-004 | Build / Buy / Glue 决策归属冻结 | Done | xiaocai | ADR-008 已建立；具体执行已落入本文件任务组 |
 
+### P1：采购智能配置中心
+
+| 任务ID | 任务 | 状态 | Owner | 验收 |
+|---|---|---|---|---|
+| CFG-001 | 配置中心产品范围冻结 | Planned | xiaocai | P0 / P1 / P2 范围明确，prompt 编辑不作为唯一控制面 |
+| CFG-002 | 品类配置 schema 草案 | Planned | xiaocai | 品类字段、必填字段、推荐追问、分析维度、寻源偏好可表达 |
+| CFG-003 | 模板配置 schema 草案 | Planned | xiaocai | 模板章节、变量、字段依赖、草稿/确认态可表达 |
+| CFG-004 | AI 规则作用域与优先级 | Planned | xiaocai | 全局、品类、模板、任务级规则边界清楚 |
+| CFG-005 | 资料库接入边界 | Planned | xiaocai | 资料库作为 evidence/context 输入，不成为 authoritative state |
+| CFG-006 | 设置页 MVP 预览流 | Planned | xiaocai | 可预览追问、缺失字段、分析结构与模板依赖 |
+
 ## 5. 排期维护规则
 
 1. 当前执行任务必须出现在本文件或本目录下的周计划文件中。
 2. 每个任务必须有任务ID、状态、Owner、验收。
-3. 架构原因写入 `architecture/`，不要写进任务表。
-4. 业务规则写入 `domain-standards/`，不要写进任务表。
-5. 合同字段写入 `contracts/`，不要写进任务表。
-6. 历史任务只追溯，不直接覆盖当前排期。
+3. 每个实现任务必须先有对应 fixture / 测试命令 / 人工验收清单。
+4. 测试或验收缺失时，任务只能保持 `Planned` 或 `In Progress`，不得标记 `Done`。
+5. 架构原因写入 `architecture/`，不要写进任务表。
+6. 业务规则写入 `domain-standards/`，不要写进任务表。
+7. 合同字段写入 `contracts/`，不要写进任务表。
+8. 历史任务只追溯，不直接覆盖当前排期。
 
 ## 6. 状态枚举
 

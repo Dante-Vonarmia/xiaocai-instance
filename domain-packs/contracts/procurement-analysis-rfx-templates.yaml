@@ -18,6 +18,7 @@ analysis_template:
         - 需求来源
         - 需求提出人
       block_on_missing_required: true
+      draft_allowed_when_missing: false
 
     - id: market-analysis
       title: 市场现状和分析
@@ -29,6 +30,7 @@ analysis_template:
         - 行业资料
         - 历史项目
       block_on_missing_required: false
+      draft_allowed_when_missing: true
 
     - id: cost-analysis
       title: 成本结构分析
@@ -40,6 +42,7 @@ analysis_template:
       optional_fields:
         - 付款条款
       block_on_missing_required: true
+      draft_allowed_when_missing: false
 
     - id: risk-analysis
       title: 项目风险分析
@@ -49,6 +52,7 @@ analysis_template:
       optional_fields:
         - 风险与诉讼
       block_on_missing_required: false
+      draft_allowed_when_missing: true
 
     - id: strategy-suggestion
       title: 采购策略分析
@@ -58,6 +62,32 @@ analysis_template:
       optional_fields:
         - 谈判要点
       block_on_missing_required: true
+      draft_allowed_when_missing: false
+
+    - id: supplier-selection
+      title: 供应商选择建议
+      required_fields:
+        - 一级品类
+        - 二级品类
+        - 产品/服务
+      optional_fields:
+        - 供应商资质
+        - 履约能力
+        - 历史案例
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
+
+    - id: implementation-plan
+      title: 项目实施计划与执行建议
+      required_fields:
+        - 交付时间
+        - 交付地点
+      optional_fields:
+        - 里程碑
+        - 决策人
+        - 输出物
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
 
 rfx_templates:
   allowed_types:

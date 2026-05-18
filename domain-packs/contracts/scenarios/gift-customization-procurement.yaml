@@ -22,6 +22,16 @@ expected:
     - 单位
     - 预算金额
     - 交付地点
+  missing_fields:
+    - 质量标准
+    - 供应商资质
+  next_question_fields:
+    - 质量标准
+    - 供应商资质
+  readiness_score_range:
+    min: 0.55
+    max: 0.75
+  allow_analysis: false
   blocker:
     should_trigger: true
     reason: 缺少质量标准与供应商资质要求

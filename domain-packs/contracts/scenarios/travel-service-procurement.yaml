@@ -21,6 +21,16 @@ expected:
     - 预算金额
     - 发票类型
     - 付款条款
+  missing_fields:
+    - 服务区域
+    - 验收口径
+  next_question_fields:
+    - 服务区域
+    - 验收口径
+  readiness_score_range:
+    min: 0.55
+    max: 0.75
+  allow_analysis: false
   blocker:
     should_trigger: true
     reason: 缺少服务区域与验收口径

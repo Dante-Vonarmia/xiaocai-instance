@@ -3,10 +3,35 @@
 # 约束: 首轮仅导入三级目录；特殊字段与寻源要素使用占位结构
 directory:
   version: '1.0'
-  source: '/Users/dantevonalcatraz/Downloads/数据契约.xlsx#品类维度的需求处理'
+  source: '/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx#品类维度的需求处理'
   采购负责类数量: 10
   一级品类数量: 45
   二级品类数量: 96
+
+field_matrix_defaults:
+  applies_to: all_category_paths
+  required_fields:
+    - 采购目的
+    - 使用场景
+    - 一级品类
+    - 二级品类
+    - 交付地点
+  recommended_fields:
+    - 产品/服务
+    - 数量
+    - 单位
+    - 预算金额
+    - 交付时间
+    - 质量标准
+    - 验收口径
+  optional_fields:
+    - 特殊要求
+    - 响应时效
+    - 交付方式
+    - 供应商资质
+    - 履约能力
+    - 候选数量
+    - 供应商区域
 
 采购负责类:
   - 名称: 市场营销与传播

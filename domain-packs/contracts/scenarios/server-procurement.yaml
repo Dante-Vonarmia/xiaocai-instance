@@ -24,6 +24,16 @@ expected:
     - 预算金额
     - 交付时间
     - 交付地点
+  missing_fields:
+    - 技术要求
+    - 验收口径
+  next_question_fields:
+    - 技术要求
+    - 验收口径
+  readiness_score_range:
+    min: 0.60
+    max: 0.79
+  allow_analysis: false
   blocker:
     should_trigger: true
     reason: 缺少技术要求与验收口径

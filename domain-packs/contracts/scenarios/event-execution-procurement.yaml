@@ -22,6 +22,16 @@ expected:
     - 预算金额
     - 交付时间
     - 交付地点
+  missing_fields:
+    - 验收口径
+    - 里程碑
+  next_question_fields:
+    - 验收口径
+    - 里程碑
+  readiness_score_range:
+    min: 0.60
+    max: 0.80
+  allow_analysis: false
   blocker:
     should_trigger: true
     reason: 缺少验收口径与里程碑

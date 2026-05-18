@@ -4,8 +4,74 @@ contract:
   name: procurement-field-dictionary
   version: '1.0'
   key_mode: 中文字段名
-  source: '/Users/dantevonalcatraz/Downloads/数据契约.xlsx#总字段表'
+  source: '/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx#总字段表'
   field_count: 81
+
+field_aliases:
+  - external_name: 数量和单位
+    mapping_type: split
+    canonical_fields:
+      - 数量
+      - 单位
+    readiness_gate: true
+    gate_strategy: requirement_collection_readiness
+  - external_name: 影响范围
+    mapping_type: alias
+    canonical_fields:
+      - 影响范围（部门/区域）
+    readiness_gate: false
+    gate_strategy: analysis_quality_only
+  - external_name: 供应商数量
+    mapping_type: alias
+    canonical_fields:
+      - 候选数量
+    readiness_gate: false
+    gate_strategy: sourcing_completeness_only
+  - external_name: 交期时长
+    mapping_type: derived
+    canonical_fields:
+      - 交付时间
+      - 响应时效
+    readiness_gate: false
+    gate_strategy: sourcing_completeness_only
+  - external_name: 注册资金
+    mapping_type: alias
+    canonical_fields:
+      - 注册资本
+    readiness_gate: false
+    gate_strategy: supplier_filter_only
+  - external_name: 成立时长
+    mapping_type: derived
+    canonical_fields:
+      - 成立日期
+      - 成立年份
+    readiness_gate: false
+    gate_strategy: supplier_filter_only
+  - external_name: 对标企业
+    mapping_type: placeholder
+    canonical_fields: []
+    readiness_gate: false
+    gate_strategy: not_in_v1_readiness
+  - external_name: 员工规模
+    mapping_type: placeholder
+    canonical_fields: []
+    readiness_gate: false
+    gate_strategy: not_in_v1_readiness
+  - external_name: 实缴资金
+    mapping_type: placeholder
+    canonical_fields: []
+    readiness_gate: false
+    gate_strategy: not_in_v1_readiness
+  - external_name: 企业性质
+    mapping_type: placeholder
+    canonical_fields: []
+    readiness_gate: false
+    gate_strategy: not_in_v1_readiness
+  - external_name: 社保人数
+    mapping_type: placeholder
+    canonical_fields: []
+    readiness_gate: false
+    gate_strategy: not_in_v1_readiness
 
 module_index:
   需求梳理:

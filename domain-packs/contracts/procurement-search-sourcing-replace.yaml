@@ -122,6 +122,75 @@ sourcing_rules:
     default_candidate_count: 5
     allow_new_supplier_field: 允许新供应商
 
+sourcing_output_template:
+  output_name: supplier-sourcing-recommendation
+  sections:
+    - id: input-constraint-summary
+      title: 输入约束摘要
+      required_fields:
+        - 一级品类
+        - 二级品类
+        - 产品/服务
+        - 交付地点
+      optional_fields:
+        - 预算金额
+        - 交付时间
+        - 数量
+        - 单位
+      block_on_missing_required: true
+      draft_allowed_when_missing: false
+
+    - id: candidate-pool-summary
+      title: 候选池说明
+      required_fields:
+        - 公司名称
+        - 主营品类
+        - 所在地
+        - 数据来源
+      optional_fields:
+        - 候选数量
+        - 供应商区域
+        - 允许新供应商
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
+
+    - id: recommendation-rationale
+      title: 推荐理由
+      required_fields:
+        - 综合评分
+        - 履约能力
+        - 供应商资质
+      optional_fields:
+        - 历史案例
+        - 售后质保
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
+
+    - id: risk-notice
+      title: 风险提示
+      required_fields:
+        - 风险与诉讼
+        - 风险等级
+      optional_fields:
+        - 纳税资质
+        - 资质证书
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
+
+    - id: next-actions
+      title: 下一步动作
+      required_fields:
+        - RFX类型
+        - 输出物
+        - 输出格式
+      optional_fields:
+        - 付款条款
+        - 发票类型
+        - 评估项
+        - 权重
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
+
 replace_rules:
   auto_replace_allowed:
     - 搜索关键词

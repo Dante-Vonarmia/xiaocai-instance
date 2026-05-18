@@ -22,6 +22,16 @@ expected:
     - 单位
     - 预算金额
     - 交付时间
+  missing_fields:
+    - 验收口径
+    - 风险分析
+  next_question_fields:
+    - 验收口径
+    - 风险分析
+  readiness_score_range:
+    min: 0.55
+    max: 0.75
+  allow_analysis: false
   blocker:
     should_trigger: true
     reason: 缺少验收口径和版权要求
