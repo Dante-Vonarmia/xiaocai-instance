@@ -17,13 +17,24 @@ from xiaocai_instance_api.contracts.chat_contract import (
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
-from xiaocai_instance_api.chat.kernel_client import get_kernel_client
+from xiaocai_instance_api.chat.kernel_client import KernelStreamConflictError, get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
 from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
+from xiaocai_instance_api.chat.orchestration.mode_resolution import (
+    INTAKE_MODE_ALIAS,
+    INTAKE_MODE_PREFIX,
+    is_intake_mode,
+    resolve_effective_mode,
+)
 from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
+from xiaocai_instance_api.chat.stream_turn import (
+    build_stream_busy_events,
+    get_stream_turn_registry,
+    serialize_sse_event,
+)
 from xiaocai_instance_api.chat.workbench_projection import (
     build_intake_workbench_projection,
     projection_key,
@@ -34,8 +45,6 @@ import json
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-INTAKE_MODE_PREFIX = "requirement_intake"
-INTAKE_MODE_ALIAS = "requirement_canvas"
 EMPTY_ASSISTANT_MESSAGE = (
     "我这边没有拿到完整的可展示结果，先不直接给结论。\n"
     "你可以继续补充采购目标、品类/规格、数量、预算、交付地点和时间；我会基于这些信息继续梳理需求。\n"
@@ -118,22 +127,19 @@ def _extract_mode(source: dict | None) -> str | None:
 
 
 def _is_intake_mode(mode: str | None) -> bool:
-    if not isinstance(mode, str):
-        return False
-    normalized = mode.strip()
-    return normalized == INTAKE_MODE_ALIAS or normalized.startswith(INTAKE_MODE_PREFIX)
+    return is_intake_mode(mode)
 
 
-def _resolve_effective_mode(request_mode: str | None, session_mode: str | None) -> str | None:
-    if _is_intake_mode(session_mode):
-        if _is_intake_mode(request_mode):
-            return request_mode
-        if request_mode == "auto":
-            return "auto"
-        if not request_mode:
-            return session_mode
-        return request_mode
-    return request_mode or session_mode
+def _resolve_effective_mode(
+    request_mode: str | None,
+    session_mode: str | None,
+    message: str = "",
+) -> str | None:
+    return resolve_effective_mode(
+        request_mode=request_mode,
+        session_mode=session_mode,
+        message=message,
+    )
 
 
 def _as_object(value: object) -> dict | None:
@@ -430,7 +436,11 @@ async def chat_run(
         await _check_daily_limit(user_id=claims.user_id, context=request.context)
         session = await _ensure_session_exists(claims=claims, request=request)
         request_mode = _extract_mode(request.context)
-        mode = _resolve_effective_mode(request_mode=request_mode, session_mode=session.mode)
+        mode = _resolve_effective_mode(
+            request_mode=request_mode,
+            session_mode=session.mode,
+            message=request.message,
+        )
         await _check_mode_allowed(mode=mode)
         conversation_store = get_conversation_store()
         if mode and mode != session.mode:
@@ -581,7 +591,11 @@ async def chat_stream(
             await _check_daily_limit(user_id=claims.user_id, context=request.context)
             session = await _ensure_session_exists(claims=claims, request=request)
             request_mode = _extract_mode(request.context)
-            mode = _resolve_effective_mode(request_mode=request_mode, session_mode=session.mode)
+            mode = _resolve_effective_mode(
+                request_mode=request_mode,
+                session_mode=session.mode,
+                message=request.message,
+            )
             await _check_mode_allowed(mode=mode)
             conversation_store = get_conversation_store()
             if mode and mode != session.mode:
@@ -628,154 +642,168 @@ async def chat_stream(
                         assistant_message=guard.message,
                     )
                 return
-            kernel_context = dict(request.context) if isinstance(request.context, dict) else {}
-            if session.project_id and not kernel_context.get("project_id"):
-                kernel_context["project_id"] = session.project_id
-            if mode:
-                kernel_context["mode"] = mode
-            retrieval_scope = await authz.build_retrieval_scope(
-                claims=claims,
-                project_id=_extract_project_id(kernel_context),
-            )
-            kernel_context["auth_scope"] = retrieval_scope.to_dict()
-            kernel_context = await enrich_kernel_context_with_retrieval_policy(
-                claims=claims,
-                kernel_context=kernel_context,
-                user_message=request.message,
-            )
-            kernel_context.setdefault("function_type", session.function_type)
-            kernel_context.setdefault("intake_session_id", request.session_id)
-            kernel_client = get_kernel_client()
-            text_accumulator = StreamTextAccumulator()
-            done_message: str | None = None
-            emitted_done_event = False
-            latest_pending_contract: dict | None = None
-            exchange_persisted = False
-            emitted_projection_keys: set[str] = set()
-            emitted_suppressed_question = False
-            event_iter = kernel_client.chat_stream(
-                user_id=claims.user_id,
-                message=request.message,
-                session_id=request.session_id,
-                context=kernel_context,
-            )
-            async for event in event_iter:
-                event_type = event.get("type", "message")
-                pending_contract = _build_pending_contract(
-                    event if isinstance(event, dict) else {},
-                    session_id=request.session_id,
-                    mode=mode,
+            turn_registry = get_stream_turn_registry()
+            turn_admission = await turn_registry.try_acquire(request.session_id)
+            if not turn_admission.accepted:
+                for event_type, payload in build_stream_busy_events(request.session_id):
+                    yield serialize_sse_event(event_type, payload)
+                return
+            try:
+                kernel_context = dict(request.context) if isinstance(request.context, dict) else {}
+                if session.project_id and not kernel_context.get("project_id"):
+                    kernel_context["project_id"] = session.project_id
+                if mode:
+                    kernel_context["mode"] = mode
+                retrieval_scope = await authz.build_retrieval_scope(
+                    claims=claims,
+                    project_id=_extract_project_id(kernel_context),
                 )
-                pending_contract = apply_confidence_policy_to_pending_contract(
-                    pending_contract=pending_contract,
-                    confidence_policy=kernel_context.get("confidence_policy"),
-                    clarification_policy=kernel_context.get("clarification_policy"),
-                    category_prior=kernel_context.get("category_prior"),
-                    session_id=request.session_id,
-                    mode=mode,
-                )
-                native_pending_contract = pending_contract
-                workbench_projection = build_intake_workbench_projection(
-                    pending_contract=pending_contract,
-                    mode=mode,
-                    session_id=request.session_id,
+                kernel_context["auth_scope"] = retrieval_scope.to_dict()
+                kernel_context = await enrich_kernel_context_with_retrieval_policy(
+                    claims=claims,
+                    kernel_context=kernel_context,
                     user_message=request.message,
                 )
-                projection_events: list[tuple[str, dict]] = []
-                if workbench_projection:
-                    projected_pending = _as_object(workbench_projection.get("pending_contract"))
-                    if projected_pending:
-                        pending_contract = projected_pending
-                    plan_payload = _as_object(workbench_projection.get("plan_payload"))
-                    canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
-                    if plan_payload:
-                        projection_events.append(("primary_flow_payload", plan_payload))
-                    if canvas_payload:
-                        projection_events.append(("canvas_state", canvas_payload))
-                has_native_canvas_state = event_type == "canvas_state" and _has_usable_canvas_state_event(event)
-                if has_native_canvas_state:
-                    projection_events = []
-                if native_pending_contract:
-                    latest_pending_contract = native_pending_contract
-                if pending_contract:
-                    event = {**event, **pending_contract}
-                if event_type == "canvas_state" and workbench_projection and not has_native_canvas_state:
-                    canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
-                    if canvas_payload:
-                        event = canvas_payload
-                        emitted_projection_keys.add(f"canvas_state:{projection_key(canvas_payload)}")
-                chunk = _extract_event_chunk(event)
-                if chunk and _should_accumulate_stream_chunk(event_type, event):
-                    event, chunk_delta, should_emit_event = text_accumulator.normalize_event(
-                        event_type=event_type,
-                        event=event,
-                        chunk=chunk,
-                    )
-                    if not should_emit_event:
-                        continue
-                    text_accumulator.append(chunk_delta)
-                if event_type in ("done", "complete"):
-                    emitted_done_event = True
-                    done_message, event = _resolve_stream_terminal_message(
-                        event=event,
-                        final_message_chunks=text_accumulator.chunks,
-                    )
-                    # Preserve FLARE text when it exists. Question fallback is
-                    # only for native pending events that did not emit text.
-                    suppress_contract = latest_pending_contract or native_pending_contract
-                    if not _is_non_empty_text(done_message) and _should_suppress_assistant_message(suppress_contract):
-                        question_text = _pending_question_text(suppress_contract)
-                        if question_text:
-                            done_message = question_text
-                            event = {**event, "message": question_text, "content": question_text}
-                            if not emitted_suppressed_question:
-                                replacement_event = {
-                                    "type": "text.replace",
-                                    "content": question_text,
-                                    "session_id": request.session_id,
-                                }
-                                yield "event: text.replace\n"
-                                yield f"data: {json.dumps(replacement_event, ensure_ascii=False)}\n\n"
-                                emitted_suppressed_question = True
-                    if done_message is None and not text_accumulator.chunks:
-                        done_message = EMPTY_ASSISTANT_MESSAGE
-                        event = {**event, "message": done_message}
-                yield f"event: {event_type}\n"
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
-                    yield "event: next_actions\n"
-                    yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
-                for projected_type, projected_payload in projection_events:
-                    event_key = f"{projected_type}:{projection_key(projected_payload)}"
-                    if event_key in emitted_projection_keys:
-                        continue
-                    emitted_projection_keys.add(event_key)
-                    yield f"event: {projected_type}\n"
-                    yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
-            final_message = done_message or text_accumulator.final_message()
-            if not _is_non_empty_text(final_message) and _should_suppress_assistant_message(latest_pending_contract):
-                pending_question = _as_object((latest_pending_contract or {}).get("question"))
-                current_question = _as_object((latest_pending_contract or {}).get("current_question"))
-                final_message = _to_text((pending_question or {}).get("question_text"))
-                if not final_message:
-                    final_message = _to_text((current_question or {}).get("question_text"))
-            if not _is_non_empty_text(final_message):
-                final_message = EMPTY_ASSISTANT_MESSAGE
-            if not emitted_done_event:
-                synthetic_done_event = {
-                    "type": "done",
-                    "message": final_message,
-                    "session_id": request.session_id,
-                }
-                yield "event: done\n"
-                yield f"data: {json.dumps(synthetic_done_event, ensure_ascii=False)}\n\n"
-            if final_message and not client_handles_writeback:
-                await conversation_store.append_exchange(
+                kernel_context.setdefault("function_type", session.function_type)
+                kernel_context.setdefault("intake_session_id", request.session_id)
+                kernel_client = get_kernel_client()
+                text_accumulator = StreamTextAccumulator()
+                done_message: str | None = None
+                emitted_done_event = False
+                latest_pending_contract: dict | None = None
+                exchange_persisted = False
+                emitted_projection_keys: set[str] = set()
+                emitted_suppressed_question = False
+                event_iter = kernel_client.chat_stream(
                     user_id=claims.user_id,
+                    message=request.message,
                     session_id=request.session_id,
-                    user_message=request.message,
-                    assistant_message=final_message,
+                    context=kernel_context,
                 )
+                async for event in event_iter:
+                    event_type = event.get("type", "message")
+                    pending_contract = _build_pending_contract(
+                        event if isinstance(event, dict) else {},
+                        session_id=request.session_id,
+                        mode=mode,
+                    )
+                    pending_contract = apply_confidence_policy_to_pending_contract(
+                        pending_contract=pending_contract,
+                        confidence_policy=kernel_context.get("confidence_policy"),
+                        clarification_policy=kernel_context.get("clarification_policy"),
+                        category_prior=kernel_context.get("category_prior"),
+                        session_id=request.session_id,
+                        mode=mode,
+                    )
+                    native_pending_contract = pending_contract
+                    workbench_projection = build_intake_workbench_projection(
+                        pending_contract=pending_contract,
+                        mode=mode,
+                        session_id=request.session_id,
+                        user_message=request.message,
+                        candidate_context=kernel_context,
+                    )
+                    projection_events: list[tuple[str, dict]] = []
+                    if workbench_projection:
+                        projected_pending = _as_object(workbench_projection.get("pending_contract"))
+                        if projected_pending:
+                            pending_contract = projected_pending
+                        plan_payload = _as_object(workbench_projection.get("plan_payload"))
+                        canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
+                        if plan_payload:
+                            projection_events.append(("primary_flow_payload", plan_payload))
+                        if canvas_payload:
+                            projection_events.append(("canvas_state", canvas_payload))
+                    has_native_canvas_state = event_type == "canvas_state" and _has_usable_canvas_state_event(event)
+                    if has_native_canvas_state:
+                        projection_events = []
+                    if native_pending_contract:
+                        latest_pending_contract = native_pending_contract
+                    if pending_contract:
+                        event = {**event, **pending_contract}
+                    if event_type == "canvas_state" and workbench_projection and not has_native_canvas_state:
+                        canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
+                        if canvas_payload:
+                            event = canvas_payload
+                            emitted_projection_keys.add(f"canvas_state:{projection_key(canvas_payload)}")
+                    chunk = _extract_event_chunk(event)
+                    if chunk and _should_accumulate_stream_chunk(event_type, event):
+                        event, chunk_delta, should_emit_event = text_accumulator.normalize_event(
+                            event_type=event_type,
+                            event=event,
+                            chunk=chunk,
+                        )
+                        if not should_emit_event:
+                            continue
+                        text_accumulator.append(chunk_delta)
+                    if event_type in ("done", "complete"):
+                        emitted_done_event = True
+                        done_message, event = _resolve_stream_terminal_message(
+                            event=event,
+                            final_message_chunks=text_accumulator.chunks,
+                        )
+                        # Preserve FLARE text when it exists. Question fallback is
+                        # only for native pending events that did not emit text.
+                        suppress_contract = latest_pending_contract or native_pending_contract
+                        if not _is_non_empty_text(done_message) and _should_suppress_assistant_message(suppress_contract):
+                            question_text = _pending_question_text(suppress_contract)
+                            if question_text:
+                                done_message = question_text
+                                event = {**event, "message": question_text, "content": question_text}
+                                if not emitted_suppressed_question:
+                                    replacement_event = {
+                                        "type": "text.replace",
+                                        "content": question_text,
+                                        "session_id": request.session_id,
+                                    }
+                                    yield "event: text.replace\n"
+                                    yield f"data: {json.dumps(replacement_event, ensure_ascii=False)}\n\n"
+                                    emitted_suppressed_question = True
+                        if done_message is None and not text_accumulator.chunks:
+                            done_message = EMPTY_ASSISTANT_MESSAGE
+                            event = {**event, "message": done_message}
+                    yield f"event: {event_type}\n"
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
+                        yield "event: next_actions\n"
+                        yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
+                    for projected_type, projected_payload in projection_events:
+                        event_key = f"{projected_type}:{projection_key(projected_payload)}"
+                        if event_key in emitted_projection_keys:
+                            continue
+                        emitted_projection_keys.add(event_key)
+                        yield f"event: {projected_type}\n"
+                        yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
+                final_message = done_message or text_accumulator.final_message()
+                if not _is_non_empty_text(final_message) and _should_suppress_assistant_message(latest_pending_contract):
+                    pending_question = _as_object((latest_pending_contract or {}).get("question"))
+                    current_question = _as_object((latest_pending_contract or {}).get("current_question"))
+                    final_message = _to_text((pending_question or {}).get("question_text"))
+                    if not final_message:
+                        final_message = _to_text((current_question or {}).get("question_text"))
+                if not _is_non_empty_text(final_message):
+                    final_message = EMPTY_ASSISTANT_MESSAGE
+                if not emitted_done_event:
+                    synthetic_done_event = {
+                        "type": "done",
+                        "message": final_message,
+                        "session_id": request.session_id,
+                    }
+                    yield "event: done\n"
+                    yield f"data: {json.dumps(synthetic_done_event, ensure_ascii=False)}\n\n"
+                if final_message and not client_handles_writeback:
+                    await conversation_store.append_exchange(
+                        user_id=claims.user_id,
+                        session_id=request.session_id,
+                        user_message=request.message,
+                        assistant_message=final_message,
+                    )
+            except KernelStreamConflictError:
+                for event_type, payload in build_stream_busy_events(request.session_id):
+                    yield serialize_sse_event(event_type, payload)
+                return
+            finally:
+                await turn_registry.release(request.session_id)
         except Exception as e:
             error_event = {"type": "error", "message": str(e)}
             yield "event: error\n"

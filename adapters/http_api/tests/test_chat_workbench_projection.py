@@ -107,6 +107,42 @@ def test_intake_workbench_projection_outputs_display_draft_without_pending_contr
     assert "## 原始需求" in canvas_state["versions"][0]["content"]
 
 
+def test_intake_workbench_projection_shows_context_candidates_without_confirming_them():
+    projection = build_intake_workbench_projection(
+        pending_contract=None,
+        mode="requirement_canvas",
+        session_id="sess-context-candidates",
+        user_message="我要采购一批办公桌椅，用于上海新办公室开放办公区，预算45万元",
+        candidate_context={
+            "candidate_fields": [
+                {
+                    "field_key": "一级品类",
+                    "value": "空间相关",
+                    "source": "rule_extracted",
+                },
+                {
+                    "field_key": "二级品类",
+                    "value": "办公家具、电器",
+                    "source": "rule_extracted",
+                },
+            ]
+        },
+    )
+
+    assert projection is not None
+    canvas_state = projection["canvas_payload"]["canvas_state"]
+    collected_keys = {item["field_key"] for item in canvas_state["collected"]}
+    candidate_keys = {item["field_key"] for item in canvas_state["candidate_fields"]}
+    markdown = canvas_state["versions"][0]["content"]
+
+    assert "pending_contract" not in projection
+    assert "一级品类" not in collected_keys
+    assert "二级品类" not in collected_keys
+    assert candidate_keys == {"一级品类", "二级品类"}
+    assert "## 模型建议（待确认）" in markdown
+    assert "- 二级品类: 办公家具、电器" in markdown
+
+
 def test_intake_workbench_projection_does_not_fabricate_missing_field_question():
     projection = build_intake_workbench_projection(
         pending_contract={

@@ -154,6 +154,34 @@ async def test_kernel_client_stream_parses_sse_events(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_kernel_client_stream_raises_typed_conflict(monkeypatch):
+    settings = Settings(
+        instance_jwt_secret="secret",
+        kernel_host="kernel.local",
+        kernel_port=8080,
+        kernel_run_path="/custom/run",
+        kernel_stream_path="/custom/stream",
+        flare_domain_pack_root=".",
+    )
+    monkeypatch.setattr(kernel_client_module, "get_settings", lambda: settings)
+
+    fake_client = FakeAsyncClient(stream_response=FakeResponse(status_code=409))
+    monkeypatch.setattr(kernel_client_module.httpx, "AsyncClient", lambda: fake_client)
+
+    client = KernelClient()
+    with pytest.raises(kernel_client_module.KernelStreamConflictError):
+        [
+            event
+            async for event in client.chat_stream(
+                user_id="user-1",
+                message="你好",
+                session_id="session-1",
+                context={},
+            )
+        ]
+
+
+@pytest.mark.asyncio
 async def test_kernel_client_run_http_error(monkeypatch):
     settings = Settings(
         instance_jwt_secret="secret",

@@ -74,6 +74,32 @@ def _current_question(pending_contract: dict[str, Any]) -> dict[str, object]:
     return {}
 
 
+def _merge_candidate_payloads(*payloads: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    candidates: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+
+    for payload in payloads:
+        normalized = normalize_candidate_payload(payload)
+        for status_key, target in (("candidate_fields", candidates), ("rejected_candidates", rejected)):
+            for item in normalized[status_key]:
+                dedupe_key = (
+                    status_key,
+                    _to_text(item.get("field_key")),
+                    _to_text(item.get("value")),
+                    _to_text(item.get("source")),
+                )
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                target.append(item)
+
+    return {
+        "candidate_fields": candidates,
+        "rejected_candidates": rejected,
+    }
+
+
 def _markdown(
     collected: list[dict[str, object]],
     missing_fields: list[str],
@@ -115,12 +141,13 @@ def build_intake_workbench_projection(
     mode: str | None,
     session_id: str,
     user_message: str,
+    candidate_context: dict[str, Any] | None = None,
 ) -> dict[str, object] | None:
     if mode != INTAKE_MODE_KEY and mode != "requirement_canvas":
         return None
 
     pending = dict(pending_contract or {})
-    candidate_payload = normalize_candidate_payload(pending)
+    candidate_payload = _merge_candidate_payloads(pending, dict(candidate_context or {}))
     candidate_fields = candidate_payload["candidate_fields"]
     rejected_candidates = candidate_payload["rejected_candidates"]
     slots = extract_slots(user_message)

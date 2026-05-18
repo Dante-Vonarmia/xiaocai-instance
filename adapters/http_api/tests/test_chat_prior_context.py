@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
+from xiaocai_instance_api.chat.orchestration.flare_intake_contract import build_flare_intake_contract
 from xiaocai_instance_api.chat.orchestration.prior_context import build_procurement_prior_context
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
 from xiaocai_instance_api.settings import get_settings
@@ -161,6 +162,32 @@ def test_chat_prior_keeps_project_name_out_of_chat_question_priority(client, aut
         assert kernel_context["confidence_policy"]["should_clarify_before_commit"] is True
         assert clarification_policy["ask_missing_fields_one_by_one"] is True
         assert domain_prior["instruction_hints"]["defer_missing_fields_to_workbench"] is False
+
+
+def test_office_furniture_terms_become_canonical_category_candidates():
+    message = "我要采购一批办公桌椅，用于上海新办公室开放办公区，预算45万元，数量120套，2周内交付。请先帮我梳理需求。"
+    prior = build_procurement_prior_context(
+        kernel_context={},
+        mode="requirement_canvas",
+        user_message=message,
+    )
+    contract = build_flare_intake_contract(
+        kernel_context={},
+        domain_prior=prior.domain_prior,
+        mode="requirement_canvas",
+    )
+
+    category_prior = prior.domain_prior["category_prior"]
+    candidates_by_key = {item["field_key"]: item for item in contract["candidate_fields"]}
+
+    assert category_prior["resolved_level1_category"] == "空间相关"
+    assert category_prior["resolved_level2_category"] == "办公家具、电器"
+    assert category_prior["confidence_score"] >= 0.4
+    assert "一级品类" not in contract["confirmed_fields"]
+    assert "二级品类" not in contract["confirmed_fields"]
+    assert candidates_by_key["一级品类"]["normalized_value"] == "空间相关"
+    assert candidates_by_key["二级品类"]["normalized_value"] == "办公家具、电器"
+    assert candidates_by_key["一级品类"]["normalization_status"] == "needs_confirmation"
 
 
 def test_sourcing_prior_does_not_hard_block_on_missing_ranking_fields():

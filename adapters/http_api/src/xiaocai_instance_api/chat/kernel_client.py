@@ -25,6 +25,10 @@ from xiaocai_instance_api.chat.replay.hooks import (
 )
 
 
+class KernelStreamConflictError(RuntimeError):
+    """Raised when FLARE kernel reports an active stream for the same session."""
+
+
 class KernelClient:
     """FLARE Kernel 客户端"""
 
@@ -315,7 +319,12 @@ class KernelClient:
                     json=request_body,
                     timeout=httpx.Timeout(connect=10.0, read=None, write=60.0, pool=60.0),
                 ) as response:
-                    response.raise_for_status()
+                    try:
+                        response.raise_for_status()
+                    except httpx.HTTPStatusError as exc:
+                        if exc.response.status_code != 409:
+                            raise
+                        raise KernelStreamConflictError("kernel stream conflict") from exc
                     async for line in response.aiter_lines():
                         yield f"{line}\n"
 

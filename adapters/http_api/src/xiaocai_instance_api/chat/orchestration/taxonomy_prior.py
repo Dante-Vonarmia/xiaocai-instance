@@ -29,6 +29,11 @@ def _resolve_taxonomy_path() -> Path:
     return root / "category-fields" / "procurement-category-fields.yaml"
 
 
+def _resolve_terminology_path() -> Path:
+    root = Path(load_pack_mount_snapshot().domain_packs_root)
+    return root / "terminology" / "procurement.yaml"
+
+
 def _parse_taxonomy_paths(text: str) -> list[dict]:
     paths: list[dict] = []
     in_owner_section = False
@@ -67,6 +72,52 @@ def _parse_taxonomy_paths(text: str) -> list[dict]:
     return paths
 
 
+def _parse_category_terms(text: str) -> list[dict]:
+    terms: list[dict] = []
+    in_category_section = False
+    current: dict | None = None
+    current_list_key = ""
+
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = _line_indent(raw_line)
+
+        if stripped == "procurement_categories:":
+            in_category_section = True
+            continue
+        if in_category_section and indent == 0 and stripped.endswith(":"):
+            break
+        if not in_category_section:
+            continue
+
+        if indent == 2 and stripped.startswith("- term:"):
+            if current:
+                terms.append(current)
+            term = _normalize_scalar(stripped.split(":", 1)[1])
+            current = {"term": term, "phrases": [term]}
+            current_list_key = ""
+            continue
+
+        if current is None:
+            continue
+        if indent == 4 and stripped in {"synonyms:", "examples:"}:
+            current_list_key = stripped[:-1]
+            continue
+        if indent == 4:
+            current_list_key = ""
+            continue
+        if indent == 6 and stripped.startswith("- ") and current_list_key in {"synonyms", "examples"}:
+            phrase = _normalize_scalar(stripped[2:])
+            if phrase:
+                current["phrases"].append(phrase)
+
+    if current:
+        terms.append(current)
+    return terms
+
+
 def _build_source_text(user_message: str | None, kernel_context: dict) -> str:
     fragments: list[str] = []
     if isinstance(user_message, str) and user_message.strip():
@@ -88,6 +139,37 @@ def _round_score(value: float) -> float:
     return round(max(0.0, min(1.0, value)), 4)
 
 
+def _term_matches_category(term: str, category_name: str) -> bool:
+    if not term or not category_name:
+        return False
+    return term in category_name or category_name in term
+
+
+def _phrase_hit(phrases: list[str], source_text: str) -> bool:
+    return any(_normalize_for_match(phrase) in source_text for phrase in phrases if _normalize_for_match(phrase))
+
+
+def _semantic_hits(*, item: dict, category_terms: list[dict], source_text: str) -> dict[str, float]:
+    owner = _normalize_for_match(item["owner_category"])
+    level1 = _normalize_for_match(item["level1_category"])
+    level2 = _normalize_for_match(item["level2_category"])
+    hits = {"owner": 0.0, "level1": 0.0, "level2": 0.0}
+
+    for term_row in category_terms:
+        term = _normalize_for_match(str(term_row.get("term") or ""))
+        phrases = [str(phrase) for phrase in term_row.get("phrases", []) if str(phrase).strip()]
+        if not _phrase_hit(phrases, source_text):
+            continue
+        if _term_matches_category(term, level2):
+            hits["level2"] = 1.0
+        elif _term_matches_category(term, level1):
+            hits["level1"] = 1.0
+        elif _term_matches_category(term, owner):
+            hits["owner"] = 1.0
+
+    return hits
+
+
 def build_taxonomy_prior(
     *,
     user_message: str | None,
@@ -96,6 +178,8 @@ def build_taxonomy_prior(
 ) -> dict:
     taxonomy_text = _resolve_taxonomy_path().read_text(encoding="utf-8")
     paths = _parse_taxonomy_paths(taxonomy_text)
+    terminology_path = _resolve_terminology_path()
+    category_terms = _parse_category_terms(terminology_path.read_text(encoding="utf-8")) if terminology_path.exists() else []
     source_text = _build_source_text(user_message, kernel_context)
 
     explicit_l1 = _normalize_for_match(str(kernel_context.get("一级品类") or ""))
@@ -110,13 +194,23 @@ def build_taxonomy_prior(
         owner_hit = 1.0 if owner and owner in source_text else 0.0
         level1_hit = 1.0 if level1 and level1 in source_text else 0.0
         level2_hit = 1.0 if level2 and level2 != "/" and level2 in source_text else 0.0
+        semantic_hits = _semantic_hits(
+            item=item,
+            category_terms=category_terms,
+            source_text=source_text,
+        )
         explicit_match_bonus = 0.0
         if explicit_l1 and explicit_l1 == level1:
             explicit_match_bonus += 0.2
         if explicit_l2 and explicit_l2 == level2:
             explicit_match_bonus += 0.3
 
-        score = owner_hit * 0.2 + level1_hit * 0.35 + level2_hit * 0.45 + explicit_match_bonus
+        score = (
+            max(owner_hit, semantic_hits["owner"] * 0.8) * 0.2
+            + max(level1_hit, semantic_hits["level1"] * 0.85) * 0.35
+            + max(level2_hit, semantic_hits["level2"] * 0.9) * 0.45
+            + explicit_match_bonus
+        )
         if score <= 0:
             continue
 
