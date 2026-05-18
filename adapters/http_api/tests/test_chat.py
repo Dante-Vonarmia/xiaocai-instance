@@ -359,7 +359,7 @@ def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token
 
 
 def test_kernel_error_handling(monkeypatch):
-    """测试 kernel 错误处理（不走本地编排兜底）"""
+    """测试 kernel 错误处理降级（不 500 硬阻断）"""
     monkeypatch.setenv("ENABLE_LOCAL_ORCHESTRATION_FALLBACK", "true")
     get_settings.cache_clear()
     app = create_app()
@@ -379,9 +379,10 @@ def test_kernel_error_handling(monkeypatch):
             }
         )
 
-        assert response.status_code == 500
+        assert response.status_code == 200
         data = response.json()
-        assert "Chat failed" in data["detail"]
+        assert data["message"] == "当前未生成可展示回复，请重试。"
+        assert data["metadata"]["degraded"] is True
 
 
 def test_chat_run_returns_error_when_kernel_fails_even_if_fallback_enabled(monkeypatch):
@@ -405,9 +406,10 @@ def test_chat_run_returns_error_when_kernel_fails_even_if_fallback_enabled(monke
             },
         )
 
-        assert response.status_code == 500
+        assert response.status_code == 200
         data = response.json()
-        assert "Chat failed" in data["detail"]
+        assert data["message"] == "当前未生成可展示回复，请重试。"
+        assert data["metadata"]["degraded"] is True
 
 
 def test_chat_mode_not_allowed(monkeypatch):
@@ -632,7 +634,7 @@ def test_chat_run_auto_creates_session_with_default_function_type(client, auth_t
     assert session_data["project_id"] == "proj-auto-create"
 
 
-def test_chat_run_keeps_intake_mode_sticky_across_turns(client, auth_token):
+def test_chat_run_auto_mode_does_not_keep_intake_mode_sticky_across_turns(client, auth_token):
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -675,7 +677,7 @@ def test_chat_run_keeps_intake_mode_sticky_across_turns(client, auth_token):
 
     assert response.status_code == 200
     call_args = mock_chat.call_args[1]
-    assert call_args["context"]["mode"] == "requirement_canvas"
+    assert call_args["context"]["mode"] == "auto"
 
 
 def test_chat_run_allows_analysis_mode_to_override_sticky_intake(client, auth_token):

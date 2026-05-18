@@ -122,7 +122,9 @@ def _resolve_effective_mode(request_mode: str | None, session_mode: str | None) 
     if _is_intake_mode(session_mode):
         if _is_intake_mode(request_mode):
             return request_mode
-        if not request_mode or request_mode == "auto":
+        if request_mode == "auto":
+            return "auto"
+        if not request_mode:
             return session_mode
         return request_mode
     return request_mode or session_mode
@@ -201,6 +203,9 @@ def _build_pending_contract(
     session_id: str,
     mode: str | None,
 ) -> dict | None:
+    if not _is_intake_mode(mode):
+        return None
+
     source = _extract_pending_source(payload)
     if not source:
         return None
@@ -515,10 +520,24 @@ async def chat_run(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chat failed: {str(e)}",
+        fallback_response = ChatRunResponse(
+            message=EMPTY_ASSISTANT_MESSAGE,
+            cards=[],
+            session_id=request.session_id,
+            metadata={
+                "degraded": True,
+                "degrade_reason": "kernel_exception",
+                "degrade_detail": str(e),
+            },
         )
+        conversation_store = get_conversation_store()
+        await conversation_store.append_exchange(
+            user_id=claims.user_id,
+            session_id=request.session_id,
+            user_message=request.message,
+            assistant_message=fallback_response.message,
+        )
+        return fallback_response
 
 
 @router.post("/stream")

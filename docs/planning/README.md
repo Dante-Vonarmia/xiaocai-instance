@@ -153,6 +153,7 @@ planning/status alignment
 | 任务ID | 任务 | 状态 | Owner | 验收 |
 |---|---|---|---|---|
 | CHAT-001 | 移除本地 orchestration fallback 与 adapter 伪造 pending | Done | xiaocai | legacy fallback 无残留引用；adapter projection 不覆盖 FLARE 输出；`adapters/http_api/tests` 通过 |
+| CHAT-002 | auto 自然对话保护与梳理投影泄漏回归修复（instance 轻量化） | Done | xiaocai | `mode=auto` 不继承历史 intake 粘性；非显式梳理意图不生成需求梳理投影；普通对话不被缺字段策略阻断；局部失败降级为可继续对话；先补回归测试再改实现。测试清单：`docs/planning/chat-002-test-checklist.md`。验收命令：`.venv/bin/python -m pytest adapters/http_api/tests/test_chat.py adapters/http_api/tests/test_chat_prior_context.py adapters/http_api/tests/test_chat_stream_projection.py adapters/http_api/tests/test_chat_workbench_projection.py adapters/http_api/tests/test_chat_mode_regression.py -q`；结果：`45 passed in 16.63s`。 |
 
 ### P0：数据契约与 canonical 质量门禁（FLARE 执行前置）
 
