@@ -1,0 +1,114 @@
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+
+from xiaocai_instance_api.app import create_app
+from xiaocai_instance_api.settings import get_settings
+
+
+def _auth_headers(client: TestClient) -> dict[str, str]:
+    response = client.post(
+        "/auth/exchange",
+        json={"mock": True, "mock_user_id": "projection-user"},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+def test_projection_question_does_not_replace_stream_answer(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _auth_headers(client)
+
+    bind_response = client.post(
+        "/projects/bind",
+        headers=headers,
+        json={"project_id": "proj-stream-projection"},
+    )
+    assert bind_response.status_code == 200
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def mock_generator():
+            yield {
+                "type": "text.delta",
+                "channel": "assistant",
+                "delta": "我先按测试服务器采购场景整理需求，并列出待补充信息。",
+            }
+            yield {"type": "done", "session_id": "sess-stream-projection"}
+
+        mock_stream.return_value = mock_generator()
+
+        response = client.post(
+            "/chat/stream",
+            headers=headers,
+            json={
+                "message": "我要采购一批测试服务器，请先帮我梳理采购需求并列出还缺的关键信息。",
+                "session_id": "sess-stream-projection",
+                "context": {
+                    "project_id": "proj-stream-projection",
+                    "mode": "requirement_canvas",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert "我先按测试服务器采购场景整理需求，并列出待补充信息。" in response.text
+    legacy_projection_question = "".join(["请", "补", "充", "字", "段", "：", "项目名称"])
+    assert legacy_projection_question not in response.text
+    assert "event: text.replace" not in response.text
+
+
+def test_projected_pending_does_not_override_existing_stream_text(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _auth_headers(client)
+
+    bind_response = client.post(
+        "/projects/bind",
+        headers=headers,
+        json={"project_id": "proj-stream-native-text"},
+    )
+    assert bind_response.status_code == 200
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def mock_generator():
+            yield {
+                "type": "text.delta",
+                "channel": "assistant",
+                "delta": "您希望采购或寻找合适的衍射仪，我先给出选型框架。",
+            }
+            yield {
+                "type": "early_patch",
+                "missing_fields": ["一级品类"],
+                "current_question": {
+                    "field_key": "一级品类",
+                    "question_text": "请确认更接近哪类采购方向。",
+                    "options": [],
+                },
+                "gate": {"status": "blocked", "reason": "missing_required_fields"},
+            }
+            yield {"type": "done", "session_id": "sess-stream-native-text"}
+
+        mock_stream.return_value = mock_generator()
+
+        response = client.post(
+            "/chat/stream",
+            headers=headers,
+            json={
+                "message": "我要找衍射仪",
+                "session_id": "sess-stream-native-text",
+                "context": {
+                    "project_id": "proj-stream-native-text",
+                    "mode": "requirement_canvas",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert "您希望采购或寻找合适的衍射仪，我先给出选型框架。" in response.text
+    assert "为避免品类判断偏差" not in response.text
+    assert "event: text.replace" not in response.text

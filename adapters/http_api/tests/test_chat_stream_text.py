@@ -33,7 +33,7 @@ def test_chat_stream_deduplicates_repeated_content_snapshots(client, auth_token)
             "/chat/stream",
             headers={"Authorization": f"Bearer {auth_token}"},
             json={
-                "message": "先补关键字段",
+                "message": "测试流式内容去重",
                 "session_id": "sess-stream-dedupe",
             },
         )

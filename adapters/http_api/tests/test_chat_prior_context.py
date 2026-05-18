@@ -1,10 +1,12 @@
 from unittest.mock import patch
+import io
 
 import pytest
 from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
+from xiaocai_instance_api.settings import get_settings
 
 
 @pytest.fixture
@@ -87,7 +89,7 @@ def test_chat_run_injects_template_recommendation_prior(client, auth_token):
         assert domain_prior["instruction_hints"]["prefer_weighted_template_candidates"] is True
 
 
-def test_chat_run_uses_confidence_policy_to_build_pending_contract(client, auth_token):
+def test_chat_run_keeps_confidence_policy_hidden_without_native_pending(client, auth_token):
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.return_value = {
             "message": "我先帮你整理一个基础分析框架。",
@@ -109,11 +111,76 @@ def test_chat_run_uses_confidence_policy_to_build_pending_contract(client, auth_
         )
 
         assert response.status_code == 200
-        pending_contract = response.json()["metadata"]["pending_contract"]
-        assert pending_contract["command_type"] == "clarify_category_first"
-        assert pending_contract["gate"]["reason"] == "low_category_confidence"
-        assert pending_contract["current_question"]["field_key"] == "一级品类"
-        assert pending_contract["next_actions"][0]["action_key"] == "clarify_category_first"
+        body = response.json()
+        kernel_context = mock_chat.await_args.kwargs["context"]
+        assert body["message"] == "我先帮你整理一个基础分析框架。"
+        assert "pending_contract" not in body["metadata"]
+        assert "confidence_policy" in kernel_context
+
+
+def test_chat_run_keeps_selected_upload_source_context(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    local_client = TestClient(create_app())
+    token_response = local_client.post(
+        "/auth/exchange",
+        json={"mock": True, "mock_user_id": "selected-upload-user"},
+    )
+    assert token_response.status_code == 200
+    headers = {"Authorization": f"Bearer {token_response.json()['access_token']}"}
+    project_id = "proj-selected-upload"
+
+    bind_response = local_client.post(
+        "/projects/bind",
+        headers=headers,
+        json={"project_id": project_id},
+    )
+    assert bind_response.status_code == 200
+
+    upload_a = local_client.post(
+        "/sources/upload",
+        headers=headers,
+        data={"project_id": project_id},
+        files={"file": ("selected.txt", io.BytesIO(b"selected content"), "text/plain")},
+    )
+    upload_b = local_client.post(
+        "/sources/upload",
+        headers=headers,
+        data={"project_id": project_id},
+        files={"file": ("other.txt", io.BytesIO(b"other content"), "text/plain")},
+    )
+    assert upload_a.status_code == 200
+    assert upload_b.status_code == 200
+    selected_source_id = upload_a.json()["source_id"]
+    other_source_id = upload_b.json()["source_id"]
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "已根据上传内容整理",
+            "cards": [],
+            "session_id": "test-selected-upload-session",
+            "metadata": {},
+        }
+
+        response = local_client.post(
+            "/chat/run",
+            headers=headers,
+            json={
+                "message": "结合上传内容总结",
+                "session_id": "test-selected-upload-session",
+                "context": {
+                    "project_id": project_id,
+                    "context_refs": [{"source_id": selected_source_id}],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    kernel_context = mock_chat.await_args.kwargs["context"]
+    injected_source_ids = [item["source_id"] for item in kernel_context["context_refs"]]
+    assert injected_source_ids == [selected_source_id]
+    assert other_source_id not in injected_source_ids
 
 
 def test_confidence_policy_does_not_create_pending_contract_outside_intake():
@@ -127,6 +194,22 @@ def test_confidence_policy_does_not_create_pending_contract_outside_intake():
         category_prior={},
         session_id="test-analysis-session",
         mode="analysis_mode",
+    )
+
+    assert pending_contract is None
+
+
+def test_confidence_policy_does_not_create_legacy_pending_contract_inside_intake():
+    pending_contract = apply_confidence_policy_to_pending_contract(
+        pending_contract=None,
+        confidence_policy={
+            "action": "clarify_category_first",
+            "rationale": "low_category_confidence",
+        },
+        clarification_policy={},
+        category_prior={"candidate_pool": [{"level1_category": "工业MRO"}]},
+        session_id="test-intake-session",
+        mode="requirement_canvas",
     )
 
     assert pending_contract is None

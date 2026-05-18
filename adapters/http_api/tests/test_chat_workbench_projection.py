@@ -37,7 +37,7 @@ def test_intake_workbench_projection_outputs_canvas_state():
             "missing_fields": ["采购目的"],
             "current_question": {
                 "field_key": "采购目的",
-                "question_text": "为先把当前需求分析做准，建议先补充：采购目的",
+                "question_text": "请说明本次采购的业务目标。",
                 "options": [],
             },
             "next_actions": [{"action_key": "continue_collection", "label": "继续补充"}],
@@ -59,3 +59,25 @@ def test_intake_workbench_projection_outputs_canvas_state():
     assert canvas_state["progress"] > 0
     assert canvas_state["collected"]
     assert all(item["field_key"] != "采购目的" for item in canvas_state["missing"])
+
+
+def test_intake_workbench_projection_does_not_fabricate_missing_field_question():
+    projection = build_intake_workbench_projection(
+        pending_contract={
+            "current_stage": "collecting",
+            "missing_fields": ["项目名称"],
+            "next_actions": [{"action_key": "continue_collection", "label": "继续补充"}],
+        },
+        mode="requirement_intake",
+        session_id="sess-test",
+        user_message="我要采购一批测试服务器",
+    )
+
+    assert projection is not None
+    pending = projection["pending_contract"]
+    canvas_state = projection["canvas_payload"]["canvas_state"]
+
+    assert pending["current_question"] == {}
+    assert pending["question"] == {}
+    assert pending["has_active_question"] is False
+    assert canvas_state["current_question"] == {}

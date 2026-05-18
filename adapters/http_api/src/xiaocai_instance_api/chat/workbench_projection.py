@@ -56,23 +56,16 @@ def _field_item(field_key: str, value: str = "", status: str = "missing") -> dic
     }
 
 
-def _current_question(pending_contract: dict[str, Any], missing_fields: list[str]) -> dict[str, object]:
+def _current_question(pending_contract: dict[str, Any]) -> dict[str, object]:
     question = _as_dict(pending_contract.get("current_question")) or _as_dict(pending_contract.get("question"))
     field_key = _to_text(question.get("field_key"))
-    if field_key and field_key in missing_fields:
+    question_text = _to_text(question.get("question_text"))
+    if field_key and question_text:
         return {
             "field_key": field_key,
             "field_label": _to_text(question.get("field_label")) or field_key,
-            "question_text": _to_text(question.get("question_text")) or f"请补充字段：{field_key}",
+            "question_text": question_text,
             "options": _as_list(question.get("options")),
-        }
-    if missing_fields:
-        field = missing_fields[0]
-        return {
-            "field_key": field,
-            "field_label": field,
-            "question_text": f"请补充字段：{field}",
-            "options": [],
         }
     return {}
 
@@ -105,8 +98,12 @@ def build_intake_workbench_projection(
 ) -> dict[str, object] | None:
     if mode != INTAKE_MODE_KEY and mode != "requirement_canvas":
         return None
+    if not pending_contract:
+        # Keep workbench projection display-only: it must not invent a required-field
+        # question from domain-pack scoring when the runtime did not emit pending state.
+        return None
 
-    pending = dict(pending_contract or {})
+    pending = dict(pending_contract)
     slots = extract_slots(user_message)
     required = _required_fields()
     collected = [
@@ -121,7 +118,7 @@ def build_intake_workbench_projection(
         *(field for field in required if field not in collected_keys),
     ])
     missing = [_field_item(field) for field in missing_fields]
-    current_question = _current_question(pending, missing_fields)
+    current_question = _current_question(pending)
     progress = len(collected) / max(1, len(required))
     next_actions = _as_list(pending.get("next_actions"))
     mode_state = _to_text(pending.get("current_stage")) or "collecting"

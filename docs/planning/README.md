@@ -148,6 +148,12 @@ planning/status alignment
 | LLM-FB-004 | timeout/error fallback 回归 | Planned | FLARE + xiaocai | primary timeout/500 返回 fallback 并记录 `provider_trace` |
 | LLM-FB-005 | chat/retrieval 联合验收 | Planned | xiaocai | 回复不中断，降级原因可审计 |
 
+### P0：Chat projection / fallback owner 收敛
+
+| 任务ID | 任务 | 状态 | Owner | 验收 |
+|---|---|---|---|---|
+| CHAT-001 | 移除本地 orchestration fallback 与 adapter 伪造 pending | Done | xiaocai | legacy fallback 无残留引用；adapter projection 不覆盖 FLARE 输出；`adapters/http_api/tests` 通过 |
+
 ### P0：数据契约与 canonical 质量门禁（FLARE 执行前置）
 
 > 边界：本组任务只冻结 xiaocai domain contract、字段权重、品类完整性、分析模板和验收 fixture。  
