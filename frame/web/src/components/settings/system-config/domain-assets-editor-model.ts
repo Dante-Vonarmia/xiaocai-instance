@@ -1,8 +1,11 @@
 import {
   FIELD_GROUPS,
+  flattenCategoryTree,
+  normalizeCategoryTreeForPayload,
   type DomainAssetsDraftPayload,
   type DomainFieldItem,
   type PromptFallbackTemplate,
+  type CategoryOwnerNode,
 } from './domain-assets-model'
 import { normalizePromptTemplateDrafts, type PromptTemplateDraft } from './prompt-template-blueprints'
 
@@ -14,8 +17,7 @@ export const FIELD_GROUP_LABELS = {
 
 export type EditorState = {
   fields: DomainAssetsDraftPayload['fields']
-  ownerNames: string[]
-  level1Names: string[]
+  categoryTree: CategoryOwnerNode[]
   askOrder: string[]
   followupTemplates: PromptFallbackTemplate[]
   analysisSections: string[]
@@ -28,8 +30,7 @@ export function hydrateEditorState(payload: DomainAssetsDraftPayload): EditorSta
       acc[key] = payload.fields[key]
       return acc
     }, {} as EditorState['fields']),
-    ownerNames: payload.category.ownerNames,
-    level1Names: payload.category.level1Names,
+    categoryTree: payload.category.categoryTree,
     askOrder: payload.prompts.askOrder,
     followupTemplates: payload.prompts.followupTemplates,
     analysisSections: payload.prompts.analysisSections,
@@ -38,14 +39,17 @@ export function hydrateEditorState(payload: DomainAssetsDraftPayload): EditorSta
 }
 
 export function buildPayload(state: EditorState): DomainAssetsDraftPayload {
+  const categoryTree = normalizeCategoryTreeForPayload(state.categoryTree)
+  const categoryNames = flattenCategoryTree(categoryTree)
+
   return {
     fields: FIELD_GROUPS.reduce((acc, key) => {
       acc[key] = state.fields[key].filter((field) => field.key || field.label)
       return acc
     }, {} as DomainAssetsDraftPayload['fields']),
     category: {
-      ownerNames: state.ownerNames.map((item) => item.trim()).filter(Boolean),
-      level1Names: state.level1Names.map((item) => item.trim()).filter(Boolean),
+      ...categoryNames,
+      categoryTree,
     },
     prompts: {
       askOrder: state.askOrder.map((item) => item.trim()).filter(Boolean),

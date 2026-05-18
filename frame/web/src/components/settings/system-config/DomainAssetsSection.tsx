@@ -1,4 +1,4 @@
-import { Alert, Card, Empty, Spin, message } from 'antd'
+import { Alert, Empty, Spin, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { instanceApi } from '@/services/instanceApi'
 import { settingsApi, type ConfigDraft } from '@/services/settingsApi'
@@ -98,7 +98,7 @@ function DomainAssetsSection() {
   }
 
   return (
-    <Card className="settings-domain-card" title="字段 / 品类 / 提示词" bordered={false}>
+    <>
       {error ? <Alert type="error" showIcon message={error} className="settings-domain-alert" /> : null}
       {loading ? <div className="settings-domain-loading"><Spin /></div> : null}
       {!loading && !summary && !error ? <Empty description="暂无领域配置" /> : null}
@@ -112,7 +112,7 @@ function DomainAssetsSection() {
           onReset={resetDraft}
         />
       ) : null}
-    </Card>
+    </>
   )
 }
 

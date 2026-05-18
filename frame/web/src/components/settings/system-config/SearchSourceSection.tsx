@@ -170,7 +170,7 @@ function SearchSourceSection() {
                 <div>
                   <Typography.Text strong>备用搜索源</Typography.Text>
                   <Typography.Paragraph type="secondary" className="settings-source-copy">
-                    开启后按优先级作为补充数据源，避免主源覆盖不足。
+                    开启后按优先级补充主源结果。
                   </Typography.Paragraph>
                 </div>
                 <Switch

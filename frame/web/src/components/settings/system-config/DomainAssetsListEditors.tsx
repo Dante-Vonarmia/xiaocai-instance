@@ -14,6 +14,7 @@ type NameListEditorProps = {
   title: string
   hint: string
   items: string[]
+  editable: boolean
   onChange: (items: string[]) => void
 }
 
@@ -21,6 +22,7 @@ type QuestionPolicyEditorProps = {
   askOrder: string[]
   followupTemplates: PromptFallbackTemplate[]
   analysisSections: string[]
+  editable: boolean
   onAskOrderChange: (items: string[]) => void
   onFallbackChange: (items: PromptFallbackTemplate[]) => void
   onAnalysisSectionsChange: (items: string[]) => void
@@ -74,7 +76,7 @@ export function FieldListEditor({ groupKey, fields, editable, onChange }: FieldL
     <section className="settings-structured-card">
       <SectionHeader
         title={FIELD_GROUP_LABELS[groupKey]}
-        hint={editable ? '编辑字段草稿，不会直接覆盖运行契约。' : '只读查看字段契约：字段名称、业务含义、数据口径、必填、示例值、适用模块。'}
+        hint={editable ? '草稿编辑中' : '默认只读'}
         count={fields.length}
       />
       <VirtualRows
@@ -106,7 +108,7 @@ export function FieldListEditor({ groupKey, fields, editable, onChange }: FieldL
   )
 }
 
-export function NameListEditor({ title, hint, items, onChange }: NameListEditorProps) {
+export function NameListEditor({ title, hint, items, editable, onChange }: NameListEditorProps) {
   return (
     <section className="settings-structured-card">
       <SectionHeader title={title} hint={hint} count={items.length} />
@@ -115,41 +117,55 @@ export function NameListEditor({ title, hint, items, onChange }: NameListEditorP
         height={260}
         rowHeight={58}
         itemKey={(item, index) => `${item || 'name'}-${index}`}
-        renderItem={(item, index) => (
+        renderItem={(item, index) => editable ? (
           <div className="settings-name-row">
             <Tag>{index + 1}</Tag>
             <Input value={item} onChange={(event) => onChange(replaceAt(items, index, event.target.value))} />
             <Button danger onClick={() => onChange(removeAt(items, index))}>删除</Button>
           </div>
+        ) : (
+          <div className="settings-name-readonly-row">
+            <Tag>{index + 1}</Tag>
+            <Typography.Text>{item || '-'}</Typography.Text>
+          </div>
         )}
       />
-      <Button onClick={() => onChange([...items, ''])}>添加</Button>
+      {editable ? <Button onClick={() => onChange([...items, ''])}>添加</Button> : null}
     </section>
   )
 }
 
-function FallbackRows({ items, onChange }: { items: PromptFallbackTemplate[]; onChange: (items: PromptFallbackTemplate[]) => void }) {
+function FallbackRows(props: {
+  items: PromptFallbackTemplate[]
+  editable: boolean
+  onChange: (items: PromptFallbackTemplate[]) => void
+}) {
   const updateItem = (index: number, patch: Partial<PromptFallbackTemplate>) => {
-    onChange(replaceAt(items, index, { ...items[index], ...patch }))
+    props.onChange(replaceAt(props.items, index, { ...props.items[index], ...patch }))
   }
 
   return (
     <section className="settings-structured-card">
-      <SectionHeader title="兜底参考话术" hint="只作为模型兜底参考，不直接作为最终追问。" count={items.length} />
+      <SectionHeader title="参考话术" hint="缺失字段确认的参考表达。" count={props.items.length} />
       <VirtualRows
-        items={items}
+        items={props.items}
         height={260}
         rowHeight={74}
         itemKey={(item, index) => `${item.key || 'fallback'}-${index}`}
-        renderItem={(item, index) => (
+        renderItem={(item, index) => props.editable ? (
           <div className="settings-fallback-row">
             <Input value={item.key} placeholder="字段 key" onChange={(event) => updateItem(index, { key: event.target.value })} />
-            <Input value={item.text} placeholder="兜底参考话术" onChange={(event) => updateItem(index, { text: event.target.value })} />
-            <Button danger onClick={() => onChange(removeAt(items, index))}>删除</Button>
+            <Input value={item.text} placeholder="参考话术" onChange={(event) => updateItem(index, { text: event.target.value })} />
+            <Button danger onClick={() => props.onChange(removeAt(props.items, index))}>删除</Button>
+          </div>
+        ) : (
+          <div className="settings-fallback-readonly-row">
+            <Tag>{item.key || '-'}</Tag>
+            <Typography.Text>{item.text || '-'}</Typography.Text>
           </div>
         )}
       />
-      <Button onClick={() => onChange([...items, { key: '', text: '' }])}>添加参考话术</Button>
+      {props.editable ? <Button onClick={() => props.onChange([...props.items, { key: '', text: '' }])}>添加话术</Button> : null}
     </section>
   )
 }
@@ -158,6 +174,7 @@ export function QuestionPolicyEditor({
   askOrder,
   followupTemplates,
   analysisSections,
+  editable,
   onAskOrderChange,
   onFallbackChange,
   onAnalysisSectionsChange,
@@ -166,15 +183,17 @@ export function QuestionPolicyEditor({
     <div className="settings-domain-editor-grid settings-domain-editor-grid--three">
       <NameListEditor
         title="字段优先级"
-        hint="控制缺失字段判断和追问排序；最终问题由模型生成。"
+        hint="缺失字段判断和追问排序。"
         items={askOrder}
+        editable={editable}
         onChange={onAskOrderChange}
       />
-      <FallbackRows items={followupTemplates} onChange={onFallbackChange} />
+      <FallbackRows items={followupTemplates} editable={editable} onChange={onFallbackChange} />
       <NameListEditor
         title="分析章节"
-        hint="这是报告结构契约，不是追问提示词。"
+        hint="报告章节顺序。"
         items={analysisSections}
+        editable={editable}
         onChange={onAnalysisSectionsChange}
       />
     </div>
@@ -198,24 +217,5 @@ export function FieldGroupsEditor(props: {
         />
       ))}
     </div>
-  )
-}
-
-export function CategoryEditor(props: {
-  ownerNames: string[]
-  level1Names: string[]
-  onOwnerNamesChange: (items: string[]) => void
-  onLevel1NamesChange: (items: string[]) => void
-}) {
-  return (
-    <Space direction="vertical" size={14} style={{ width: '100%' }}>
-      <div className="settings-contract-note">
-        品类来自数据契约的「采购负责类 / 一级品类 / 二级品类」，这里只维护可配置入口；后续可扩展二级品类树。
-      </div>
-      <div className="settings-domain-editor-grid settings-domain-editor-grid--two">
-        <NameListEditor title="采购负责类" hint="每行一个负责类名称。" items={props.ownerNames} onChange={props.onOwnerNamesChange} />
-        <NameListEditor title="一级品类" hint="每行一个一级品类名称。" items={props.level1Names} onChange={props.onLevel1NamesChange} />
-      </div>
-    </Space>
   )
 }

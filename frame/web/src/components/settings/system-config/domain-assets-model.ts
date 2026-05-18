@@ -1,4 +1,15 @@
 import { normalizePromptTemplateDrafts, type PromptTemplateDraft } from './prompt-template-blueprints'
+import {
+  readCategoryTree,
+  type CategoryAssetSummary,
+} from './category-assets-model'
+export {
+  countCategoryTree,
+  flattenCategoryTree,
+  parseCategoryAsset,
+  normalizeCategoryTreeForPayload,
+  type CategoryOwnerNode,
+} from './category-assets-model'
 
 type FieldGroupKey = 'required' | 'recommended' | 'optional'
 
@@ -8,14 +19,6 @@ export type DomainFieldItem = {
   type: string
   description: string
   requiredLevel: FieldGroupKey
-}
-
-export type CategoryAssetSummary = {
-  ownerCount: number
-  level1Count: number
-  level2Count: number
-  ownerNames: string[]
-  level1Names: string[]
 }
 
 export type PromptFallbackTemplate = { key: string; text: string }
@@ -41,7 +44,7 @@ export type DomainAssetsSummary = {
 
 export type DomainAssetsDraftPayload = {
   fields: Record<FieldGroupKey, DomainFieldItem[]>
-  category: Pick<CategoryAssetSummary, 'ownerNames' | 'level1Names'>
+  category: Pick<CategoryAssetSummary, 'ownerNames' | 'level1Names' | 'level2Names' | 'categoryTree'>
   prompts: PromptAssetSummary
 }
 
@@ -61,19 +64,6 @@ function asArray(value: unknown): unknown[] {
 
 function hasOwn(record: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key)
-}
-
-function readNumber(text: string, key: string): number {
-  const match = text.match(new RegExp(`${key}:\\s*(\\d+)`))
-  return match ? Number(match[1]) : 0
-}
-
-function parseNamesByIndent(text: string, prefix: string): string[] {
-  return text
-    .split('\n')
-    .filter((line) => line.startsWith(prefix))
-    .map((line) => line.split(':', 2)[1]?.trim() || '')
-    .filter(Boolean)
 }
 
 function normalizeField(value: unknown, groupKey: FieldGroupKey): DomainFieldItem {
@@ -101,16 +91,6 @@ export function normalizeDomainFields(payload: unknown): DomainFieldsSummary {
     packId: asString(record.pack_id) || 'activity_procurement',
     version: asString(record.version) || 'v1',
     groups,
-  }
-}
-
-export function parseCategoryAsset(text: string): CategoryAssetSummary {
-  return {
-    ownerCount: readNumber(text, '采购负责类数量'),
-    level1Count: readNumber(text, '一级品类数量'),
-    level2Count: readNumber(text, '二级品类数量'),
-    ownerNames: parseNamesByIndent(text, '  - 名称:').slice(0, 10),
-    level1Names: parseNamesByIndent(text, '      - 名称:').slice(0, 18),
   }
 }
 
@@ -211,6 +191,8 @@ export function buildDomainAssetsDraft(
   const prompts = asRecord(payload.prompts)
   const ownerNames = readStringList(category.ownerNames)
   const level1Names = readStringList(category.level1Names)
+  const level2Names = readStringList(category.level2Names)
+  const categoryTree = readCategoryTree(category.categoryTree)
   const askOrder = readStringList(prompts.askOrder)
   const followupTemplates = readFallbackTemplates(prompts.followupTemplates)
   const analysisSections = readStringList(prompts.analysisSections)
@@ -228,6 +210,8 @@ export function buildDomainAssetsDraft(
     category: {
       ownerNames: hasOwn(category, 'ownerNames') ? ownerNames : summary.category.ownerNames,
       level1Names: hasOwn(category, 'level1Names') ? level1Names : summary.category.level1Names,
+      level2Names: hasOwn(category, 'level2Names') ? level2Names : summary.category.level2Names,
+      categoryTree: hasOwn(category, 'categoryTree') ? categoryTree : summary.category.categoryTree,
     },
     prompts: {
       askOrder: hasOwn(prompts, 'askOrder') ? askOrder : summary.prompts.askOrder,

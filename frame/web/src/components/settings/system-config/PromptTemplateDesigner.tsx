@@ -4,6 +4,7 @@ import type { PromptTemplateDraft } from './prompt-template-blueprints'
 
 type PromptTemplateDesignerProps = {
   templates: PromptTemplateDraft[]
+  editable: boolean
   onChange: (templates: PromptTemplateDraft[]) => void
 }
 
@@ -37,6 +38,7 @@ function TemplateField(props: {
   label: string
   hint: string
   value: string
+  editable: boolean
   rows?: number
   onChange: (value: string) => void
 }) {
@@ -47,6 +49,7 @@ function TemplateField(props: {
         {props.hint}
       </Typography.Paragraph>
       <Input.TextArea
+        disabled={!props.editable}
         rows={props.rows || 4}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
@@ -55,7 +58,7 @@ function TemplateField(props: {
   )
 }
 
-function PromptTemplateDesigner({ templates, onChange }: PromptTemplateDesignerProps) {
+function PromptTemplateDesigner({ templates, editable, onChange }: PromptTemplateDesignerProps) {
   const [activeKey, setActiveKey] = useState(templates[0]?.key || '')
   const activeIndex = useMemo(
     () => Math.max(0, templates.findIndex((item) => item.key === activeKey)),
@@ -79,7 +82,7 @@ function PromptTemplateDesigner({ templates, onChange }: PromptTemplateDesignerP
       <div className="settings-prompt-designer__rail">
         <Typography.Text strong>Prompt 模板</Typography.Text>
         <Typography.Paragraph className="settings-domain-copy" type="secondary">
-          对齐 Excel 数据契约中的处理阶段，不再和追问策略混在一起。
+          按阶段准入、字段依赖和交付物口径维护模板。
         </Typography.Paragraph>
         <div className="settings-prompt-card-list">
           {templates.map((template) => (
@@ -100,28 +103,31 @@ function PromptTemplateDesigner({ templates, onChange }: PromptTemplateDesignerP
               <Tag color="purple">{active.stage}</Tag>
               {active.dataContractColumns.map((item) => <Tag key={item}>{item}</Tag>)}
             </div>
-            <Typography.Text type="secondary">数据契约模板</Typography.Text>
+            <Typography.Text type="secondary">阶段模板</Typography.Text>
           </div>
-          <Input value={active.title} onChange={(event) => updateActive({ title: event.target.value })} />
+          <Input disabled={!editable} value={active.title} onChange={(event) => updateActive({ title: event.target.value })} />
           <div className="settings-domain-editor-grid settings-domain-editor-grid--two">
             <TemplateField
-              label="输入字段契约"
-              hint="每行一个输入字段，来自总字段表和品类维度契约。"
+              label="输入字段"
+              hint="阶段准入与变量绑定所需字段。"
               value={active.inputFields.join('\n')}
+              editable={editable}
               onChange={(value) => updateActive({ inputFields: splitLines(value) })}
             />
             <TemplateField
-              label="输出结构契约"
-              hint="每行一个输出块，作为模型输出校验和 workbench 投影依据。"
+              label="输出结构"
+              hint="用于结果校验、工作台投影和归档追溯的输出块。"
               value={active.outputContract.join('\n')}
+              editable={editable}
               onChange={(value) => updateActive({ outputContract: splitLines(value) })}
             />
           </div>
           <TemplateField
-            label="模板指令正文"
-            hint="这里才是真正的 Prompt 模板。要求模型基于上下文生成问题/结果，不重复询问已确认字段。"
+            label="指令正文"
+            hint="定义阶段任务、阻塞条件、输出边界和可追溯要求。"
             rows={7}
             value={active.instruction}
+            editable={editable}
             onChange={(value) => updateActive({ instruction: value })}
           />
         </Space>
