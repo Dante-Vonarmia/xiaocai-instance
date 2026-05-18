@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
+from xiaocai_instance_api.chat.kernel_client import KernelClient
 from xiaocai_instance_api.contracts.chat_contract import ChatStreamRequest
 
 
@@ -94,3 +95,23 @@ def test_chat_core_payload_normalizes_mode_into_context():
     assert request.context["manual_mode"] == "requirement_intake"
     assert request.context["target_mode"] == "requirement_intake"
     assert request.context["action_key"] == "activate_intake_mode"
+
+
+def test_kernel_request_body_canonicalizes_legacy_intake_mode_alias():
+    request_body = KernelClient._build_request_body(
+        user_id="user-compat-mode",
+        message="帮我梳理采购需求",
+        session_id="sess-compat-mode",
+        context={
+            "mode": "requirement_canvas",
+            "manual_mode": "requirement_canvas",
+            "target_mode": "requirement_canvas",
+            "function_type": "procurement",
+        },
+    )
+
+    assert request_body["mode"] == "requirement_intake"
+    assert request_body["manual_mode"] == "requirement_intake"
+    assert request_body["target_mode"] == "requirement_intake"
+    assert request_body["context"]["mode"] == "requirement_intake"
+    assert request_body["payload"]["mode"] == "requirement_intake"

@@ -17,6 +17,7 @@ import httpx
 from typing import Dict, Any, AsyncGenerator
 from functools import lru_cache
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.chat.mode_contract import canonicalize_kernel_context
 from xiaocai_instance_api.chat.replay.hooks import (
     append_kernel_capture,
     begin_kernel_capture,
@@ -47,7 +48,7 @@ class KernelClient:
         session_id: str,
         context: Dict[str, Any] | None,
     ) -> Dict[str, Any]:
-        context_dict = dict(context) if isinstance(context, dict) else {}
+        context_dict = canonicalize_kernel_context(context)
         payload = dict(context_dict)
         payload["message"] = message
 

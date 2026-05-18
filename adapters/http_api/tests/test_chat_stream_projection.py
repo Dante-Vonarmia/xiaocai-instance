@@ -55,6 +55,8 @@ def test_projection_question_does_not_replace_stream_answer(monkeypatch, tmp_pat
 
     assert response.status_code == 200
     assert "我先按测试服务器采购场景整理需求，并列出待补充信息。" in response.text
+    assert "event: canvas_state" in response.text
+    assert "# 需求梳理草稿" in response.text
     legacy_projection_question = "".join(["请", "补", "充", "字", "段", "：", "项目名称"])
     assert legacy_projection_question not in response.text
     assert "event: text.replace" not in response.text
