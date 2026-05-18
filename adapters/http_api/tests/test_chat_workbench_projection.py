@@ -61,6 +61,28 @@ def test_intake_workbench_projection_outputs_canvas_state():
     assert all(item["field_key"] != "采购目的" for item in canvas_state["missing"])
 
 
+def test_intake_workbench_projection_outputs_display_draft_without_pending_contract():
+    projection = build_intake_workbench_projection(
+        pending_contract=None,
+        mode="requirement_canvas",
+        session_id="sess-display-draft",
+        user_message="我要采购一批测试服务器，用于AI模型训练和数据库压测，预算30万，2周内交付",
+    )
+
+    assert projection is not None
+    canvas_payload = projection["canvas_payload"]
+    canvas_state = canvas_payload["canvas_state"]
+
+    assert "pending_contract" not in projection
+    assert "plan_payload" not in projection
+    assert canvas_payload["ui_signal"]["active_tab"] == "requirement"
+    assert canvas_state["progress"] > 0
+    assert canvas_state["collected"]
+    assert canvas_state["current_question"] == {}
+    assert canvas_state["versions"][0]["content"].startswith("# 需求梳理草稿")
+    assert "## 原始需求" in canvas_state["versions"][0]["content"]
+
+
 def test_intake_workbench_projection_does_not_fabricate_missing_field_question():
     projection = build_intake_workbench_projection(
         pending_contract={

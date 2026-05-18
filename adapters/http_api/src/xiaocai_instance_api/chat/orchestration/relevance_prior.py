@@ -115,6 +115,16 @@ def _round_score(value: float) -> float:
     return round(max(0.0, min(1.0, value)), 4)
 
 
+def _action_rank(action: object) -> int:
+    """Keep chat-askable fields ahead of canvas-only fields for FLARE prompts."""
+    ranks = {
+        "ask_in_chat": 0,
+        "suggest_not_force": 1,
+        "defer_to_canvas": 2,
+    }
+    return ranks.get(str(action or ""), 3)
+
+
 def _collect_candidate_missing_fields(template_recommendation: dict) -> dict[str, float]:
     field_scores: dict[str, float] = {}
     for candidate in template_recommendation.get("candidate_pool", []):
@@ -215,7 +225,12 @@ def build_missing_field_relevance(
             }
         )
 
-    rows.sort(key=lambda item: item.get("priority_score", 0.0), reverse=True)
+    rows.sort(
+        key=lambda item: (
+            _action_rank(item.get("action")),
+            -float(item.get("priority_score") or 0.0),
+        )
+    )
     ask_in_chat = [item["field_key"] for item in rows if item.get("action") == "ask_in_chat"]
     defer_to_canvas = [item["field_key"] for item in rows if item.get("action") == "defer_to_canvas"]
     suggest_not_force = [item["field_key"] for item in rows if item.get("action") == "suggest_not_force"]

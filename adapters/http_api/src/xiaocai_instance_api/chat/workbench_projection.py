@@ -70,8 +70,12 @@ def _current_question(pending_contract: dict[str, Any]) -> dict[str, object]:
     return {}
 
 
-def _markdown(collected: list[dict[str, object]], missing_fields: list[str]) -> str:
-    lines = ["# 需求梳理草稿", "", "## 已识别信息"]
+def _markdown(collected: list[dict[str, object]], missing_fields: list[str], source_text: str = "") -> str:
+    lines = ["# 需求梳理草稿", ""]
+    source = _to_text(source_text)
+    if source:
+        lines.extend(["## 原始需求", source, ""])
+    lines.append("## 已识别信息")
     if collected:
         lines.extend(f"- {item['field_label']}: {item['value']}" for item in collected)
     else:
@@ -98,12 +102,8 @@ def build_intake_workbench_projection(
 ) -> dict[str, object] | None:
     if mode != INTAKE_MODE_KEY and mode != "requirement_canvas":
         return None
-    if not pending_contract:
-        # Keep workbench projection display-only: it must not invent a required-field
-        # question from domain-pack scoring when the runtime did not emit pending state.
-        return None
 
-    pending = dict(pending_contract)
+    pending = dict(pending_contract or {})
     slots = extract_slots(user_message)
     required = _required_fields()
     collected = [
@@ -138,6 +138,11 @@ def build_intake_workbench_projection(
         "has_active_question": bool(current_question),
     }
 
+    # Display-only fallback: if FLARE did not emit a pending intake node, still
+    # project the explicit fields and contract gaps into the workbench. Do not
+    # emit a pending contract or question here; those remain authoritative only
+    # when supplied by the runtime.
+    has_pending_contract = pending_contract is not None
     canvas_state = {
         "session_id": session_id,
         "mode_key": INTAKE_MODE_KEY,
@@ -153,12 +158,16 @@ def build_intake_workbench_projection(
             "missing_fields": missing_fields,
         },
         "next_actions": next_actions,
-        "versions": [{"content": _markdown(collected, missing_fields)}],
+        "versions": [{"content": _markdown(collected, missing_fields, user_message)}],
     }
 
-    return {
+    authoritative_payload = {
         "pending_contract": enriched_pending,
         "plan_payload": enriched_pending,
+    } if has_pending_contract else {}
+
+    return {
+        **authoritative_payload,
         "canvas_payload": {
             "type": "canvas_state",
             "mode_key": INTAKE_MODE_KEY,

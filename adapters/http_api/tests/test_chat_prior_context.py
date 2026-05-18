@@ -89,6 +89,37 @@ def test_chat_run_injects_template_recommendation_prior(client, auth_token):
         assert domain_prior["instruction_hints"]["prefer_weighted_template_candidates"] is True
 
 
+def test_chat_prior_keeps_project_name_out_of_chat_question_priority(client, auth_token):
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "已进入需求梳理。",
+            "cards": [],
+            "session_id": "test-project-name-deferred-session",
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "我要采购一批测试服务器，请先帮我梳理采购需求并列出还缺的关键信息。",
+                "session_id": "test-project-name-deferred-session",
+                "context": {"mode": "requirement_canvas"},
+            },
+        )
+
+        assert response.status_code == 200
+        kernel_context = mock_chat.await_args.kwargs["context"]
+        clarification_policy = kernel_context["clarification_policy"]
+        domain_prior = kernel_context["domain_prior"]
+        relevance_rows = domain_prior["missing_fields_with_relevance"]
+
+        assert "项目名称" in clarification_policy["defer_to_canvas"]
+        assert clarification_policy["top_missing_field"] != "项目名称"
+        assert clarification_policy["priority_order"][0] != "项目名称"
+        assert relevance_rows[0]["action"] == "ask_in_chat"
+
+
 def test_chat_run_keeps_confidence_policy_hidden_without_native_pending(client, auth_token):
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.return_value = {
