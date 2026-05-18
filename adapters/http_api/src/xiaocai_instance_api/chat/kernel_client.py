@@ -313,7 +313,7 @@ class KernelClient:
                     "POST",
                     kernel_url,
                     json=request_body,
-                    timeout=60.0,
+                    timeout=httpx.Timeout(connect=10.0, read=None, write=60.0, pool=60.0),
                 ) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():

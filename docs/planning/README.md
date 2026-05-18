@@ -109,10 +109,10 @@ planning/status alignment
 |---|---|---|---|
 | 2026-05-18 | planning 状态与测试先行门禁对齐 | `docs/planning/README.md` | 后续任务均有先验收/先测试规则 |
 | 2026-05-19 | 数据契约字段与别名闭合 | `/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx` | 字段、别名、阶段归属与 domain-pack contract 可追溯 |
-| 2026-05-20 | canonical readiness / 权重 contract 固化 | `docs/contracts/xiaocai-canonical-quality-gates-v1.md` | 字段权重、阻断阈值、草稿阈值、可分析阈值可验收；不新增 runtime |
+| 2026-05-20 | canonical readiness / 权重 contract 固化 | `docs/contracts/xiaocai-canonical-quality-gates.md` | 字段权重、阻断阈值、草稿阈值、可分析阈值可验收；不新增 runtime |
 | 2026-05-21 | 分析/寻源输出模板 contract 补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，字段依赖与缺字段阻断明确 |
 | 2026-05-22 | 契约与 domain-pack 回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
-| 2026-05-25 | FLARE handoff 包整理 | `docs/contracts/xiaocai-canonical-quality-gates-v1.md` | canonical context 示例、字段策略、模板、验收命令可交付 |
+| 2026-05-25 | FLARE handoff 包整理 | `docs/contracts/xiaocai-canonical-quality-gates.md` | canonical context 示例、字段策略、模板、验收命令可交付 |
 
 ### 3.2 采购智能配置中心排期
 
@@ -154,6 +154,7 @@ planning/status alignment
 |---|---|---|---|---|
 | CHAT-001 | 移除本地 orchestration fallback 与 adapter 伪造 pending | Done | xiaocai | legacy fallback 无残留引用；adapter projection 不覆盖 FLARE 输出；`adapters/http_api/tests` 通过 |
 | CHAT-002 | auto 自然对话保护与梳理投影泄漏回归修复（instance 轻量化） | Done | xiaocai | `mode=auto` 不继承历史 intake 粘性；非显式梳理意图不生成需求梳理投影；普通对话不被缺字段策略阻断；局部失败降级为可继续对话；先补回归测试再改实现。测试清单：`docs/planning/chat-002-test-checklist.md`。验收命令：`.venv/bin/python -m pytest adapters/http_api/tests/test_chat.py adapters/http_api/tests/test_chat_prior_context.py adapters/http_api/tests/test_chat_stream_projection.py adapters/http_api/tests/test_chat_workbench_projection.py adapters/http_api/tests/test_chat_mode_regression.py -q`；结果：`45 passed in 16.63s`。 |
+| CHAT-004 | Intake canonical runtime hardcode cleanup | Done | xiaocai | 清理伪确认值与 runtime 业务选项硬编码；模型/规则输出先进入 candidate，经字段字典和品类目录 canonical 后再进入 confirmed；验收清单：`docs/planning/chat-003-intake-canonical-acceptance-checklist.md#d-intake-canonical-防回归chat-004-必补`；验收命令：`.venv/bin/python -m pytest adapters/http_api/tests -q && .venv/bin/python -m pytest tests/domain_packs -q`；结果：`117 passed` + `19 passed, 42 subtests passed`。 |
 
 ### P0：数据契约与 canonical 质量门禁（FLARE 执行前置）
 
@@ -165,6 +166,7 @@ planning/status alignment
 | DATA-001 | 数据契约字段 source 与别名闭合 | Done | xiaocai | `数量和单位`、`影响范围`、供应商寻源字段别名有明确映射；source 指向当前契约文件 |
 | DATA-002 | 品类字段完整性矩阵 | Done | xiaocai | 每个一级/二级品类的必问、推荐问、可选字段可追溯，供 FLARE 追问消费 |
 | CANON-001 | canonical readiness / 权重算法确认 | Done | xiaocai | 字段权重、品类字段权重、阻断阈值、草稿阈值、可分析阈值形成稳定 contract |
+| CANON-002 | LLM candidate -> canonical field normalization contract | Done | xiaocai | canonical state 明确 `candidate_fields` / `confirmed_fields` / `rejected_candidates` / `field_history` 分层；模型输出默认不可直接成为 confirmed；anti-hardcode 门禁写入 canonical quality gates |
 | OUT-001 | 需求分析与寻源输出模板 contract 补齐 | Done | xiaocai | 需求分析覆盖 7 段，寻源分析覆盖数据契约要求章节，字段依赖明确 |
 | TEST-001 | 真实采购 case 验收集 | Done | xiaocai | case 覆盖期望追问字段、readiness 分数区间、可进入分析条件、模板段落 |
 | HANDOFF-001 | FLARE 对接包 | Done | xiaocai + FLARE | canonical context 示例、字段策略、模板、验收标准可交给 FLARE 执行 |

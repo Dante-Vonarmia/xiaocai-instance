@@ -51,7 +51,10 @@ class TestCategoryFieldMatrix(unittest.TestCase):
         defaults = self.category_contract.get("field_matrix_defaults", {})
         field_names = _field_names(self.field_dictionary)
 
-        for bucket in ("required_fields", "recommended_fields", "optional_fields"):
+        self.assertEqual(defaults.get("required_fields"), [])
+        self.assertEqual(defaults.get("required_fields_semantics"), "no_category_level_hard_gate")
+
+        for bucket in ("identification_fields", "ranking_fields", "recommended_fields", "optional_fields"):
             with self.subTest(bucket=bucket):
                 fields = defaults.get(bucket, [])
                 self.assertIsInstance(fields, list)

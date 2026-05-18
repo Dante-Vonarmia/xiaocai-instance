@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.chat.router import EMPTY_ASSISTANT_MESSAGE
 
 
 def _auth_headers(client: TestClient, user_id: str = "chat-mode-regression-user") -> dict[str, str]:
@@ -197,7 +198,7 @@ def test_chat_002_t4_kernel_run_error_should_degrade_not_hard_fail(monkeypatch, 
         )
 
     assert response.status_code == 200
-    assert "当前未生成可展示回复，请重试。" in response.json()["message"]
+    assert EMPTY_ASSISTANT_MESSAGE in response.json()["message"]
 
 
 def test_chat_002_t5_explicit_intake_mode_still_emits_canvas_projection(monkeypatch, tmp_path):

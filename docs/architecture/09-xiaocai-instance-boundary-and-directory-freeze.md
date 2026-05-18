@@ -43,7 +43,7 @@ docs/
     08-xiaocai-instance-technical-scope-and-route-freeze.md
     09-xiaocai-instance-boundary-and-directory-freeze.md
   contracts/
-    xiaocai-instance-canonical-contract-v1.md
+    xiaocai-instance-canonical-contract.md
 ```
 
 ## 4. 兼容层冻结

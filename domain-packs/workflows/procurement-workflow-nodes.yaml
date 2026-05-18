@@ -29,6 +29,7 @@ nodes:
     field_contract:
       dictionary_ref: schema/procurement-field-dictionary.yaml
       required_set_ref: schema/procurement.yaml#stage_field_sets.需求梳理必填集
+      required_set_semantics: formal_output_completeness
       initial_required_fields:
         - 采购目的
         - 使用场景
@@ -49,10 +50,12 @@ nodes:
     orchestration:
       clarification_strategy:
         enabled: true
-        continue_until_required_complete: true
-        ask_missing_fields_one_by_one: true
+        continue_until_required_complete: false
+        ask_missing_fields_one_by_one: weighted_by_relevance
+        missing_fields_are_blocking: false
+        allow_user_requested_downstream_with_assumptions: true
       completion_rule:
-        pass_when: requirement_collection_required_fields_complete
+        pass_when: requirement_collection_quality_score_or_user_requested_next_step
       output_contract:
         - 项目名称
         - 采购目的
@@ -70,9 +73,11 @@ nodes:
         - PR编号
     transitions:
       - to: requirement-analysis
-        condition: requirement_collection_required_fields_complete
+        condition: requirement_collection_sufficient_or_user_requests_analysis
+      - to: intelligent-sourcing
+        condition: user_requests_supplier_candidates
       - to: requirement-collection
-        condition: missing_required_fields
+        condition: user_wants_to_continue_collection
 
   requirement-analysis:
     id: requirement-analysis

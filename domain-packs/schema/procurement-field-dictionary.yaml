@@ -51,27 +51,27 @@ field_aliases:
     mapping_type: placeholder
     canonical_fields: []
     readiness_gate: false
-    gate_strategy: not_in_v1_readiness
+    gate_strategy: not_in_initial_readiness
   - external_name: 员工规模
     mapping_type: placeholder
     canonical_fields: []
     readiness_gate: false
-    gate_strategy: not_in_v1_readiness
+    gate_strategy: not_in_initial_readiness
   - external_name: 实缴资金
     mapping_type: placeholder
     canonical_fields: []
     readiness_gate: false
-    gate_strategy: not_in_v1_readiness
+    gate_strategy: not_in_initial_readiness
   - external_name: 企业性质
     mapping_type: placeholder
     canonical_fields: []
     readiness_gate: false
-    gate_strategy: not_in_v1_readiness
+    gate_strategy: not_in_initial_readiness
   - external_name: 社保人数
     mapping_type: placeholder
     canonical_fields: []
     readiness_gate: false
-    gate_strategy: not_in_v1_readiness
+    gate_strategy: not_in_initial_readiness
 
 module_index:
   需求梳理:

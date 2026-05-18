@@ -1,4 +1,4 @@
-# xiaocai canonical quality gates v1
+# xiaocai canonical quality gates
 
 ## 1. 目的
 
@@ -46,11 +46,11 @@
 | 交期时长 | 交付时间 / 响应时效 | derived | 影响寻源完整性 |
 | 注册资金 | 注册资本 | alias | 影响供应商筛选 |
 | 成立时长 | 成立日期 / 成立年份 | derived | 影响供应商筛选 |
-| 对标企业 | deferred placeholder | optional placeholder | 不作为 v1 readiness gate |
-| 员工规模 | deferred placeholder | optional placeholder | 不作为 v1 readiness gate |
-| 实缴资金 | deferred placeholder | optional placeholder | 不作为 v1 readiness gate |
-| 企业性质 | deferred placeholder | optional placeholder | 不作为 v1 readiness gate |
-| 社保人数 | deferred placeholder | optional placeholder | 不作为 v1 readiness gate |
+| 对标企业 | deferred placeholder | optional placeholder | 不作为当前 readiness gate |
+| 员工规模 | deferred placeholder | optional placeholder | 不作为当前 readiness gate |
+| 实缴资金 | deferred placeholder | optional placeholder | 不作为当前 readiness gate |
+| 企业性质 | deferred placeholder | optional placeholder | 不作为当前 readiness gate |
+| 社保人数 | deferred placeholder | optional placeholder | 不作为当前 readiness gate |
 
 机器可读位置：
 
@@ -66,7 +66,7 @@
 - 一级品类数量：45
 - 二级品类数量：96
 
-v1 使用 `field_matrix_defaults` 作为所有品类路径的基础字段矩阵：
+current 使用 `field_matrix_defaults` 作为所有品类路径的基础字段矩阵：
 
 | 字段组 | 用途 |
 |---|---|
@@ -122,6 +122,47 @@ readiness_score =
 1. 字段存在于 `confirmed_fields`。
 2. 值不是空字符串、空数组、空对象或 null。
 3. split / alias / derived 字段必须写入 `field_history` 或等价 trace。
+4. 字段名必须来自字段字典 canonical 字段，或通过 `field_aliases` 显式映射。
+5. `一级品类` / `二级品类` 必须来自品类目录 canonical 路径。
+6. 大模型输出默认是 candidate，不是 confirmed。
+
+### 6.2.1 Candidate 晋级门禁
+
+所有模型、规则、检索、OCR 产出的字段值必须经过以下门禁后才能进入 `confirmed_fields`：
+
+| 门禁 | 要求 |
+|---|---|
+| 字段合法性 | `field_key` 命中字段字典或 `field_aliases` |
+| 值合法性 | 值符合字段类型、格式、单位或枚举口径 |
+| 品类合法性 | 品类字段命中 `procurement-category-fields.yaml` |
+| 证据 | 有用户原文、附件、检索引用或规则 trace |
+| 来源 | 标明 `user_explicit` / `model_inferred` / `rule_extracted` / `retrieval_evidence` / `domain_default` |
+| 置信 | 写入 confidence；低置信只进入 candidate |
+
+晋级规则：
+
+1. `user_explicit` + canonical 校验通过，可晋级。
+2. `rule_extracted` + 明确原文 evidence + 不发明值，可晋级。
+3. `model_inferred` 默认不可晋级，只能作为待确认候选。
+4. `retrieval_evidence` 默认不可覆盖 confirmed，只能作为候选或补充证据。
+5. `domain_default` 不可作为用户已确认值。
+
+### 6.2.2 Anti-hardcode 门禁
+
+以下内容不得出现在 runtime authoritative state 或兼容投影中：
+
+1. `"已由用户给出（会话上下文）"` 等伪确认值。
+2. Python/TS runtime 常量中硬编码的采购业务选项。
+3. Python/TS runtime 常量中硬编码的一级/二级品类映射。
+4. 未经字段字典验证的字段名。
+5. 未经品类目录验证的品类值。
+
+允许存在的位置：
+
+1. 字段字典：`domain-packs/schema/procurement-field-dictionary.yaml`
+2. 品类目录：`domain-packs/category-fields/procurement-category-fields.yaml`
+3. 场景 fixture：`domain-packs/contracts/scenarios/*.yaml`
+4. 配置中心草案或租户配置（必须经 contract normalize 后生效）
 
 ### 6.3 阈值
 
@@ -135,7 +176,7 @@ readiness_score =
 
 ## 7. hard blocker
 
-v1 hard blocker 只允许来自 contract，不允许由 UI 或 router 临时推断。
+current hard blocker 只允许来自 contract，不允许由 UI 或 router 临时推断。
 
 需求梳理 hard blocker：
 

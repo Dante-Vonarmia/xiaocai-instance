@@ -68,7 +68,20 @@ class Settings(BaseSettings):
     storage_db_url: str = Field(default="", description="数据库连接串（优先，支持 postgresql://）")
     upload_max_size_bytes: int = Field(default=20 * 1024 * 1024, description="上传文件最大字节数")
     upload_allowed_extensions: List[str] = Field(
-        default=["pdf", "doc", "docx", "xls", "xlsx", "txt"],
+        default=[
+            "pdf",
+            "doc",
+            "docx",
+            "xls",
+            "xlsx",
+            "csv",
+            "txt",
+            "md",
+            "png",
+            "jpg",
+            "jpeg",
+            "webp",
+        ],
         description="允许上传的文件扩展名",
     )
     enabled_modes: List[str] = Field(

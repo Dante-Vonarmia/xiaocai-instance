@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List
 
-from .constants import CITY_KEYWORDS, L1_L2_KEYWORDS
+from .constants import CITY_KEYWORDS
 
 
 def contains_any(text: str, keywords: List[str]) -> bool:
@@ -21,7 +21,13 @@ def extract_slots(text: str) -> Dict[str, str]:
 
     qty_match = re.search(r"(\d+)\s*(份|个|台|套|人|家|张|件|箱|吨|次)", text)
     if qty_match:
+        slots["数量"] = qty_match.group(1)
+        slots["单位"] = qty_match.group(2)
         slots["数量和单位"] = f"{qty_match.group(1)}{qty_match.group(2)}"
+    elif re.search(r"一\s*批", text):
+        slots["数量"] = "1"
+        slots["单位"] = "批"
+        slots["数量和单位"] = "1批"
 
     for city in CITY_KEYWORDS:
         if city in text:
@@ -32,42 +38,15 @@ def extract_slots(text: str) -> Dict[str, str]:
     if time_match:
         slots["交付时间"] = time_match.group(1)
 
-    if contains_any(text, ["采购", "购买", "定制", "招标", "询价"]):
-        slots["采购目的"] = "完成本次业务采购交付"
-
-    if contains_any(text, ["周年庆", "发布会", "答谢", "活动"]):
-        slots["使用场景"] = "市场活动执行"
-
     scene_match = re.search(r"(?:用于|用来|使用于)([^，。；\n]{2,40})", text)
     if scene_match:
         slots["使用场景"] = scene_match.group(1).strip()
-
-    for l1, l2 in L1_L2_KEYWORDS:
-        if l1 in text:
-            slots["一级品类"] = l1
-            slots["二级品类"] = l2
-            break
 
     product_match = re.search(r"(采购|定制|需要|找)([^，。；\n]{2,40})", text)
     if product_match:
         raw = product_match.group(2).strip()
         if raw:
             slots["产品/服务"] = raw
-
-    if "技术要求" in text:
-        slots["技术要求"] = "已由用户给出（会话上下文）"
-    if "质量标准" in text or "质量" in text:
-        slots["质量标准"] = "已由用户给出（会话上下文）"
-    if "验收" in text:
-        slots["验收口径"] = "已由用户给出（会话上下文）"
-    if "发票" in text:
-        slots["发票类型"] = "已由用户给出（会话上下文）"
-    if "付款" in text:
-        slots["付款条款"] = "已由用户给出（会话上下文）"
-    if "条款" in text:
-        slots["关键条款"] = "已由用户给出（会话上下文）"
-    if "分批" in text or "一次性交付" in text or "交付方式" in text:
-        slots["交付方式"] = "已由用户给出（会话上下文）"
 
     return slots
 

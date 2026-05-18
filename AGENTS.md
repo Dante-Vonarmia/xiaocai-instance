@@ -228,6 +228,7 @@ When extracting an application helper, workflow bridge, normalization function, 
 
 - Avoid god services, god utils, and catch-all helpers.
 - Avoid generic names like `utils.py`, `helpers.py`, `common.py`, `manager.py`, `service.py` unless the file has a single, self-evident role.
+- Do not use numeric version suffixes for project docs, contracts, filenames, task names, or architecture labels. Use stable semantic names and explicit status/date metadata instead.
 - If many files repeat the same business prefix, move that prefix to a feature directory.
 - Keep one file focused on one role: route, orchestration, policy, repository, adapter, contract, or assembler.
 

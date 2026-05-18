@@ -16,6 +16,7 @@ from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.sources.ingestion import ingest_source_for_kernel
 from xiaocai_instance_api.sources.response import serialize_source_record, source_status_for_client
 from xiaocai_instance_api.storage.source_store import get_source_store
 
@@ -139,7 +140,11 @@ async def upload_source_file(
         if tmp_path.exists():
             os.unlink(tmp_path)
 
-    return serialize_source_record(record)
+    response = serialize_source_record(record)
+    ingestion = ingest_source_for_kernel(record)
+    response["ingestion_status"] = ingestion.status
+    response["ingestion_chunk_count"] = ingestion.chunk_count
+    return response
 
 
 @router.delete("/{source_id}")

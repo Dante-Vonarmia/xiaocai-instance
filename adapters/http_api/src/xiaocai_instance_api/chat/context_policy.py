@@ -9,6 +9,9 @@ Chat kernel context policy helpers.
 from __future__ import annotations
 
 from xiaocai_instance_api.retrieval.policy_resolver import resolve_enabled_search_source_policy
+from xiaocai_instance_api.chat.orchestration.flare_intake_contract import (
+    build_flare_intake_contract,
+)
 from xiaocai_instance_api.chat.orchestration.prior_context import build_procurement_prior_context
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.settings import get_settings
@@ -95,4 +98,13 @@ async def enrich_kernel_context_with_retrieval_policy(
     kernel_context["clarification_policy"] = prior.domain_prior.get("clarification_policy", {})
     kernel_context["category_prior"] = prior.domain_prior.get("category_prior", {})
     kernel_context["confidence_policy"] = prior.domain_prior.get("confidence_policy", {})
+    # Bridge xiaocai procurement semantics into FLARE's native intake contract.
+    # FLARE remains the owner of question planning, chooser state and composer UI.
+    kernel_context.update(
+        build_flare_intake_contract(
+            kernel_context=kernel_context,
+            domain_prior=prior.domain_prior,
+            mode=kernel_context.get("mode") if isinstance(kernel_context.get("mode"), str) else None,
+        )
+    )
     return kernel_context

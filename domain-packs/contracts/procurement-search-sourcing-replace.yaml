@@ -96,13 +96,30 @@ search_mapping:
       min_confidence: 0.80
 
 sourcing_rules:
-  required_requirement_fields:
+  required_requirement_fields: []
+  required_requirement_fields_semantics: no_hard_gate_for_sourcing_entry
+  minimum_search_inputs:
+    any_of:
+      - 产品/服务
+      - 二级品类
+      - 一级品类
+      - 搜索关键词
+    freeform_query_allowed: true
+    behavior_when_present: allow_supplier_candidates_with_assumptions
+  ranking_fields:
     - 一级品类
     - 二级品类
     - 产品/服务
     - 交付地点
     - 交付时间
     - 预算金额
+    - 数量
+    - 单位
+  missing_field_policy:
+    block_on_missing: false
+    output_assumption_notice: true
+    ask_before_sourcing: only_when_user_intent_is_unclear
+    confidence_impact: reduce_ranking_confidence_not_candidate_generation
   recommendation_contract:
     required_fields:
       - 公司名称
@@ -137,8 +154,8 @@ sourcing_output_template:
         - 交付时间
         - 数量
         - 单位
-      block_on_missing_required: true
-      draft_allowed_when_missing: false
+      block_on_missing_required: false
+      draft_allowed_when_missing: true
 
     - id: candidate-pool-summary
       title: 候选池说明

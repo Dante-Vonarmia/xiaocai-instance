@@ -176,6 +176,7 @@
 - if a file would exceed 350 lines, split first, continue second
 - 禁止 god file / god service / god utils / catch-all helper
 - 禁止模糊文件名：`utils/common/helper/manager/service`，除非职责单一且命名可自证
+- 禁止在项目文档、contract、文件名、任务名、架构标签中使用数字版本后缀命名；使用稳定语义名称，并用状态/日期元数据表达演进。
 - 一个文件不得混 transport + orchestration + persistence + provider integration
 - 一个文件不得同时承载 intake + analysis + sourcing + artifact generation 多主职责
 - workbench projection / app contract / procurement semantics / provider integration 应尽量分文件分层

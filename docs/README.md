@@ -4,22 +4,22 @@
 
 ## 1. 文档体系定位
 
-`docs/` 是 xiaocai 的正式知识库，不再按临时 MVP 文档堆叠方式维护。  
+`docs/` 是 xiaocai 的正式知识库，不再按临时 MVP 文档堆叠方式维护。
 所有新增文档必须先归类，再落文件；禁止继续在 `docs/` 根目录追加临时专题文档。
 
 ## 2. 正式阅读顺序
 
-1. [Domain Standards](./domain-standards/README.md)  
+1. [Domain Standards](./domain-standards/README.md)
    采购领域规则、字段、流程与验收口径。
-2. [Architecture](./architecture/README.md)  
+2. [Architecture](./architecture/README.md)
    xiaocai 与 FLARE 边界、分层、集成与执行计划。
-3. [Contracts](./contracts/xiaocai-instance-canonical-contract-v1.md)  
+3. [Contracts](./contracts/xiaocai-instance-canonical-contract.md)
    对外/对内稳定数据契约、schema、registry。
-4. [Planning](./planning/README.md)  
+4. [Planning](./planning/README.md)
    当前任务排期、里程碑、验收门禁。
-5. [Manual Public](./manual-public/README.md)  
+5. [Manual Public](./manual-public/README.md)
    面向使用、接入、运维和联调的手册。
-6. [ADR](./adr/)  
+6. [ADR](./adr/)
    已接受的架构决策记录。
 
 ## 3. 目录职责

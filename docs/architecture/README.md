@@ -21,4 +21,4 @@
 
 1. `07` 为平台边界专项约束，保持独立。
 2. 讨论文档吸收后归档，避免双轨口径。
-3. 锁版契约文件见 [docs/contracts/xiaocai-instance-canonical-contract-v1.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/contracts/xiaocai-instance-canonical-contract-v1.md)。
+3. 锁版契约文件见 [docs/contracts/xiaocai-instance-canonical-contract.md](/Users/dantevonalcatraz/Development/procurement-agents/docs/contracts/xiaocai-instance-canonical-contract.md)。

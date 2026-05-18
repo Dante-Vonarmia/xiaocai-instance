@@ -1,3 +1,4 @@
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -62,6 +63,14 @@ class TestCanonicalQualityGates(unittest.TestCase):
                 self.assertEqual(aliases[placeholder]["mapping_type"], "placeholder")
                 self.assertFalse(aliases[placeholder]["readiness_gate"])
 
+    def test_alias_gate_strategy_names_do_not_use_numeric_version_suffixes(self) -> None:
+        suffix_pattern = re.compile(r"(^|[_-])v\d+", re.IGNORECASE)
+
+        for item in self.field_dictionary.get("field_aliases", []):
+            gate_strategy = str(item.get("gate_strategy", ""))
+            with self.subTest(external_name=item.get("external_name")):
+                self.assertIsNone(suffix_pattern.search(gate_strategy))
+
     def test_analysis_template_has_required_seven_sections(self) -> None:
         sections = self.analysis_rfx["analysis_template"]["sections"]
         titles = [section["title"] for section in sections]
@@ -85,6 +94,21 @@ class TestCanonicalQualityGates(unittest.TestCase):
                 self.assertIn("optional_fields", section)
                 self.assertIn("block_on_missing_required", section)
                 self.assertIn("draft_allowed_when_missing", section)
+
+    def test_canonical_docs_freeze_candidate_confirmed_boundary(self) -> None:
+        contract_text = (
+            ROOT / "docs" / "contracts" / "xiaocai-instance-canonical-contract.md"
+        ).read_text(encoding="utf-8")
+        gates_text = (
+            ROOT / "docs" / "contracts" / "xiaocai-canonical-quality-gates.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("candidate_fields", contract_text)
+        self.assertIn("confirmed_fields", contract_text)
+        self.assertIn("model_inferred", contract_text)
+        self.assertIn("不能直接晋级为 confirmed", contract_text)
+        self.assertIn("Anti-hardcode 门禁", gates_text)
+        self.assertIn("已由用户给出（会话上下文）", gates_text)
 
 
 if __name__ == "__main__":

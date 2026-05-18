@@ -10,18 +10,22 @@ directory:
 
 field_matrix_defaults:
   applies_to: all_category_paths
-  required_fields:
+  required_fields: []
+  required_fields_semantics: no_category_level_hard_gate
+  identification_fields:
     - 采购目的
     - 使用场景
     - 一级品类
     - 二级品类
     - 交付地点
-  recommended_fields:
+  ranking_fields:
     - 产品/服务
     - 数量
     - 单位
     - 预算金额
     - 交付时间
+    - 交付地点
+  recommended_fields:
     - 质量标准
     - 验收口径
   optional_fields:

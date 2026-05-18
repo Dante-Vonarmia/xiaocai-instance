@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
+from xiaocai_instance_api.chat.orchestration.prior_context import build_procurement_prior_context
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
 from xiaocai_instance_api.settings import get_settings
 
@@ -56,6 +57,8 @@ def test_chat_run_injects_template_recommendation_prior(client, auth_token):
         clarification_policy = kernel_context["clarification_policy"]
         category_prior = kernel_context["category_prior"]
         confidence_policy = kernel_context["confidence_policy"]
+        field_definitions = kernel_context["field_definitions"]
+        definitions_by_key = {item["key"]: item for item in field_definitions}
 
         assert template_recommendation["stage"] == "requirement_collection"
         assert len(template_recommendation["matched_rules"]) >= 1
@@ -82,11 +85,27 @@ def test_chat_run_injects_template_recommendation_prior(client, auth_token):
         assert "allow_direct_commit" in confidence_policy
         assert "should_clarify_before_commit" in confidence_policy
         assert "action" in confidence_policy
-        assert confidence_policy["action"] in {"proceed", "clarify_category_first", "clarify_requirement_first", "defer_to_canvas"}
+        assert confidence_policy["action"] in {
+            "proceed",
+            "clarify_category_first",
+            "clarify_requirement_first",
+            "defer_to_canvas",
+        }
         assert domain_prior["instruction_hints"]["preferred_category_path"] == category_prior["resolved_path"]
         assert domain_prior["instruction_hints"]["top_missing_field"] == clarification_policy["top_missing_field"]
         assert domain_prior["instruction_hints"]["clarification_action"] == confidence_policy["action"]
         assert domain_prior["instruction_hints"]["prefer_weighted_template_candidates"] is True
+        assert "采购目的" in kernel_context["required_fields"]
+        assert definitions_by_key["采购目的"]["priority"] == "required"
+        assert definitions_by_key["采购目的"]["blocker"] is False
+        assert definitions_by_key["采购目的"]["question"]
+        assert definitions_by_key["使用场景"]["question"]
+        assert definitions_by_key["一级品类"]["options"]
+        assert any(item["value"] == "活动" for item in definitions_by_key["一级品类"]["options"])
+        assert definitions_by_key["预算金额"]["question"]
+        assert kernel_context["fields"]["采购目的"] == "支持品牌活动落地"
+        assert kernel_context["fields"]["使用场景"] == "线下活动执行"
+        assert "采购目的" not in kernel_context["required_missing"]
 
 
 def test_chat_prior_keeps_project_name_out_of_chat_question_priority(client, auth_token):
@@ -113,11 +132,50 @@ def test_chat_prior_keeps_project_name_out_of_chat_question_priority(client, aut
         clarification_policy = kernel_context["clarification_policy"]
         domain_prior = kernel_context["domain_prior"]
         relevance_rows = domain_prior["missing_fields_with_relevance"]
+        definitions_by_key = {item["key"]: item for item in kernel_context["field_definitions"]}
 
         assert "项目名称" in clarification_policy["defer_to_canvas"]
         assert clarification_policy["top_missing_field"] != "项目名称"
         assert clarification_policy["priority_order"][0] != "项目名称"
         assert relevance_rows[0]["action"] == "ask_in_chat"
+        assert domain_prior["message_extracted_fields"]["数量"] == "1"
+        assert domain_prior["message_extracted_fields"]["单位"] == "批"
+        assert "一级品类" not in domain_prior["message_extracted_fields"]
+        assert domain_prior["readiness_score"] < 0.35
+        assert kernel_context["fields"]["数量"] == "1"
+        assert kernel_context["fields"]["单位"] == "批"
+        assert kernel_context["confirmed_fields"]["数量"] == "1"
+        assert any(item["field_key"] == "数量" for item in kernel_context["field_history"])
+        assert "一级品类" not in kernel_context["fields"]
+        assert "二级品类" not in kernel_context["fields"]
+        assert any(item["field_key"] == "一级品类" for item in kernel_context["candidate_fields"])
+        assert any(item["field_key"] == "二级品类" for item in kernel_context["candidate_fields"])
+        assert kernel_context["field_definitions"][0]["key"] == "项目名称"
+        assert definitions_by_key["项目名称"]["priority"] == "optional"
+        assert definitions_by_key["项目名称"]["completion_required"] is True
+        assert definitions_by_key["预算金额"]["question"]
+        assert definitions_by_key["一级品类"]["options"]
+        assert kernel_context["field_semantics"]["项目名称"]["criticality"] == "supplementary"
+        assert "项目名称" not in kernel_context.get("intake_core_fields", [])
+        assert "项目名称" in kernel_context["required_missing"]
+        assert kernel_context["confidence_policy"]["should_clarify_before_commit"] is True
+        assert clarification_policy["ask_missing_fields_one_by_one"] is True
+        assert domain_prior["instruction_hints"]["defer_missing_fields_to_workbench"] is False
+
+
+def test_sourcing_prior_does_not_hard_block_on_missing_ranking_fields():
+    prior = build_procurement_prior_context(
+        kernel_context={"产品/服务": "测试服务器"},
+        mode="intelligent_sourcing",
+        user_message="我要采购一批测试服务器，直接先给供应商。",
+    )
+
+    domain_prior = prior.domain_prior
+    assert domain_prior["active_stage"] == "sourcing"
+    assert domain_prior["missing_fields"] == []
+    assert "预算金额" not in domain_prior["missing_fields"]
+    assert "交付地点" not in domain_prior["missing_fields"]
+    assert domain_prior["instruction_hints"]["ask_for_missing_required_fields_before_finalizing"] is False
 
 
 def test_chat_run_keeps_confidence_policy_hidden_without_native_pending(client, auth_token):

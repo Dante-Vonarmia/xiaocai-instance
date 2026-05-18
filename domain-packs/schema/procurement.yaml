@@ -6,6 +6,18 @@ schema:
   field_dictionary_ref: 'schema/procurement-field-dictionary.yaml'
   key_mode: 中文字段名
 
+field_requirement_semantics:
+  source_contract: '数据契约20260411.xlsx#总字段表'
+  industry_base_pack: true
+  required_meaning: formal_output_completeness
+  runtime_gate_policy: weighted_relevance_not_hard_blocking
+  missing_field_behavior: surface_as_recommendation_or_assumption
+  direct_sourcing_policy: allow_supplier_candidates_with_assumptions
+  notes:
+    - Excel 中“必填”表示正式需求/RFX/寻源结果的完整度字段，不表示对话或寻源入口必须阻断。
+    - 用户明确要求供应商时，可基于产品/服务、品类或自然语言需求先给初筛候选，并标注缺失假设。
+    - 预算、数量、交付时间、交付地点等字段影响排序、置信度和风险提示，不作为默认硬门槛。
+
 stage_field_sets:
   最小必填集:
     - 项目名称
@@ -124,10 +136,18 @@ completeness_rules:
   requirement_collection:
     pass_when: '需求梳理必填集全部完成'
     missing_fields_source: 'schema/procurement-field-dictionary.yaml#fields'
+    gate_policy: formal_completeness_only
+    allow_draft_with_missing: true
+    allow_downstream_with_assumptions: true
+    missing_fields_behavior: '建议补充，不阻断分析或寻源入口'
   requirement_analysis:
     pass_when: '需求分析必填集全部完成'
+    gate_policy: formal_completeness_only
+    allow_draft_with_missing: true
   rfx_strategy:
     pass_when: 'RFX策略必填集全部完成'
+    gate_policy: formal_document_completeness
+    allow_draft_with_missing: true
 
 entities:
   Project:

@@ -39,6 +39,7 @@ services:
       - MODEL_PROVIDER_HEALTH_FILE=${MODEL_PROVIDER_HEALTH_FILE:-}
       - MODEL_PROVIDER_QUOTA_JSON=${MODEL_PROVIDER_QUOTA_JSON:-}
       - LLM_PROVIDER_TIMEOUT_BY_INTENT_JSON=${LLM_PROVIDER_TIMEOUT_BY_INTENT_JSON:-}
+      - STRUCTURED_REASONING_ENABLED=${STRUCTURED_REASONING_ENABLED:-true}
     volumes:
       - ../docs:/app/docs:ro
       - ../docs:/usr/local/lib/python3.11/site-packages/docs:ro
@@ -140,7 +141,7 @@ services:
       - FLARE_REDIS_URL=${FLARE_REDIS_URL:-redis://inst-xiaocai-redis:6379/0}
       - FLARE_QDRANT_URL=${FLARE_QDRANT_URL:-http://inst-xiaocai-qdrant:6333}
       - UPLOAD_MAX_SIZE_BYTES=${UPLOAD_MAX_SIZE_BYTES:-20971520}
-      - UPLOAD_ALLOWED_EXTENSIONS=${UPLOAD_ALLOWED_EXTENSIONS:-["pdf","doc","docx","xls","xlsx","txt"]}
+      - UPLOAD_ALLOWED_EXTENSIONS=${UPLOAD_ALLOWED_EXTENSIONS:-["pdf","doc","docx","xls","xlsx","csv","txt","md","png","jpg","jpeg","webp"]}
       - ENABLED_MODES=${ENABLED_MODES:-["auto","requirement_canvas","analysis_mode","intelligent_sourcing"]}
       - ENABLE_LOCAL_ORCHESTRATION_FALLBACK=${ENABLE_LOCAL_ORCHESTRATION_FALLBACK:-false}
       - DAILY_MESSAGE_LIMIT=${DAILY_MESSAGE_LIMIT:-0}

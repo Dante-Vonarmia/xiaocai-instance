@@ -148,6 +148,9 @@ async def test_kernel_client_stream_parses_sse_events(monkeypatch):
     assert events[1]["type"] == "token"
     assert events[1]["payload"] == {"content": "好"}
     assert events[2]["type"] == "done"
+    stream_timeout = fake_client.stream_calls[0]["timeout"]
+    assert isinstance(stream_timeout, httpx.Timeout)
+    assert stream_timeout.read is None
 
 
 @pytest.mark.asyncio

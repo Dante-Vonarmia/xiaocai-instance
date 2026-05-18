@@ -8,6 +8,10 @@ from typing import Any
 
 from xiaocai_instance_api.chat.orchestration.contract_loader import load_contracts
 from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
+from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
+from xiaocai_instance_api.chat.orchestration.question_options import (
+    normalize_question_options,
+)
 
 
 INTAKE_MODE_KEY = "requirement_intake"
@@ -65,12 +69,17 @@ def _current_question(pending_contract: dict[str, Any]) -> dict[str, object]:
             "field_key": field_key,
             "field_label": _to_text(question.get("field_label")) or field_key,
             "question_text": question_text,
-            "options": _as_list(question.get("options")),
+            "options": normalize_question_options(question.get("options")),
         }
     return {}
 
 
-def _markdown(collected: list[dict[str, object]], missing_fields: list[str], source_text: str = "") -> str:
+def _markdown(
+    collected: list[dict[str, object]],
+    missing_fields: list[str],
+    candidates: list[dict[str, Any]] | None = None,
+    source_text: str = "",
+) -> str:
     lines = ["# 需求梳理草稿", ""]
     source = _to_text(source_text)
     if source:
@@ -80,6 +89,13 @@ def _markdown(collected: list[dict[str, object]], missing_fields: list[str], sou
         lines.extend(f"- {item['field_label']}: {item['value']}" for item in collected)
     else:
         lines.append("- 暂未识别到结构化字段")
+    if candidates:
+        lines.extend(["", "## 模型建议（待确认）"])
+        lines.extend(
+            f"- {item['field_key']}: {item['value']}"
+            for item in candidates
+            if _to_text(item.get("field_key")) and _to_text(item.get("value"))
+        )
     lines.extend(["", "## 待补充信息"])
     if missing_fields:
         lines.extend(f"- {field}" for field in missing_fields)
@@ -104,6 +120,9 @@ def build_intake_workbench_projection(
         return None
 
     pending = dict(pending_contract or {})
+    candidate_payload = normalize_candidate_payload(pending)
+    candidate_fields = candidate_payload["candidate_fields"]
+    rejected_candidates = candidate_payload["rejected_candidates"]
     slots = extract_slots(user_message)
     required = _required_fields()
     collected = [
@@ -118,9 +137,17 @@ def build_intake_workbench_projection(
         *(field for field in required if field not in collected_keys),
     ])
     missing = [_field_item(field) for field in missing_fields]
+    has_pending_contract = pending_contract is not None
     current_question = _current_question(pending)
     progress = len(collected) / max(1, len(required))
     next_actions = _as_list(pending.get("next_actions"))
+    if current_question and not next_actions:
+        next_actions = [{
+            "action_key": "continue_collection",
+            "label": "继续补充",
+            "status": "available",
+            "target_mode": mode or INTAKE_MODE_KEY,
+        }]
     mode_state = _to_text(pending.get("current_stage")) or "collecting"
 
     enriched_pending = {
@@ -131,6 +158,8 @@ def build_intake_workbench_projection(
         "current_question": current_question,
         "question": current_question,
         "next_actions": next_actions,
+        "candidate_fields": candidate_fields,
+        "rejected_candidates": rejected_candidates,
         "required_coverage": progress,
         "total_coverage": progress,
         "active_collecting": bool(missing_fields),
@@ -142,13 +171,15 @@ def build_intake_workbench_projection(
     # project the explicit fields and contract gaps into the workbench. Do not
     # emit a pending contract or question here; those remain authoritative only
     # when supplied by the runtime.
-    has_pending_contract = pending_contract is not None
     canvas_state = {
         "session_id": session_id,
         "mode_key": INTAKE_MODE_KEY,
         "mode_state": mode_state,
         "progress": progress,
         "collected": collected,
+        "candidates": candidate_fields,
+        "candidate_fields": candidate_fields,
+        "rejected_candidates": rejected_candidates,
         "missing": missing,
         "current_question": current_question,
         "readiness": {
@@ -158,7 +189,7 @@ def build_intake_workbench_projection(
             "missing_fields": missing_fields,
         },
         "next_actions": next_actions,
-        "versions": [{"content": _markdown(collected, missing_fields, user_message)}],
+        "versions": [{"content": _markdown(collected, missing_fields, candidate_fields, user_message)}],
     }
 
     authoritative_payload = {

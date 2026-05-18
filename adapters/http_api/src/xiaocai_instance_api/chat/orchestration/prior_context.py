@@ -7,6 +7,7 @@ from xiaocai_instance_api.chat.orchestration.contract_loader import (
     load_contracts,
     load_pack_mount_snapshot,
 )
+from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
 from xiaocai_instance_api.chat.orchestration.field_prior import (
     build_missing_field_priorities,
 )
@@ -162,14 +163,22 @@ def _resolve_active_stage(mode: str | None) -> str:
     return "requirement-analysis"
 
 
-def _collect_filled_fields(kernel_context: dict, required_fields: list[str]) -> list[str]:
+def _collect_filled_fields(
+    kernel_context: dict,
+    required_fields: list[str],
+    message_slots: dict[str, str] | None = None,
+) -> list[str]:
     filled: list[str] = []
     confirmed_fields = kernel_context.get("confirmed_fields")
     confirmed_map = confirmed_fields if isinstance(confirmed_fields, dict) else {}
+    slot_map = message_slots if isinstance(message_slots, dict) else {}
     for field in required_fields:
         direct_value = kernel_context.get(field)
         confirmed_value = confirmed_map.get(field)
+        slot_value = slot_map.get(field)
         candidate = confirmed_value if confirmed_value not in (None, "", [], {}) else direct_value
+        if candidate in (None, "", [], {}):
+            candidate = slot_value
         if candidate not in (None, "", [], {}):
             filled.append(field)
     return filled
@@ -186,6 +195,7 @@ def build_procurement_prior_context(
     analysis_sections = _extract_analysis_template_sections(contract_text)
     rfx_template = _extract_rfx_templates(contract_text)
     active_stage = _resolve_active_stage(mode)
+    message_slots = extract_slots(user_message or "") if user_message else {}
     category_prior = build_taxonomy_prior(
         user_message=user_message,
         kernel_context=kernel_context,
@@ -196,7 +206,11 @@ def build_procurement_prior_context(
     else:
         required_fields = list(contracts.stage_required.get(active_stage, []))
 
-    filled_fields = _collect_filled_fields(kernel_context, required_fields)
+    filled_fields = _collect_filled_fields(
+        kernel_context,
+        required_fields,
+        message_slots=message_slots,
+    )
     missing_fields = [field for field in required_fields if field not in filled_fields]
     readiness_score = round((len(filled_fields) / len(required_fields)), 4) if required_fields else 0.0
     template_recommendation = build_template_recommendation_prior(
@@ -234,11 +248,13 @@ def build_procurement_prior_context(
         readiness_score=readiness_score,
         clarification_policy=clarification_policy,
     )
+    clarification_policy["ask_missing_fields_one_by_one"] = confidence_policy["should_clarify_before_commit"]
     domain_prior = {
         "domain": "procurement",
         "active_stage": active_stage,
         "required_fields": required_fields,
         "filled_fields": filled_fields,
+        "message_extracted_fields": message_slots,
         "missing_fields": missing_fields,
         "missing_fields_with_priority": missing_fields_with_priority,
         "missing_fields_with_relevance": relevance_prior["missing_fields_with_relevance"],
@@ -251,7 +267,8 @@ def build_procurement_prior_context(
         "confidence_policy": confidence_policy,
         "instruction_hints": {
             "prefer_analysis_template_sections": [item.get("title", "") for item in analysis_sections if item.get("title")],
-            "ask_for_missing_required_fields_before_finalizing": bool(missing_fields),
+            "ask_for_missing_required_fields_before_finalizing": confidence_policy["should_clarify_before_commit"],
+            "defer_missing_fields_to_workbench": bool(missing_fields) and not confidence_policy["should_clarify_before_commit"],
             "prioritize_required_fields_over_freeform_expansion": True,
             "prefer_weighted_template_candidates": bool(template_recommendation.get("candidate_pool")),
             "top_missing_field": clarification_policy["top_missing_field"],

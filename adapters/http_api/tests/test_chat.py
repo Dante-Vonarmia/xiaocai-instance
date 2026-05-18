@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from xiaocai_instance_api.app import create_app
 from unittest.mock import patch
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.chat.router import EMPTY_ASSISTANT_MESSAGE
 
 
 @pytest.fixture
@@ -85,7 +86,8 @@ def test_chat_run_uses_neutral_message_when_kernel_reply_is_empty(client, auth_t
 
         assert response.status_code == 200
         data = response.json()
-        assert data["message"] == "当前未生成可展示回复，请重试。"
+        assert data["message"] == EMPTY_ASSISTANT_MESSAGE
+        assert data["message"].count("\n") >= 2
 
 
 def test_chat_run_without_auth(client):
@@ -144,7 +146,8 @@ def test_chat_stream_uses_neutral_message_when_done_event_has_no_content(client,
         )
 
         assert response.status_code == 200
-        assert "当前未生成可展示回复，请重试。" in response.text
+        assert EMPTY_ASSISTANT_MESSAGE.split("\n", 1)[0] in response.text
+        assert "\\n" in response.text
 
 
 def test_chat_stream_emits_synthetic_done_when_kernel_stream_closes_without_done(client, auth_token):
@@ -166,7 +169,8 @@ def test_chat_stream_emits_synthetic_done_when_kernel_stream_closes_without_done
 
         assert response.status_code == 200
         assert "event: done" in response.text
-        assert "当前未生成可展示回复，请重试。" in response.text
+        assert EMPTY_ASSISTANT_MESSAGE.split("\n", 1)[0] in response.text
+        assert "\\n" in response.text
 
 
 def test_chat_with_context(client, auth_token):
@@ -381,7 +385,7 @@ def test_kernel_error_handling(monkeypatch):
 
         assert response.status_code == 200
         data = response.json()
-        assert data["message"] == "当前未生成可展示回复，请重试。"
+        assert data["message"] == EMPTY_ASSISTANT_MESSAGE
         assert data["metadata"]["degraded"] is True
 
 
@@ -408,7 +412,7 @@ def test_chat_run_returns_error_when_kernel_fails_even_if_fallback_enabled(monke
 
         assert response.status_code == 200
         data = response.json()
-        assert data["message"] == "当前未生成可展示回复，请重试。"
+        assert data["message"] == EMPTY_ASSISTANT_MESSAGE
         assert data["metadata"]["degraded"] is True
 
 
@@ -770,6 +774,8 @@ def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_
     assert pending_contract["command_type"] == "continue_collection"
     assert pending_contract["missing_fields"] == ["category"]
     assert pending_contract["intake_session_id"] == "sess-pending-run"
+    assert pending_contract["current_question"]["options"][0]["label"] == "活动执行"
+    assert pending_contract["current_question"]["options"][1]["value"] == "服务器"
     for required_key in (
         "current_question",
         "question",

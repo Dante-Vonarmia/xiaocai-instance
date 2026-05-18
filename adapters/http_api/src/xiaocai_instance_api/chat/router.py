@@ -20,6 +20,8 @@ from xiaocai_instance_api.security.authorization import get_authorization_servic
 from xiaocai_instance_api.chat.kernel_client import get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
+from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
+from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.chat.workbench_projection import (
@@ -34,7 +36,11 @@ import json
 router = APIRouter(prefix="/chat", tags=["chat"])
 INTAKE_MODE_PREFIX = "requirement_intake"
 INTAKE_MODE_ALIAS = "requirement_canvas"
-EMPTY_ASSISTANT_MESSAGE = "当前未生成可展示回复，请重试。"
+EMPTY_ASSISTANT_MESSAGE = (
+    "我这边没有拿到完整的可展示结果，先不直接给结论。\n"
+    "你可以继续补充采购目标、品类/规格、数量、预算、交付地点和时间；我会基于这些信息继续梳理需求。\n"
+    "如果这是系统异常，请稍后重试或回到上一步继续。"
+)
 
 
 def _is_non_empty_text(value: object) -> bool:
@@ -211,14 +217,15 @@ def _build_pending_contract(
         return None
 
     missing_fields = _as_list(source.get("missing_fields")) or _as_list(source.get("required_missing"))
-    question = _as_object(source.get("question"))
-    chooser = _as_object(source.get("chooser"))
+    question = normalize_question_payload(_as_object(source.get("question")))
+    chooser = normalize_question_payload(_as_object(source.get("chooser")))
     interaction_node = _as_object(source.get("interaction_node"))
-    current_question = _as_object(source.get("current_question"))
+    current_question = normalize_question_payload(_as_object(source.get("current_question")))
     gate = _as_object(source.get("gate")) or {}
     command_type = _to_text(source.get("command_type")) or "continue_collection"
     current_stage = _to_text(source.get("current_stage")) or "collecting"
     summary_confirmed = _to_bool(source.get("summary_confirmed"))
+    candidate_payload = normalize_candidate_payload(source)
 
     if not current_question:
         question_text = ""
@@ -292,6 +299,8 @@ def _build_pending_contract(
         "next_actions": next_actions,
         "gate": gate,
         "summary_confirmed": summary_confirmed,
+        "candidate_fields": candidate_payload["candidate_fields"],
+        "rejected_candidates": candidate_payload["rejected_candidates"],
         "intake_session_id": _to_text(source.get("intake_session_id")) or session_id,
     }
 

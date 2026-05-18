@@ -10,7 +10,9 @@
 2. 梳理态 `canvas_state` 可流式产出；
 3. 历史写回与重载不丢失 `canvas_state`；
 4. 不再出现旧的粗糙覆盖回复；
-5. 新会话端到端体验稳定。
+5. 新会话端到端体验稳定；
+6. 大模型 / 规则抽取结果先进入 candidate，经 canonical 后再进入 confirmed；
+7. 不出现伪确认值或 runtime 硬编码业务选项。
 
 ---
 
@@ -48,6 +50,25 @@
 - 预期：
   - 不出现早期覆盖式粗糙问句（如“提问项目名称”这类替换主回答的表现）；
   - 主链路回答保留，梳理信息作为并行投影展示。
+
+### CHAT-003-M5：模型候选不伪装成已确认字段
+
+- 输入：
+  - `我要采购一批办公桌椅，预算45万，交付到上海，质量、验收、发票和付款条款后续再补。`
+- 预期：
+  - `预算金额`、`交付地点` 可进入已识别字段；
+  - `质量标准`、`验收口径`、`发票类型`、`付款条款` 不得显示为 `已由用户给出（会话上下文）`；
+  - 未明确给出具体值的字段应保持待补充或候选待确认。
+
+### CHAT-003-M6：问题选项来自 canonical 来源
+
+- 输入：
+  - `我要采购一批办公桌椅，请帮我梳理需求。`
+- 预期：
+  - 当前问题和选项可展示；
+  - 一级/二级品类选项必须来自 `domain-packs/category-fields/procurement-category-fields.yaml`；
+  - 字段问法和字段定义必须可追溯到字段字典、品类目录、配置中心或 FLARE canonical planner；
+  - 不允许由 xiaocai runtime Python 常量硬编码业务选项。
 
 ---
 
@@ -93,6 +114,25 @@ cd /Users/dantevonalcatraz/Development/procurement-agents
 
 - 全部通过（当前基线：`9 passed`）。
 
+### D. Intake canonical 防回归（CHAT-004 必补）
+
+```bash
+cd /Users/dantevonalcatraz/Development/procurement-agents
+.venv/bin/python -m pytest \
+  adapters/http_api/tests/test_chat_prior_context.py \
+  adapters/http_api/tests/test_chat_workbench_projection.py \
+  tests/domain_packs/test_canonical_quality_gates.py \
+  -q
+```
+
+通过标准：
+
+- 不出现伪确认值；
+- 模型推断值不会直接进入 `confirmed_fields`；
+- 字段名通过字段字典或别名映射；
+- 品类值通过品类目录 canonical 校验；
+- 问题选项不来自 runtime 硬编码业务常量。
+
 ---
 
 ## 4. 关键断言（供日志/接口抽检）
@@ -105,6 +145,10 @@ cd /Users/dantevonalcatraz/Development/procurement-agents
    - `analysis_payload`（如有）
    - `context_authority`（如有）
 4. 历史读回的 `canvas_state.progress` 不为 `0`（针对该轮确实产出梳理的会话）。
+5. `confirmed_fields` 不包含 `"已由用户给出（会话上下文）"`。
+6. `model_inferred` 字段默认停留在 `candidate_fields`。
+7. `一级品类` / `二级品类` 值必须能追溯到品类目录。
+8. `current_question.options` 必须能追溯到 canonical 来源。
 
 ---
 
@@ -113,9 +157,10 @@ cd /Users/dantevonalcatraz/Development/procurement-agents
 仅当以下都满足才允许上线：
 
 1. 手工验收 M1~M4 全部通过；
-2. 自动化 A+B 全部通过；
-3. 定点回归 C 通过；
-4. 本地/预发数据库不存在会干扰观测的旧脏会话（必要时先清理历史再验收）。
+2. 手工验收 M5~M6 全部通过；
+3. 自动化 A+B 全部通过；
+4. 定点回归 C 通过；
+5. CHAT-004 防回归 D 通过；
+6. 本地/预发数据库不存在会干扰观测的旧脏会话（必要时先清理历史再验收）。
 
 若任一失败，状态应回到 `Blocked`，不得标记为 `Done`。
-

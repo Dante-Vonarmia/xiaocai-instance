@@ -1,11 +1,10 @@
 import { FileTextOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { App as FlareChatCoreApp } from 'flare-chat-core'
 import { APP_ROUTES } from '@/constants/routes'
 import { useBranding } from '@/hooks/chat/useBranding'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
-import { createBackendRuntime } from '@/services/backendRuntime'
 import { XIAOCAI_CHAT_THEME_TOKENS } from '@/theme/chatTheme'
 import './styles.css'
 
@@ -15,9 +14,8 @@ type CoreEntryPageProps = {
 
 const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'auto'
 const DEFAULT_SESSION_TITLE = import.meta.env.VITE_FLARE_CHAT_DEFAULT_SESSION_TITLE || '新会话'
-const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const FLARE_VERSION = '0.2.13'
+const FLARE_VERSION = '0.2.14'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const navigate = useNavigate()
@@ -26,10 +24,6 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const currentUserId = getCurrentUserId() || 'anonymous-user'
   const projectSlot = branding.projectSlot
   const uiLabels = branding.uiLabels
-  const backendRuntime = useMemo(() => createBackendRuntime({
-    defaultProjectId: projectSlot.project_id || DEFAULT_PROJECT_ID,
-    defaultProjectName: projectSlot.name,
-  }), [projectSlot.name, projectSlot.project_id])
   const handleGoProfile = useCallback(() => {
     navigate(APP_ROUTES.profile)
   }, [navigate])
@@ -98,12 +92,9 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
           defaultProjectName={projectSlot.name}
           defaultSessionTitle={DEFAULT_SESSION_TITLE}
           functionType={FUNCTION_TYPE}
-          messageAPI={backendRuntime.messageAPI}
           projectId=""
-          projectAPI={backendRuntime.projectAPI}
           productName={uiLabels.product_name}
           productTag={uiLabels.brand_tag}
-          sessionAPI={backendRuntime.sessionAPI}
           starterScenarios={branding.starterPrompts}
           themeTokens={XIAOCAI_CHAT_THEME_TOKENS}
           uiLabels={uiLabels}
