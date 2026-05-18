@@ -78,6 +78,11 @@ export type BackendRuntime = {
   appendExchange: (sessionId: string, userMessage: string, assistantMessage: string) => Promise<void>
 }
 
+type BackendRuntimeOptions = {
+  defaultProjectId?: string
+  defaultProjectName?: string
+}
+
 function toText(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -121,7 +126,24 @@ function normalizeProjectRecord(record: ProjectApiRecord): ProjectRecord {
   }
 }
 
-export function createBackendRuntime(): BackendRuntime {
+function isActiveProject(project: ProjectRecord) {
+  return String(project.status || 'active').trim() !== 'archived'
+}
+
+export function createBackendRuntime(options: BackendRuntimeOptions = {}): BackendRuntime {
+  const defaultProjectId = toText(options.defaultProjectId)
+  const defaultProjectName = toText(options.defaultProjectName) || defaultProjectId
+  const upsertProject = async (
+    projectId: string,
+    payload: { project_name?: string | null; status?: string } = {},
+  ) => {
+    const response = await apiClient.put(`/projects/${encodeURIComponent(projectId)}`, {
+      project_name: payload.project_name ?? null,
+      status: payload.status ?? 'active',
+    })
+    return normalizeProjectRecord(response.data as ProjectApiRecord)
+  }
+
   return {
     sessionAPI: {
       async list(params = {}) {
@@ -154,18 +176,30 @@ export function createBackendRuntime(): BackendRuntime {
         const response = await apiClient.get('/projects')
         const payload = response.data as { projects?: ProjectApiRecord[] }
         const projects = Array.isArray(payload.projects) ? payload.projects : []
+        const normalizedProjects = projects
+          .map(normalizeProjectRecord)
+          .filter((project) => Boolean(project.project_id))
+        const hasActiveProject = normalizedProjects.some(isActiveProject)
+
+        if (!hasActiveProject && defaultProjectId) {
+          const defaultProject = await upsertProject(defaultProjectId, {
+            project_name: defaultProjectName,
+            status: 'active',
+          })
+          return {
+            projects: [
+              defaultProject,
+              ...normalizedProjects.filter((project) => project.project_id !== defaultProject.project_id),
+            ],
+          }
+        }
+
         return {
-          projects: projects
-            .map(normalizeProjectRecord)
-            .filter((project) => Boolean(project.project_id)),
+          projects: normalizedProjects,
         }
       },
       async upsertProject(projectId: string, payload = {}) {
-        const response = await apiClient.put(`/projects/${encodeURIComponent(projectId)}`, {
-          project_name: payload.project_name ?? null,
-          status: payload.status ?? 'active',
-        })
-        return normalizeProjectRecord(response.data as ProjectApiRecord)
+        return upsertProject(projectId, payload)
       },
     },
     async appendExchange(sessionId: string, userMessage: string, assistantMessage: string) {

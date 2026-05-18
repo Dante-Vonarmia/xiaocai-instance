@@ -24,11 +24,17 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const branding = useBranding()
   const accessToken = getAccessToken()
   const currentUserId = getCurrentUserId() || 'anonymous-user'
-  const backendRuntime = useMemo(() => createBackendRuntime(), [])
   const projectSlot = branding.projectSlot
   const uiLabels = branding.uiLabels
+  const backendRuntime = useMemo(() => createBackendRuntime({
+    defaultProjectId: projectSlot.project_id || DEFAULT_PROJECT_ID,
+    defaultProjectName: projectSlot.name,
+  }), [projectSlot.name, projectSlot.project_id])
+  const handleGoProfile = useCallback(() => {
+    navigate(APP_ROUTES.profile)
+  }, [navigate])
   const handleGoSettings = useCallback(() => {
-    navigate(APP_ROUTES.settingsProfile)
+    navigate(APP_ROUTES.settingsSystem)
   }, [navigate])
   const logoutButton = onLogout ? (
     <button
@@ -76,7 +82,7 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
             className="core-entry-sidebar-action"
             type="button"
             title="个人信息"
-            onClick={handleGoSettings}
+            onClick={handleGoProfile}
           >
             <UserOutlined />
           </button>
@@ -93,7 +99,7 @@ function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
           defaultSessionTitle={DEFAULT_SESSION_TITLE}
           functionType={FUNCTION_TYPE}
           messageAPI={backendRuntime.messageAPI}
-          projectId={projectSlot.project_id || DEFAULT_PROJECT_ID}
+          projectId=""
           projectAPI={backendRuntime.projectAPI}
           productName={uiLabels.product_name}
           productTag={uiLabels.brand_tag}

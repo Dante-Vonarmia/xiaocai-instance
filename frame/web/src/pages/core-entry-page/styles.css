@@ -103,3 +103,94 @@
   flex: 1;
   min-width: 0;
 }
+
+@media (max-width: 767px) {
+  .core-entry-page {
+    --core-entry-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .core-entry-main {
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .core-entry-sidebar {
+    align-items: center;
+    border-right: 0;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06);
+    flex: 0 0 var(--core-entry-mobile-nav-height);
+    flex-direction: row;
+    gap: 10px;
+    height: var(--core-entry-mobile-nav-height);
+    min-height: 0;
+    min-width: 0;
+    padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    position: absolute;
+    inset: auto 0 0;
+    width: 100%;
+    z-index: 30;
+  }
+
+  .core-entry-main .flare-chat-standalone-surface {
+    padding-bottom: var(--core-entry-mobile-nav-height);
+  }
+
+  .core-entry-branding {
+    align-items: flex-start;
+    flex: 1 1 auto;
+    margin-bottom: 0;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .core-entry-branding__title {
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .core-entry-branding__subtitle,
+  .core-entry-sidebar-divider,
+  .core-entry-sidebar-version {
+    display: none;
+  }
+
+  .core-entry-sidebar-button {
+    border-radius: 10px;
+    flex: 0 0 auto;
+    font-size: 18px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .core-entry-sidebar-footer {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    margin-top: 0;
+    width: auto;
+  }
+
+  .core-entry-sidebar-action {
+    align-items: center;
+    height: 36px;
+    justify-content: center;
+    padding: 0;
+    width: 36px;
+  }
+
+  .core-entry-sidebar-action + .core-entry-sidebar-action {
+    margin-top: 0;
+  }
+}
