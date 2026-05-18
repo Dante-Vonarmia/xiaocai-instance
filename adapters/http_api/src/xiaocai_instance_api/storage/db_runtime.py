@@ -33,12 +33,10 @@ class SQLRuntime:
         self._config = config
         self.backend = config.backend
         self._conn: Any
+        self._has_pending_write = False
 
         if self.backend == "postgres":
-            from psycopg import connect
-            from psycopg.rows import dict_row
-
-            self._conn = connect(config.dsn, row_factory=dict_row)
+            self._conn = self._connect_postgres()
         else:
             Path(config.dsn).parent.mkdir(parents=True, exist_ok=True)
             self._conn = sqlite3.connect(config.dsn, check_same_thread=False)
@@ -53,6 +51,45 @@ class SQLRuntime:
             return statement.replace("?", "%s")
         return statement
 
+    def _connect_postgres(self) -> Any:
+        from psycopg import connect
+        from psycopg.rows import dict_row
+
+        return connect(self._config.dsn, row_factory=dict_row)
+
+    def _ensure_connection(self) -> None:
+        if self.backend != "postgres":
+            return
+        if getattr(self._conn, "closed", False):
+            self._conn = self._connect_postgres()
+
+    def _is_operational_error(self, error: Exception) -> bool:
+        if self.backend != "postgres":
+            return False
+        from psycopg import OperationalError
+
+        return isinstance(error, OperationalError)
+
+    def _run_with_reconnect(self, operation: Any) -> Any:
+        self._ensure_connection()
+        try:
+            return operation()
+        except Exception as error:
+            if self._has_pending_write or not self._is_operational_error(error):
+                raise
+            self._conn = self._connect_postgres()
+            return operation()
+
+    def _finish_read_if_needed(self) -> None:
+        if self.backend != "postgres" or self._has_pending_write:
+            return
+        try:
+            self._conn.commit()
+        except Exception as error:
+            if not self._is_operational_error(error):
+                raise
+            self._conn = self._connect_postgres()
+
     @staticmethod
     def _normalize_row(row: Any) -> dict[str, Any] | None:
         if row is None:
@@ -65,14 +102,18 @@ class SQLRuntime:
             return None
 
     def execute(self, statement: str, params: tuple[Any, ...] | list[Any] = ()) -> None:
-        self._conn.execute(self._sql(statement), params)
+        self._run_with_reconnect(lambda: self._conn.execute(self._sql(statement), params))
+        self._has_pending_write = True
 
     def fetchone(
         self,
         statement: str,
         params: tuple[Any, ...] | list[Any] = (),
     ) -> dict[str, Any] | None:
-        row = self._conn.execute(self._sql(statement), params).fetchone()
+        row = self._run_with_reconnect(
+            lambda: self._conn.execute(self._sql(statement), params).fetchone()
+        )
+        self._finish_read_if_needed()
         return self._normalize_row(row)
 
     def fetchall(
@@ -80,7 +121,10 @@ class SQLRuntime:
         statement: str,
         params: tuple[Any, ...] | list[Any] = (),
     ) -> list[dict[str, Any]]:
-        rows = self._conn.execute(self._sql(statement), params).fetchall()
+        rows = self._run_with_reconnect(
+            lambda: self._conn.execute(self._sql(statement), params).fetchall()
+        )
+        self._finish_read_if_needed()
         normalized: list[dict[str, Any]] = []
         for row in rows:
             item = self._normalize_row(row)
@@ -89,4 +133,5 @@ class SQLRuntime:
         return normalized
 
     def commit(self) -> None:
-        self._conn.commit()
+        self._run_with_reconnect(lambda: self._conn.commit())
+        self._has_pending_write = False
