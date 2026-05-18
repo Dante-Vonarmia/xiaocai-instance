@@ -62,32 +62,7 @@
         "canvas_status_title": "文档进度",
         "scenario_title": "起步入口"
       },
-      "starterPrompts": [
-        {
-          "key": "starter-test-server",
-          "label": "我要采购一批测试服务器",
-          "description": "需求梳理：先补齐预算、用途、配置和交付约束。",
-          "prompt": "我要采购一批测试服务器，请先帮我梳理采购需求并列出还缺的关键信息。"
-        },
-        {
-          "key": "starter-gpu-requirement",
-          "label": "帮我梳理 GPU 采购需求",
-          "description": "参数检索与对比：明确显卡型号、显存、功耗、兼容性。",
-          "prompt": "帮我梳理 GPU 采购需求，按参数检索与对比视角列出必填项和对比维度。"
-        },
-        {
-          "key": "starter-analysis-generation",
-          "label": "根据资料生成需求分析",
-          "description": "需求分析生成：沉淀目标、范围、风险与验收要点。",
-          "prompt": "根据我已有资料生成一版采购需求分析，包含目标、范围、关键参数、风险和验收建议。"
-        },
-        {
-          "key": "starter-procurement-direction",
-          "label": "给我一个采购建议方向",
-          "description": "供应商寻源（按需启用）：在需求明确后进入候选筛选。",
-          "prompt": "给我一个采购建议方向：先判断我的需求成熟度，再给出下一步行动建议。"
-        }
-      ]
+      "starterPrompts": []
     }
   }
 }

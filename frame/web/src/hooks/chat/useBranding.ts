@@ -74,7 +74,7 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
         || toText(chatConfig.welcomeMessage)
         || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
     },
-    starterPrompts: starterPrompts.length > 0 ? starterPrompts : DEFAULT_STARTER_PROMPTS,
+    starterPrompts,
   }
 }
 
