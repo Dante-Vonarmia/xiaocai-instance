@@ -118,6 +118,43 @@ def test_append_exchange_updates_default_session_title(client):
     assert get_response.json()["title"] == "采购100个保温杯"
 
 
+def test_append_exchange_preserves_flare_message_artifacts(client):
+    token = _auth_token(client, user_id="artifact-user")
+    create_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"title": "采购项目", "function_type": "requirement_canvas"},
+    )
+    assert create_response.status_code == 200
+    session_id = create_response.json()["sessionId"]
+
+    append_response = client.post(
+        f"/sessions/{session_id}/messages/append",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "user_message": "我要采购一批测试服务器",
+            "assistant_message": "# 需求梳理草稿",
+            "attachments": [{"name": "spec.pdf"}],
+            "canvas_state": {"progress": 0.25, "versions": [{"content": "# 需求梳理草稿"}]},
+            "plan_payload": {"track": "requirement_intake"},
+            "context_authority": {"source": "kernel"},
+        },
+    )
+    assert append_response.status_code == 200
+
+    messages_response = client.get(
+        f"/sessions/{session_id}/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert messages_response.status_code == 200
+    messages = messages_response.json()["messages"]
+
+    assert messages[0]["attachments"] == [{"name": "spec.pdf"}]
+    assert messages[1]["canvas_state"]["progress"] == 0.25
+    assert messages[1]["plan_payload"] == {"track": "requirement_intake"}
+    assert messages[1]["context_authority"] == {"source": "kernel"}
+
+
 def test_session_list_pagination_and_delete(client):
     token = _auth_token(client, user_id="page-user")
     bind_response = client.post(

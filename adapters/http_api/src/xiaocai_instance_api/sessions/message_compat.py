@@ -24,6 +24,22 @@ router = APIRouter(prefix="/chat", tags=["chat-compat"])
 class ChatMessageWritebackRequest(BaseModel):
     user_message: str = Field(default="")
     assistant_message: str = Field(default="")
+    run_id: str = ""
+    attachments: list[Any] = Field(default_factory=list)
+    context_refs: list[Any] = Field(default_factory=list)
+    knowledge_refs: list[Any] = Field(default_factory=list)
+    agent_status: dict[str, Any] | None = None
+    thinking_trace: str = ""
+    execution_trace: dict[str, Any] | None = None
+    knowledge_search: dict[str, Any] | None = None
+    sourcing_candidates: dict[str, Any] | None = None
+    knowledge_citation: dict[str, Any] | None = None
+    canvas_state: dict[str, Any] | None = None
+    analysis_payload: dict[str, Any] | None = None
+    context_usage: dict[str, Any] | None = None
+    provider_trace: dict[str, Any] | None = None
+    context_authority: dict[str, Any] | None = None
+    plan_payload: dict[str, Any] | None = None
     artifacts: dict[str, Any] | None = None
 
 
@@ -36,12 +52,17 @@ async def append_chat_core_messages(
     authz = get_authorization_service()
     await authz.require_conversation_write(claims=claims, conversation_id=session_id)
 
+    artifact_payload = request.model_dump()
+    if isinstance(request.artifacts, dict):
+        artifact_payload.update(request.artifacts)
+
     store = get_conversation_store()
     success = await store.append_exchange(
         user_id=claims.user_id,
         session_id=session_id,
         user_message=request.user_message,
         assistant_message=request.assistant_message,
+        artifact_payload=artifact_payload,
     )
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")

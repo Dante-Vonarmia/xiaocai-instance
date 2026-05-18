@@ -87,7 +87,11 @@ def test_append_and_list_messages_with_flare_fields():
                 "knowledge_search": {"queries": ["budget"]},
                 "sourcing_candidates": {"items": ["supplier-a"]},
                 "knowledge_citation": {"sources": ["doc-1"]},
+                "canvas_state": {"progress": 0.5},
+                "analysis_payload": {"template": "server"},
                 "context_usage": {"used_context_revision_id": "ctx-1"},
+                "context_authority": {"source": "kernel"},
+                "plan_payload": {"track": "requirement_intake"},
                 "created_at": "2026-04-30T00:00:02+00:00",
             },
         ],
@@ -99,6 +103,8 @@ def test_append_and_list_messages_with_flare_fields():
     assert messages[0]["attachments"] == [{"name": "spec.pdf"}]
     assert messages[1]["agent_status"] == {"state": "done"}
     assert messages[1]["knowledge_search"] == {"queries": ["budget"]}
+    assert messages[1]["canvas_state"] == {"progress": 0.5}
+    assert messages[1]["plan_payload"] == {"track": "requirement_intake"}
 
 
 def test_context_round_trip_and_update_remains_consistent():

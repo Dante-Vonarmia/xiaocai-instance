@@ -72,6 +72,32 @@ def _session_list_function_type_filter(function_type: str | None) -> str | None:
     return value
 
 
+def _message_response(item) -> dict:
+    """Preserve FLARE message artifacts so history reload keeps workbench state."""
+    return {
+        "message_id": item.message_id,
+        "role": item.role,
+        "content": item.content,
+        "created_at": item.created_at,
+        "run_id": item.run_id,
+        "attachments": item.attachments,
+        "context_refs": item.context_refs,
+        "knowledge_refs": item.knowledge_refs,
+        "agent_status": item.agent_status,
+        "thinking_trace": item.thinking_trace,
+        "execution_trace": item.execution_trace,
+        "knowledge_search": item.knowledge_search,
+        "sourcing_candidates": item.sourcing_candidates,
+        "knowledge_citation": item.knowledge_citation,
+        "canvas_state": item.canvas_state,
+        "analysis_payload": item.analysis_payload,
+        "context_usage": item.context_usage,
+        "provider_trace": item.provider_trace,
+        "context_authority": item.context_authority,
+        "plan_payload": item.plan_payload,
+    }
+
+
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
     function_type: str | None = None,
@@ -301,17 +327,7 @@ async def list_messages(
     await authz.require_conversation_access(claims=claims, conversation_id=session_id)
     store = get_conversation_store()
     messages = await store.list_messages(user_id=claims.user_id, session_id=session_id)
-    return MessageListResponse(
-        messages=[
-            {
-                "message_id": item.message_id,
-                "role": item.role,
-                "content": item.content,
-                "created_at": item.created_at,
-            }
-            for item in messages
-        ]
-    )
+    return MessageListResponse(messages=[_message_response(item) for item in messages])
 
 
 @router.delete("/{session_id}", response_model=SessionDeleteResponse)

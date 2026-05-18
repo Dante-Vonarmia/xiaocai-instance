@@ -1,5 +1,6 @@
 import {
   apiClient,
+  type AppendExchangePayload,
   messageApi,
   sessionApi,
   type MessageRecord,
@@ -39,11 +40,6 @@ type ProjectApiRecord = {
   updated_at?: unknown
   updatedAt?: unknown
   latest_updated_at?: unknown
-}
-
-type AppendExchangePayload = {
-  user_message?: unknown
-  assistant_message?: unknown
 }
 
 export type BackendRuntime = {
@@ -149,11 +145,7 @@ export function createBackendRuntime(): BackendRuntime {
         return messageApi.list(sessionId)
       },
       async appendExchange(sessionId: string, payload = {}) {
-        await messageApi.appendExchange(
-          sessionId,
-          toText(payload.user_message),
-          toText(payload.assistant_message),
-        )
+        await messageApi.appendExchange(sessionId, payload)
         return { success: true }
       },
     },

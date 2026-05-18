@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createBackendRuntime } from '@/services/backendRuntime'
+import { messageApi } from '@/services/api'
 
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -84,5 +85,20 @@ describe('createBackendRuntime projectAPI', () => {
       project_id: 'project-1',
       name: '采购项目 B',
     })
+  })
+
+  it('preserves FLARE appendExchange artifacts for history reload', async () => {
+    const payload = {
+      user_message: '我要采购测试服务器',
+      assistant_message: '# 需求梳理草稿',
+      canvas_state: {
+        progress: 0.25,
+      },
+    }
+
+    const runtime = createBackendRuntime()
+    await runtime.messageAPI.appendExchange('session-1', payload)
+
+    expect(messageApi.appendExchange).toHaveBeenCalledWith('session-1', payload)
   })
 })

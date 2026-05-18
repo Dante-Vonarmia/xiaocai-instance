@@ -82,6 +82,27 @@ export type MessageRecord = {
   role: 'user' | 'assistant'
   content: string
   created_at: string
+  run_id?: string
+  attachments?: unknown[]
+  context_refs?: unknown[]
+  knowledge_refs?: unknown[]
+  agent_status?: JsonRecord | null
+  thinking_trace?: string
+  execution_trace?: JsonRecord | null
+  knowledge_search?: JsonRecord | null
+  sourcing_candidates?: JsonRecord | null
+  knowledge_citation?: JsonRecord | null
+  canvas_state?: JsonRecord | null
+  analysis_payload?: JsonRecord | null
+  context_usage?: JsonRecord | null
+  provider_trace?: JsonRecord | null
+  context_authority?: JsonRecord | null
+  plan_payload?: JsonRecord | null
+}
+
+export type AppendExchangePayload = JsonRecord & {
+  user_message?: unknown
+  assistant_message?: unknown
 }
 
 const ACCESS_TOKEN_KEY = 'access_token'
@@ -748,10 +769,19 @@ export const messageApi = {
 
     return { messages }
   },
-  appendExchange: async (sessionId: string, userMessage: string, assistantMessage: string) => {
+  appendExchange: async (
+    sessionId: string,
+    userMessageOrPayload: string | AppendExchangePayload,
+    assistantMessage = '',
+  ) => {
+    const payload = typeof userMessageOrPayload === 'object' && userMessageOrPayload !== null && !Array.isArray(userMessageOrPayload)
+      ? userMessageOrPayload
+      : {
+          user_message: userMessageOrPayload,
+          assistant_message: assistantMessage,
+        }
     const response = await apiClient.post(`/sessions/${sessionId}/messages/append`, {
-      user_message: userMessage,
-      assistant_message: assistantMessage,
+      ...payload,
     })
     return response.data as { success: boolean }
   },

@@ -4,10 +4,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 import asyncio
+import json
 import uuid
 
 from xiaocai_instance_api.settings import get_settings
@@ -20,6 +21,85 @@ def _now_iso() -> str:
 
 def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+_MESSAGE_COLUMN_DEFINITIONS = {
+    "sender_user_id": "TEXT NULL",
+    "run_id": "TEXT NOT NULL DEFAULT ''",
+    "attachments": "TEXT NOT NULL DEFAULT '[]'",
+    "context_refs": "TEXT NOT NULL DEFAULT '[]'",
+    "knowledge_refs": "TEXT NOT NULL DEFAULT '[]'",
+    "agent_status": "TEXT NULL",
+    "thinking_trace": "TEXT NOT NULL DEFAULT ''",
+    "execution_trace": "TEXT NULL",
+    "knowledge_search": "TEXT NULL",
+    "sourcing_candidates": "TEXT NULL",
+    "knowledge_citation": "TEXT NULL",
+    "canvas_state": "TEXT NULL",
+    "analysis_payload": "TEXT NULL",
+    "context_usage": "TEXT NULL",
+    "provider_trace": "TEXT NULL",
+    "context_authority": "TEXT NULL",
+    "plan_payload": "TEXT NULL",
+}
+_MESSAGE_JSON_LIST_FIELDS = ("attachments", "context_refs", "knowledge_refs")
+_MESSAGE_ARTIFACT_FIELDS = (
+    "run_id",
+    *_MESSAGE_JSON_LIST_FIELDS,
+    "agent_status",
+    "thinking_trace",
+    "execution_trace",
+    "knowledge_search",
+    "sourcing_candidates",
+    "knowledge_citation",
+    "canvas_state",
+    "analysis_payload",
+    "context_usage",
+    "provider_trace",
+    "context_authority",
+    "plan_payload",
+)
+_MESSAGE_ARTIFACT_COLUMN_SQL = ", ".join(_MESSAGE_ARTIFACT_FIELDS)
+_MESSAGE_ARTIFACT_PLACEHOLDERS = ", ".join("?" for _ in _MESSAGE_ARTIFACT_FIELDS)
+
+
+def _json_dumps(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _json_loads(raw: Any, default: Any) -> Any:
+    if raw in (None, ""):
+        return default
+    if isinstance(raw, (dict, list)):
+        return raw
+    try:
+        return json.loads(str(raw))
+    except json.JSONDecodeError:
+        return default
+
+
+def _artifact_json_value(payload: dict[str, Any], field_name: str) -> str | None:
+    value = payload.get(field_name)
+    if field_name in _MESSAGE_JSON_LIST_FIELDS:
+        return _json_dumps(value if isinstance(value, list) else [])
+    if isinstance(value, (dict, list)):
+        return _json_dumps(value)
+    return None
+
+
+def _message_artifact_values(payload: dict[str, Any], *, assistant: bool) -> tuple[Any, ...]:
+    source = payload if isinstance(payload, dict) else {}
+    values: list[Any] = []
+    for field_name in _MESSAGE_ARTIFACT_FIELDS:
+        if field_name == "run_id":
+            values.append(str(source.get("run_id") or ""))
+        elif field_name == "thinking_trace":
+            values.append(str(source.get("thinking_trace") or "") if assistant else "")
+        elif not assistant and field_name not in _MESSAGE_JSON_LIST_FIELDS:
+            values.append(None)
+        else:
+            values.append(_artifact_json_value(source, field_name))
+    return tuple(values)
 
 
 def _session_access_clause(alias: str = "s") -> str:
@@ -83,6 +163,22 @@ class MessageRecord:
     role: str
     content: str
     created_at: str
+    run_id: str = ""
+    attachments: list[Any] = field(default_factory=list)
+    context_refs: list[Any] = field(default_factory=list)
+    knowledge_refs: list[Any] = field(default_factory=list)
+    agent_status: dict[str, Any] | None = None
+    thinking_trace: str = ""
+    execution_trace: dict[str, Any] | None = None
+    knowledge_search: dict[str, Any] | None = None
+    sourcing_candidates: dict[str, Any] | None = None
+    knowledge_citation: dict[str, Any] | None = None
+    canvas_state: dict[str, Any] | None = None
+    analysis_payload: dict[str, Any] | None = None
+    context_usage: dict[str, Any] | None = None
+    provider_trace: dict[str, Any] | None = None
+    context_authority: dict[str, Any] | None = None
+    plan_payload: dict[str, Any] | None = None
 
 
 class ConversationStore:
@@ -197,8 +293,9 @@ class ConversationStore:
 
             message_columns = self._runtime.fetchall("PRAGMA table_info(messages)")
             message_names = {str(row["name"]) for row in message_columns}
-            if "sender_user_id" not in message_names:
-                self._runtime.execute("ALTER TABLE messages ADD COLUMN sender_user_id TEXT NULL")
+            for name, definition in _MESSAGE_COLUMN_DEFINITIONS.items():
+                if name not in message_names:
+                    self._runtime.execute(f"ALTER TABLE messages ADD COLUMN {name} {definition}")
             self._runtime.execute(
                 """
                 UPDATE messages
@@ -238,8 +335,9 @@ class ConversationStore:
             """
         )
         message_names = {str(row["column_name"]) for row in message_columns}
-        if "sender_user_id" not in message_names:
-            self._runtime.execute("ALTER TABLE messages ADD COLUMN sender_user_id TEXT NULL")
+        for name, definition in _MESSAGE_COLUMN_DEFINITIONS.items():
+            if name not in message_names:
+                self._runtime.execute(f"ALTER TABLE messages ADD COLUMN {name} {definition}")
         self._runtime.execute(
             """
             UPDATE messages
@@ -276,6 +374,22 @@ class ConversationStore:
             role=str(row["role"]),
             content=str(row["content"]),
             created_at=str(row["created_at"]),
+            run_id=str(row.get("run_id") or ""),
+            attachments=_json_loads(row.get("attachments"), []),
+            context_refs=_json_loads(row.get("context_refs"), []),
+            knowledge_refs=_json_loads(row.get("knowledge_refs"), []),
+            agent_status=_json_loads(row.get("agent_status"), None),
+            thinking_trace=str(row.get("thinking_trace") or ""),
+            execution_trace=_json_loads(row.get("execution_trace"), None),
+            knowledge_search=_json_loads(row.get("knowledge_search"), None),
+            sourcing_candidates=_json_loads(row.get("sourcing_candidates"), None),
+            knowledge_citation=_json_loads(row.get("knowledge_citation"), None),
+            canvas_state=_json_loads(row.get("canvas_state"), None),
+            analysis_payload=_json_loads(row.get("analysis_payload"), None),
+            context_usage=_json_loads(row.get("context_usage"), None),
+            provider_trace=_json_loads(row.get("provider_trace"), None),
+            context_authority=_json_loads(row.get("context_authority"), None),
+            plan_payload=_json_loads(row.get("plan_payload"), None),
         )
 
     async def list_sessions(
@@ -673,6 +787,7 @@ class ConversationStore:
         session_id: str,
         user_message: str,
         assistant_message: str,
+        artifact_payload: dict[str, Any] | None = None,
     ) -> bool:
         async with self._lock:
             session = self._runtime.fetchone(
@@ -687,19 +802,33 @@ class ConversationStore:
             if session is None:
                 return False
 
+            artifacts = artifact_payload if isinstance(artifact_payload, dict) else {}
             now = _now_iso()
             self._runtime.execute(
-                """
-                INSERT INTO messages (message_id, session_id, user_id, sender_user_id, role, content, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                f"""
+                INSERT INTO messages (
+                    message_id, session_id, user_id, sender_user_id, role, content, created_at,
+                    {_MESSAGE_ARTIFACT_COLUMN_SQL}
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, {_MESSAGE_ARTIFACT_PLACEHOLDERS})
                 """,
-                (_new_id("msg_user"), session_id, user_id, user_id, "user", user_message, now),
+                (
+                    _new_id("msg_user"),
+                    session_id,
+                    user_id,
+                    user_id,
+                    "user",
+                    user_message,
+                    now,
+                    *_message_artifact_values(artifacts, assistant=False),
+                ),
             )
             assistant_created_at = _now_iso()
             self._runtime.execute(
-                """
-                INSERT INTO messages (message_id, session_id, user_id, sender_user_id, role, content, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                f"""
+                INSERT INTO messages (
+                    message_id, session_id, user_id, sender_user_id, role, content, created_at,
+                    {_MESSAGE_ARTIFACT_COLUMN_SQL}
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, {_MESSAGE_ARTIFACT_PLACEHOLDERS})
                 """,
                 (
                     _new_id("msg_assistant"),
@@ -709,6 +838,7 @@ class ConversationStore:
                     "assistant",
                     assistant_message,
                     assistant_created_at,
+                    *_message_artifact_values(artifacts, assistant=True),
                 ),
             )
             updated_at = _now_iso()

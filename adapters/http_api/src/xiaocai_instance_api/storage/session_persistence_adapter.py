@@ -44,6 +44,38 @@ def _json_loads(raw: Any, default: Any) -> Any:
         return default
 
 
+_MESSAGE_ARTIFACT_COLUMN_DEFINITIONS = {
+    "run_id": "TEXT NOT NULL DEFAULT ''",
+    "canvas_state": "TEXT NULL",
+    "analysis_payload": "TEXT NULL",
+    "provider_trace": "TEXT NULL",
+    "context_authority": "TEXT NULL",
+    "plan_payload": "TEXT NULL",
+}
+
+
+def _ensure_message_artifact_columns(runtime: SQLRuntime) -> None:
+    """Keep direct FLARE repository writes compatible with older message tables."""
+    if runtime.backend == "postgres":
+        rows = runtime.fetchall(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = 'messages'
+            """
+        )
+        names = {str(row["column_name"]) for row in rows}
+    else:
+        rows = runtime.fetchall("PRAGMA table_info(messages)")
+        names = {str(row["name"]) for row in rows}
+    if not names:
+        return
+    for name, definition in _MESSAGE_ARTIFACT_COLUMN_DEFINITIONS.items():
+        if name not in names:
+            runtime.execute(f"ALTER TABLE messages ADD COLUMN {name} {definition}")
+    runtime.commit()
+
+
 def _normalize_context_payload(value: Any) -> dict[str, Any]:
     payload = value if isinstance(value, dict) else _json_loads(value, {})
     return ContextContract.model_validate(payload or create_empty_context().model_dump()).model_dump(mode="python")
@@ -59,6 +91,7 @@ def _normalize_session_record(record: dict[str, Any]) -> dict[str, Any]:
 
 def _normalize_message_record(record: dict[str, Any]) -> dict[str, Any]:
     payload = dict(record)
+    payload["run_id"] = str(payload.get("run_id") or "")
     payload["attachments"] = _json_loads(payload.get("attachments"), [])
     payload["context_refs"] = _json_loads(payload.get("context_refs"), [])
     payload["knowledge_refs"] = _json_loads(payload.get("knowledge_refs"), [])
@@ -68,7 +101,12 @@ def _normalize_message_record(record: dict[str, Any]) -> dict[str, Any]:
     payload["knowledge_search"] = _json_loads(payload.get("knowledge_search"), None)
     payload["sourcing_candidates"] = _json_loads(payload.get("sourcing_candidates"), None)
     payload["knowledge_citation"] = _json_loads(payload.get("knowledge_citation"), None)
+    payload["canvas_state"] = _json_loads(payload.get("canvas_state"), None)
+    payload["analysis_payload"] = _json_loads(payload.get("analysis_payload"), None)
     payload["context_usage"] = _json_loads(payload.get("context_usage"), None)
+    payload["provider_trace"] = _json_loads(payload.get("provider_trace"), None)
+    payload["context_authority"] = _json_loads(payload.get("context_authority"), None)
+    payload["plan_payload"] = _json_loads(payload.get("plan_payload"), None)
     return SessionMessageRecord.model_validate(payload).model_dump(mode="python")
 
 
@@ -79,6 +117,7 @@ class XiaocaiSessionPersistenceAdapter(SessionRepository):
         run_storage_migrations(db_path=db_path, db_url=db_url)
         config = resolve_db_config(storage_db_url=db_url, storage_db_path=db_path)
         self._runtime = SQLRuntime(config)
+        _ensure_message_artifact_columns(self._runtime)
         self._lock = threading.Lock()
 
     def create_session_record(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -122,9 +161,10 @@ class XiaocaiSessionPersistenceAdapter(SessionRepository):
             rows = self._runtime.fetchall(
                 """
                 SELECT
-                    message_id, session_id, role, content, attachments, context_refs, knowledge_refs,
+                    message_id, session_id, run_id, role, content, attachments, context_refs, knowledge_refs,
                     agent_status, thinking_trace, execution_trace, knowledge_search,
-                    sourcing_candidates, knowledge_citation, context_usage, created_at
+                    sourcing_candidates, knowledge_citation, canvas_state, analysis_payload,
+                    context_usage, provider_trace, context_authority, plan_payload, created_at
                 FROM messages
                 WHERE session_id = ?
                 ORDER BY created_at ASC
@@ -157,16 +197,18 @@ class XiaocaiSessionPersistenceAdapter(SessionRepository):
                 self._runtime.execute(
                     """
                     INSERT INTO messages (
-                        message_id, session_id, user_id, sender_user_id, role, content, created_at,
+                        message_id, session_id, user_id, sender_user_id, run_id, role, content, created_at,
                         attachments, context_refs, knowledge_refs, agent_status, thinking_trace,
-                        execution_trace, knowledge_search, sourcing_candidates, knowledge_citation, context_usage
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        execution_trace, knowledge_search, sourcing_candidates, knowledge_citation,
+                        canvas_state, analysis_payload, context_usage, provider_trace, context_authority, plan_payload
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         normalized["message_id"],
                         normalized["session_id"],
                         session_user_id,
                         session_user_id,
+                        normalized["run_id"],
                         normalized["role"],
                         normalized["content"],
                         normalized["created_at"],
@@ -179,7 +221,12 @@ class XiaocaiSessionPersistenceAdapter(SessionRepository):
                         _json_dumps(normalized["knowledge_search"]) if normalized["knowledge_search"] is not None else None,
                         _json_dumps(normalized["sourcing_candidates"]) if normalized["sourcing_candidates"] is not None else None,
                         _json_dumps(normalized["knowledge_citation"]) if normalized["knowledge_citation"] is not None else None,
+                        _json_dumps(normalized["canvas_state"]) if normalized["canvas_state"] is not None else None,
+                        _json_dumps(normalized["analysis_payload"]) if normalized["analysis_payload"] is not None else None,
                         _json_dumps(normalized["context_usage"]) if normalized["context_usage"] is not None else None,
+                        _json_dumps(normalized["provider_trace"]) if normalized["provider_trace"] is not None else None,
+                        _json_dumps(normalized["context_authority"]) if normalized["context_authority"] is not None else None,
+                        _json_dumps(normalized["plan_payload"]) if normalized["plan_payload"] is not None else None,
                     ),
                 )
             self._runtime.commit()
