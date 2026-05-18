@@ -349,9 +349,7 @@ class OwnershipStore:
                     AND s.status = 'active'
                 GROUP BY p.project_id, p.project_name, p.status, p.created_at, p.updated_at
                 ORDER BY
-                    CASE WHEN COUNT(s.session_id) > 0 THEN 0 ELSE 1 END ASC,
-                    MAX(s.updated_at) DESC,
-                    p.updated_at DESC,
+                    latest_updated_at DESC,
                     p.project_id ASC""",
                 (user_id, user_id),
             )

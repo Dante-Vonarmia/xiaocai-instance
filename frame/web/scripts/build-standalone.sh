@@ -21,7 +21,7 @@ if [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-core/package.json" ] && [ -f "$LO
   npm install --no-save \
     flare-chat-core@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-core" \
     flare-chat-ui@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-ui" \
-    flare-canvas-ui@0.2.5 \
+    flare-canvas-ui@0.2.7 \
     flare-generative-ui@0.2.4
 fi
 

@@ -29,18 +29,25 @@ export type CanvasUiLabels = {
   scenario_title: string
 }
 
-export const FLARE_VERSION = '0.2.11'
+export const FLARE_VERSION = '0.2.13'
 export const DEFAULT_FUNCTION_TYPE = 'auto'
 export const DEFAULT_SESSION_TITLE = '新会话'
 export const DEFAULT_INTERACTION_MODE: InteractionMode = 'auto'
 
 const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 
+function getDefaultProjectName(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `采购项目 ${year}-${month}-${day}`
+}
+
 export const DEFAULT_PROJECT_SLOT: ProjectSlot = {
   key: DEFAULT_PROJECT_ID,
   project_id: DEFAULT_PROJECT_ID,
   subtitle: '项目',
-  name: '采购项目',
+  name: getDefaultProjectName(),
 }
 
 export const DEFAULT_CANVAS_UI_LABELS: CanvasUiLabels = {

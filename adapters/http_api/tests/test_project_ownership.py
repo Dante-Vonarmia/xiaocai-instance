@@ -94,7 +94,7 @@ def test_project_list_includes_session_count_and_latest_activity(client):
     assert projects_response.status_code == 200
     projects = projects_response.json()["projects"]
     matching = next(item for item in projects if item["project_id"] == "proj-activity-123")
-    assert projects[0]["project_id"] == "proj-activity-123"
+    assert projects[0]["project_id"] == "proj-empty-123"
     assert matching["session_count"] == 1
     assert matching["latest_updated_at"]
 

@@ -11,7 +11,7 @@ type SettingsPageProps = {
   onLogout?: () => void
 }
 
-const FLARE_VERSION = '0.2.11'
+const FLARE_VERSION = '0.2.13'
 const PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 
 function toSection(value: string | undefined): SettingsSection {
