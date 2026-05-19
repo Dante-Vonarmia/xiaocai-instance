@@ -817,9 +817,10 @@ async def chat_stream(
                                     yield "event: text.replace\n"
                                     yield f"data: {json.dumps(replacement_event, ensure_ascii=False)}\n\n"
                                     emitted_suppressed_question = True
-                        if done_message is None and not text_accumulator.chunks:
-                            done_message = EMPTY_ASSISTANT_MESSAGE
-                            event = {**event, "message": done_message}
+                        terminal_message_was_empty = done_message is None and not text_accumulator.chunks
+                        if terminal_message_was_empty:
+                            done_message = ""
+                            event = {**event, "message": ""}
                         if not has_native_structured_analysis_payload:
                             analysis_payload = build_analysis_report_projection(
                                 kernel_context=kernel_context,
@@ -829,13 +830,16 @@ async def chat_stream(
                                 force=has_native_analysis_payload,
                             )
                             if analysis_payload:
-                                if not _is_non_empty_text(done_message):
+                                if terminal_message_was_empty or not _is_non_empty_text(done_message):
                                     projected_message = _to_text(analysis_payload.get("markdown"))
                                     if projected_message:
                                         done_message = projected_message
                                         event = replace_event_text(event, projected_message)
                                 event = with_analysis_payload(event, analysis_payload)
                                 projection_events.append(("analysis_payload", analysis_payload))
+                        if terminal_message_was_empty and not _is_non_empty_text(done_message):
+                            done_message = EMPTY_ASSISTANT_MESSAGE
+                            event = replace_event_text(event, done_message)
                     if event_type in ("done", "complete"):
                         for projected_type, projected_payload in projection_events:
                             event_key = f"{projected_type}:{projection_key(projected_payload)}"

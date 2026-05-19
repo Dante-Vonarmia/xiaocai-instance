@@ -65,8 +65,22 @@ def _sourcing_message(payload: dict[str, Any] | None) -> str:
         title = _to_text(record.get("supplier_name")) or _to_text(record.get("title"))
         source_type = _to_text(record.get("source_type")) or "待核验"
         confidence = _to_text(record.get("confidence")) or "low"
+        summary = _to_text(record.get("summary"))
+        reasons = [
+            _to_text(reason)
+            for reason in _as_list(record.get("match_reasons"))
+            if _to_text(reason)
+        ]
+        unresolved = [
+            _to_text(check)
+            for check in _as_list(record.get("unresolved_checks"))
+            if _to_text(check)
+        ]
         if title:
             candidate_lines.append(f"- {title}｜数据来源：{source_type}｜可信度：{confidence}")
+            candidate_lines.append(f"  - 适配说明：{summary or '需结合真实检索结果核验主营品类、交付能力和服务覆盖。'}")
+            candidate_lines.append(f"  - 匹配理由：{'；'.join(reasons) if reasons else '根据当前采购字段生成待核验候选线索。'}")
+            candidate_lines.append(f"  - 待核验事项：{'；'.join(unresolved) if unresolved else '主体资质、历史案例、报价口径、交付排期、售后质保。'}")
     if not candidate_lines:
         candidate_lines.append("- 暂无可确认企业；需接入真实检索结果后补齐候选公司。")
     return "\n".join(
@@ -91,6 +105,11 @@ def _sourcing_message(payload: dict[str, Any] | None) -> str:
             "",
             "## 候选清单",
             *candidate_lines,
+            "",
+            "## 数据来源和可信度说明",
+            "- 当前占位候选不代表真实推荐结果；只有接入供应商库、项目资料或外部检索并完成核验后，才能进入可确认候选。",
+            "- 可信度 low：仅可作为检索入口；可信度 medium/high：需具备资料来源、匹配理由和可复核证据。",
+            "- 下一步建议：补充真实供应商库或联网检索结果后，按资质、案例、交付、价格、售后进行评分。",
         ]
     )
 

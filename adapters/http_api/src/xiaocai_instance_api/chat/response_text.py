@@ -11,6 +11,9 @@ HTML_BREAK_RE = re.compile(r"(?i)(<br\s*/?>|&lt;br\s*/?&gt;)")
 UNSUPPORTED_INTERACTION_MARKERS = (
     "这个交互方式目前还没有开发到",
     "暂时不能直接完成",
+    "我这边没有拿到完整的可展示结果",
+    "你可以继续补充采购目标",
+    "如果这是系统异常",
 )
 
 

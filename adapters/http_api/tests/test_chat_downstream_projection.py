@@ -411,6 +411,8 @@ def test_chat_run_projects_sourcing_when_kernel_raises(monkeypatch, tmp_path):
     assert "优选指标" in payload["message"]
     assert "候选清单字段" in payload["message"]
     assert "数据来源" in payload["message"]
+    assert "待核验事项" in payload["message"]
+    assert len(payload["message"]) >= 600
 
 
 def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_path):
@@ -426,6 +428,11 @@ def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_pat
                 "type": "text.delta",
                 "channel": "assistant",
                 "delta": "这个交互方式目前还没有开发到，暂时不能直接完成。",
+            }
+            yield {
+                "type": "text.delta",
+                "channel": "assistant",
+                "delta": "我这边没有拿到完整的可展示结果，先不直接给结论。",
             }
             yield {"type": "done", "session_id": "sess-unsupported-fallback"}
 
@@ -444,6 +451,7 @@ def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_pat
     assert response.status_code == 200
     assert "这个交互方式目前还没有开发到" not in response.text
     assert "暂时不能直接完成" not in response.text
+    assert "我这边没有拿到完整的可展示结果" not in response.text
     assert "event: analysis_payload" in response.text
     assert "需求分析与 RFX 策略报告" in response.text
     assert "45万" in response.text
