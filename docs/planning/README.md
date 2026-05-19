@@ -111,6 +111,7 @@ planning/status alignment
 | 2026-05-19 | 数据契约字段与别名闭合 | `/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx` | 字段、别名、阶段归属与 domain-pack contract 可追溯 |
 | 2026-05-20 | canonical readiness / 权重 contract 固化 | `docs/contracts/xiaocai-canonical-quality-gates.md` | 字段权重、阻断阈值、草稿阈值、可分析阈值可验收；不新增 runtime |
 | 2026-05-21 | 分析/寻源输出模板 contract 补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，字段依赖与缺字段阻断明确 |
+| 2026-05-20 - 2026-05-22 | 分析报告模板投影串联与用户可见清洗 | `docs/planning/analysis-report-template-projection-plan.md` | 右侧报告按模板格式输出；内部代码、工作流、debug 概念不进入用户可见内容 |
 | 2026-05-22 | 契约与 domain-pack 回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
 | 2026-05-25 | FLARE handoff 包整理 | `docs/contracts/xiaocai-canonical-quality-gates.md` | canonical context 示例、字段策略、模板、验收命令可交付 |
 
@@ -155,6 +156,7 @@ planning/status alignment
 | CHAT-001 | 移除本地 orchestration fallback 与 adapter 伪造 pending | Done | xiaocai | legacy fallback 无残留引用；adapter projection 不覆盖 FLARE 输出；`adapters/http_api/tests` 通过 |
 | CHAT-002 | auto 自然对话保护与梳理投影泄漏回归修复（instance 轻量化） | Done | xiaocai | `mode=auto` 不继承历史 intake 粘性；非显式梳理意图不生成需求梳理投影；普通对话不被缺字段策略阻断；局部失败降级为可继续对话；先补回归测试再改实现。测试清单：`docs/planning/chat-002-test-checklist.md`。验收命令：`.venv/bin/python -m pytest adapters/http_api/tests/test_chat.py adapters/http_api/tests/test_chat_prior_context.py adapters/http_api/tests/test_chat_stream_projection.py adapters/http_api/tests/test_chat_workbench_projection.py adapters/http_api/tests/test_chat_mode_regression.py -q`；结果：`45 passed in 16.63s`。 |
 | CHAT-004 | Intake canonical runtime hardcode cleanup | Done | xiaocai | 清理伪确认值与 runtime 业务选项硬编码；模型/规则输出先进入 candidate，经字段字典和品类目录 canonical 后再进入 confirmed；验收清单：`docs/planning/chat-003-intake-canonical-acceptance-checklist.md#d-intake-canonical-防回归chat-004-必补`；验收命令：`.venv/bin/python -m pytest adapters/http_api/tests -q && .venv/bin/python -m pytest tests/domain_packs -q`；结果：`117 passed` + `19 passed, 42 subtests passed`。 |
+| CHAT-005 | 分析报告模板投影串联与用户可见清洗 | Done | xiaocai | 已串联设置中心 prompt 模板、domain-pack 分析模板、字段归一化与右侧 `analysis_payload`；报告按 RFQ/RFX 业务格式展示；用户可见内容已清洗内部代码/工作流/debug 概念。验收命令：`.venv/bin/python -m pytest adapters/http_api/tests/test_analysis_content_schema_rules.py adapters/http_api/tests/test_chat_downstream_projection.py -q`；结果：`16 passed in 0.79s`；截图证据：`/var/folders/9g/23dgm0mj1sbc2g4wndwk9cr80000gn/T/TemporaryItems/NSIRD_screencaptureui_bc66am/Screenshot 2026-05-19 at 21.45.45.png`。 |
 
 ### P0：数据契约与 canonical 质量门禁（FLARE 执行前置）
 
