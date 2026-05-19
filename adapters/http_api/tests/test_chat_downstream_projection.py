@@ -382,6 +382,37 @@ def test_chat_run_projects_intake_when_kernel_raises(monkeypatch, tmp_path):
     assert "上海" in payload["message"]
 
 
+def test_chat_run_projects_sourcing_when_kernel_raises(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _auth_headers(client)
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_run:
+        mock_run.side_effect = TimeoutError("kernel timeout")
+
+        response = client.post(
+            "/chat/run",
+            headers=headers,
+            json={
+                "message": "基于办公桌椅、上海交付、预算45万、120套，进入智能寻源，输出供应商筛选口径和候选清单结构。",
+                "session_id": "sess-run-sourcing-raises",
+                "context": {"mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["metadata"]["degraded"] is True
+    assert "需求分析与 RFX 策略报告" not in payload["message"]
+    assert "智能寻源候选初筛" in payload["message"]
+    assert "准入门槛" in payload["message"]
+    assert "优选指标" in payload["message"]
+    assert "候选清单字段" in payload["message"]
+    assert "数据来源" in payload["message"]
+
+
 def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))

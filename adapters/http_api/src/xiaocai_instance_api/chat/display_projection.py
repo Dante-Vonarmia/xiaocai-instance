@@ -104,16 +104,6 @@ def build_chat_run_display_projection(
     assistant_message: str = "",
 ) -> tuple[str, dict[str, Any]]:
     """Build a visible response only when FLARE returns no usable text."""
-    analysis_payload = build_analysis_report_projection(
-        kernel_context=kernel_context,
-        mode=mode,
-        user_message=user_message,
-        assistant_message=assistant_message,
-    )
-    analysis_text = _analysis_message(analysis_payload)
-    if analysis_text:
-        return analysis_text, {"analysis_payload": analysis_payload}
-
     sourcing_payload = build_sourcing_candidates_projection(
         kernel_context=kernel_context,
         mode=mode,
@@ -123,6 +113,16 @@ def build_chat_run_display_projection(
     sourcing_text = _sourcing_message(sourcing_payload)
     if sourcing_text:
         return sourcing_text, {"sourcing_candidates": sourcing_payload}
+
+    analysis_payload = build_analysis_report_projection(
+        kernel_context=kernel_context,
+        mode=mode,
+        user_message=user_message,
+        assistant_message=assistant_message,
+    )
+    analysis_text = _analysis_message(analysis_payload)
+    if analysis_text:
+        return analysis_text, {"analysis_payload": analysis_payload}
 
     intake_payload = build_intake_workbench_projection(
         pending_contract=None,

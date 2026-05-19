@@ -6,7 +6,7 @@ from typing import Any
 
 from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
 
-SOURCING_TERMS = ("寻源", "供应商", "找供应商", "候选", "推荐供应商", "智能寻源")
+SOURCING_TERMS = ("寻源", "找供应商", "候选供应商", "推荐供应商", "智能寻源", "候选清单", "供应商筛选")
 BASE_FIELDS = ("产品/服务", "一级品类", "二级品类", "交付地点", "预算金额", "交付时间", "数量", "单位")
 MINIMUM_INPUT_FIELDS = ("产品/服务", "二级品类", "一级品类")
 PLACEHOLDER_POOLS = (
