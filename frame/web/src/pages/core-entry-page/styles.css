@@ -110,19 +110,16 @@
   overflow: hidden;
 }
 
+.core-entry-main > .ant-app {
+  height: 100%;
+  min-height: 0;
+}
+
 /*
  * FLARE 内层根容器会内联 height: 100vh。
  * 在 iOS Safari 下会把底部 composer 放到可视区外。
  * 这里强制改为继承外层可视高度，避免被工具栏遮挡。
  */
-.core-entry-main > .ant-app,
-.core-entry-main > div:first-child {
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-
 @media (max-width: 767px) {
   .core-entry-page {
     --core-entry-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
@@ -143,11 +140,9 @@
     width: 100%;
   }
 
-  .core-entry-main > .ant-app,
-  .core-entry-main > div:first-child {
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
+  .core-entry-main > .ant-app {
+    height: 100%;
+    min-height: 0;
   }
 
   .core-entry-sidebar {

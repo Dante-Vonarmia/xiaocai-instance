@@ -11,12 +11,46 @@
       min-height: -webkit-fill-available;
     }
 
+    html,
+    body {
+      left: 0;
+      overflow: hidden;
+      overscroll-behavior-y: none;
+      position: fixed;
+      top: 0;
+      width: 100%;
+    }
+
+    #root,
+    .core-entry-page,
+    .core-entry-main {
+      overflow: hidden;
+      overscroll-behavior-y: none;
+    }
+
+    .settings-page-main {
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .core-entry-page {
       --core-entry-mobile-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
     }
 
     .settings-page {
       --settings-page-mobile-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .xiaocai-ios-keyboard-open .core-entry-sidebar,
+    .xiaocai-ios-keyboard-open .settings-page-sidebar {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(120%);
+      transition: opacity 0.16s ease, transform 0.16s ease;
+    }
+
+    .xiaocai-ios-keyboard-open .settings-page-main {
+      padding-bottom: 16px;
     }
   }
 }
