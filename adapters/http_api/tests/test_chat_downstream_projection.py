@@ -63,8 +63,13 @@ def test_analysis_request_projects_structured_report(monkeypatch, tmp_path):
     assert "采购策略分析" in response.text
     assert "供应商选择建议" in response.text
     assert "项目实施计划与执行建议" in response.text
-    assert "降本方向" in response.text
-    assert "目标优先级建议" in response.text
+    assert "| 维度 | 说明 |" in response.text
+    assert "| 条款项 | 要求 |" in response.text
+    assert "| 评估维度 | 权重 | 核心考察点 |" in response.text
+    assert "#### 当前假设" in response.text
+    assert "produce_output" not in response.text
+    assert "当前步骤" not in response.text
+    assert "建议采用 RFQ 作为当前主路径" in response.text
     assert "供应商画像" in response.text
     assert "准入门槛" in response.text
     assert "计划建议" in response.text

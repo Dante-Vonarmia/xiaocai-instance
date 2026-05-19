@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from xiaocai_instance_api.chat.analysis_content import compose_document_sections
+from xiaocai_instance_api.chat.analysis_visibility import sanitize_analysis_payload
 from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
 from xiaocai_instance_api.chat.orchestration.mode_resolution import is_intake_mode
 
@@ -92,7 +93,26 @@ def _collect_field_values(kernel_context: dict[str, Any], user_message: str) -> 
 
 def _template_sections(kernel_context: dict[str, Any]) -> list[dict[str, Any]]:
     sections = _as_list(_as_dict(kernel_context.get("analysis_template")).get("sections"))
-    return [item for item in sections if isinstance(item, dict)]
+    normalized = [item for item in sections if isinstance(item, dict)]
+    if not normalized:
+        return []
+    prompt_titles: list[str] = []
+    for item in _as_list(kernel_context.get("domain_prompt_templates")):
+        record = _as_dict(item)
+        if _to_text(record.get("key")) != "requirement_analysis":
+            continue
+        prompt_titles = [_to_text(title) for title in _as_list(record.get("output_contract")) if _to_text(title)]
+        break
+    if not prompt_titles:
+        return normalized
+    by_title = {_to_text(_as_dict(item).get("title")): item for item in normalized}
+    ordered = [by_title[title] for title in prompt_titles if title in by_title]
+    seen_ids = {_to_text(_as_dict(item).get("id")) for item in ordered}
+    for item in normalized:
+        section_id = _to_text(_as_dict(item).get("id"))
+        if section_id not in seen_ids:
+            ordered.append(item)
+    return ordered
 
 
 def _analysis_prompt_instruction(kernel_context: dict[str, Any]) -> str:
@@ -143,6 +163,16 @@ def _markdown(title: str, sections: list[dict[str, Any]]) -> str:
     return "\n".join(lines).strip()
 
 
+def _analysis_toolbar_actions() -> list[dict[str, str]]:
+    """Declare report actions through the Canvas capability contract."""
+    return [
+        {"key": "copy", "icon": "copy", "label": "复制"},
+        {"key": "export_markdown", "icon": "download", "label": "导出"},
+        {"key": "edit", "icon": "edit", "label": "编辑"},
+        {"key": "fullscreen", "icon": "fullscreen", "label": "全屏"},
+    ]
+
+
 def build_analysis_report_projection(
     *,
     kernel_context: dict[str, Any],
@@ -176,8 +206,11 @@ def build_analysis_report_projection(
         rfx_type=rfx_type,
     )
     title = "需求分析与 RFX 策略报告"
-    return {
+    payload = {
         "markdown": _markdown(title, sections),
+        "workspace_capabilities": {
+            "toolbar_actions": _analysis_toolbar_actions(),
+        },
         "document": {
             "analysis_schema_version": "v1",
             "title": title,
@@ -205,3 +238,4 @@ def build_analysis_report_projection(
             "output_plan": ["供应商响应要求", "报价口径", "评分表", "澄清问题清单"],
         },
     }
+    return sanitize_analysis_payload(payload)

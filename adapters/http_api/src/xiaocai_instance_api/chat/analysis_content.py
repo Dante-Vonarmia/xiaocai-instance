@@ -33,36 +33,21 @@ def _fact_line(label: str, values: dict[str, str]) -> str:
     return f"{label}：{value}" if value else f"{label}：待业务确认"
 
 
-def _clean_table_line(line: str) -> str:
-    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-    cells = [cell for cell in cells if cell and set(cell) != {"-"}]
-    if len(cells) >= 2:
-        return f"{cells[0]}：{cells[1]}"
-    return line.strip().strip("|").strip()
+def _display(value: str, fallback: str = "待确认") -> str:
+    text = _to_text(value)
+    return text or fallback
 
 
-def _assistant_notes(assistant_message: str) -> dict[str, list[str]]:
-    text = normalize_assistant_display_text(assistant_message).strip()
-    if not text:
-        return {}
-    keyword_map = {
-        "project-understanding": ("项目概况", "项目名称", "PR编号", "采购目的", "需求提出人", "使用场景"),
-        "market-analysis": ("市场", "供应链", "供应", "品质", "资料", "证据限制"),
-        "cost-analysis": ("成本", "预算", "付款", "价格", "发票", "降本"),
-        "risk-analysis": ("风险", "证据限制", "波动", "延误", "验收", "质保", "校准"),
-        "strategy-suggestion": ("采购策略", "评估", "决策", "RFX", "RFQ", "RFP", "RFI", "RFB", "权重"),
-        "supplier-selection": ("供应商", "画像", "资质", "履约", "服务要求", "候选"),
-        "implementation-plan": ("里程碑", "实施", "流程", "交付", "计划", "05-", "06-", "合同"),
-    }
-    notes: dict[str, list[str]] = {key: [] for key in keyword_map}
-    for raw_line in text.splitlines():
-        line = _clean_table_line(raw_line).lstrip("-•0123456789.、 ").strip()
-        if not line or set(line) <= {"-", "|", " "}:
-            continue
-        for section_id, keywords in keyword_map.items():
-            if any(keyword in line for keyword in keywords) and line not in notes[section_id]:
-                notes[section_id].append(line)
-    return {key: value[:5] for key, value in notes.items() if value}
+def _internal_phrase_tokens() -> tuple[str, ...]:
+    return (
+        "produce_output",
+        "当前步骤",
+        "最终目标",
+        "任务推进状态",
+        "正文/结构",
+        "workflow",
+        "node_",
+    )
 
 
 def _number_from_text(text: str) -> float | None:
@@ -102,6 +87,8 @@ def _contextual_notes(notes: list[str]) -> str:
         text = _to_text(item)
         if not text:
             continue
+        if any(token in text for token in _internal_phrase_tokens()):
+            continue
         # 低置信占位句在正文里已经有最小标注（如“待确认”），不再重复罗列。
         if any(marker in text for marker in ("待业务确认", "待确认", "待补充")):
             continue
@@ -112,6 +99,40 @@ def _contextual_notes(notes: list[str]) -> str:
     if not filtered:
         return ""
     return "\n".join(f"- {item}" for item in filtered)
+
+
+def _clean_table_line(line: str) -> str:
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    cells = [cell for cell in cells if cell and set(cell) != {"-"}]
+    if len(cells) >= 2:
+        return f"{cells[0]}：{cells[1]}"
+    return line.strip().strip("|").strip()
+
+
+def _assistant_notes(assistant_message: str) -> dict[str, list[str]]:
+    text = normalize_assistant_display_text(assistant_message).strip()
+    if not text:
+        return {}
+    keyword_map = {
+        "project-understanding": ("项目概况", "项目名称", "PR编号", "采购目的", "需求提出人", "使用场景"),
+        "market-analysis": ("交付地点", "交付批次", "服务要求", "验收"),
+        "cost-analysis": ("预算", "付款", "发票", "响应时效", "成本"),
+        "risk-analysis": ("风险", "延误", "验收", "质保", "波动"),
+        "strategy-suggestion": ("采购策略", "评估", "决策", "RFX", "RFQ", "RFP", "RFI", "RFB", "权重"),
+        "supplier-selection": ("供应商", "画像", "资质", "履约", "候选"),
+        "implementation-plan": ("里程碑", "实施", "流程", "交付", "计划", "假设", "待补充"),
+    }
+    notes: dict[str, list[str]] = {key: [] for key in keyword_map}
+    for raw_line in text.splitlines():
+        line = _clean_table_line(raw_line).lstrip("-•0123456789.、 ").strip()
+        if not line or set(line) <= {"-", "|", " "}:
+            continue
+        if any(token in line for token in _internal_phrase_tokens()):
+            continue
+        for section_id, keywords in keyword_map.items():
+            if any(keyword in line for keyword in keywords) and line not in notes[section_id]:
+                notes[section_id].append(line)
+    return {key: value[:6] for key, value in notes.items() if value}
 
 
 def _section_dispatch_map() -> dict[str, Any]:
@@ -128,38 +149,49 @@ def _section_dispatch_map() -> dict[str, Any]:
 
 
 def _section_project(values: dict[str, str], notes: list[str]) -> str:
-    facts = ["项目名称", "PR编号", "采购目的", "使用场景", "需求提出人", "一级品类", "二级品类"]
-    lines = [_contextual_notes(notes), "本节用于确认项目目标、采购边界和业务影响范围："]
-    lines.extend(f"- {_fact_line(item, values)}" for item in facts)
-    lines.append("分析结论：若以上字段无异议，可将本项目定位为标准化办公空间配置采购，后续重点放在交期、规格一致性和履约服务约束。")
+    lines = [_contextual_notes(notes), "#### 项目概述", "| 维度 | 说明 |", "| --- | --- |"]
+    lines.extend(
+        [
+            f"| RFX类型 | {_display(_value(values, 'RFX类型') or 'RFQ')} |",
+            f"| 项目目标 | {_display(_value(values, '采购目的', '项目目标'))} |",
+            f"| 项目名称 | {_display(_value(values, '项目名称'))} |",
+            f"| 决策人 | {_display(_value(values, '决策人', '需求提出人'))} |",
+            f"| 使用场景 | {_display(_value(values, '使用场景'))} |",
+            f"| 品类 | {_display(_value(values, '一级品类'))} / {_display(_value(values, '二级品类'))} |",
+        ]
+    )
     return "\n".join(line for line in lines if line)
 
 
 def _section_market(values: dict[str, str], notes: list[str]) -> str:
-    product = _value(values, "产品/服务", "采购目的") or "本次采购对象"
-    location = _value(values, "交付地点") or "目标交付地"
     lines = [_contextual_notes(notes)]
     lines.extend(
         [
-            f"围绕「{product}」和「{location}」交付，应优先判断区域供应可得性、现货/定制周期、安装服务覆盖和售后响应半径。",
-            "若属于办公家具等标准化程度较高的品类，市场供给通常可通过多家供应商比价获得，但交付周期、安装排期和批量一致性会直接影响最终可用性。",
-            "建议补充外部市场价格区间、同城履约案例和主要品牌/材质档位，用于校准报价是否偏离市场合理区间。",
+            "#### 需求与交付范围",
+            f"- **交付地点**：{_display(_value(values, '交付地点'))}",
+            f"- **交付批次**：{_display(_value(values, '交付策略', '交付方式'))}",
+            f"- **服务要求**：{_display(_value(values, '技术要求', '服务要求'), '供应商需提供现场测量、空间复核、安装与清运服务。')}",
+            f"- **验收标准**：{_display(_value(values, '验收口径', '质量标准'), '以平整度、安装稳定性与基础使用功能验收为准。')}",
         ]
     )
     return "\n".join(line for line in lines if line)
 
 
 def _section_cost(values: dict[str, str], notes: list[str]) -> str:
+    budget_amount = _value(values, "预算金额")
+    budget_currency = _value(values, "预算币种") or "CNY"
+    budget_text = f"{budget_amount} {budget_currency}".strip() if budget_amount else "待确认"
     lines = [_contextual_notes(notes)]
     lines.extend(
         [
+            "#### 预算与商务条款",
+            "| 条款项 | 要求 |",
+            "| --- | --- |",
+            f"| 预算金额 | {budget_text} |",
+            f"| 付款节点 | {_display(_value(values, '付款条款'))} |",
+            f"| 发票类型 | {_display(_value(values, '发票类型'))} |",
+            f"| 响应时效 | {_display(_value(values, '响应时效'))} |",
             _unit_budget(values),
-            "成本结构建议拆为：产品/主材成本、定制或模块化配置成本、运输搬运成本、现场测量与安装成本、售后质保成本、项目管理与风险缓冲。",
-            f"- {_fact_line('预算金额', values)}",
-            f"- {_fact_line('数量', values)}",
-            f"- {_fact_line('单位', values)}",
-            f"- {_fact_line('付款条款', values)}",
-            "降本方向：优先统一规格与材质档位、压缩非必要定制项、分项报价比价、将安装/清运/质保服务单列以避免总价不透明。",
         ]
     )
     return "\n".join(line for line in lines if line)
@@ -183,10 +215,15 @@ def _section_strategy(values: dict[str, str], notes: list[str], rfx_type: str) -
     lines = [_contextual_notes(notes)]
     lines.extend(
         [
-            f"建议采用 {rfx_type} 作为当前主路径：在需求规格较明确、供应商可比价的前提下，优先形成统一报价口径并快速完成供应商横向评估。",
-            "目标优先级建议：价格30%、产品质量25%、交付周期20%、安装服务15%、售后质保10%。若业务更重视快速入驻，可将交付周期权重上调。",
-            "执行策略：先发出标准化 RFQ/RFX 包，要求供应商提交分项报价、材料/资质证明、交付排期、安装方案和质保承诺；报价后组织一次澄清，统一缺口后再定标。",
-            "输出物：配置清单、分项报价表、评分表、澄清问题清单、合同关键条款草案。",
+            "#### 供应商评估与决策机制",
+            "| 评估维度 | 权重 | 核心考察点 |",
+            "| --- | --- | --- |",
+            "| 价格 | 30% | 综合报价竞争力、隐性成本透明度 |",
+            "| 质量 | 25% | 材质与工艺、验收标准满足度 |",
+            "| 交付 | 20% | 排期可达成性、安装协同能力 |",
+            "| 服务 | 15% | 安装与售后响应时效 |",
+            "| 风险 | 10% | 合同履约稳定性与风险应对 |",
+            f"建议采用 {rfx_type} 作为当前主路径，优先统一分项报价口径后再进行评审定标。",
         ]
     )
     return "\n".join(line for line in lines if line)
@@ -211,10 +248,28 @@ def _section_plan(values: dict[str, str], notes: list[str]) -> str:
     lines = [_contextual_notes(notes)]
     lines.extend(
         [
-            "优先解决的问题：冻结规格与数量、确认交付楼层/区域、明确安装窗口、统一付款和验收条款。",
-            f"计划建议：围绕「{delivery_time}」倒排，先完成供应商初筛与 RFQ/RFX 发出，再完成报价澄清、评审定标、合同签署、到货安装和整体验收。",
-            "流程建议：若供应商范围不清，可先 RFI 收集候选；若已有供应商池且规格明确，可直接 RFQ；若方案差异较大，再追加 RFP 澄清方案能力。",
-            "资源保障：采购负责人、需求部门验收人、行政/空间负责人、财务付款确认人需提前明确，避免合同与现场验收脱节。",
+            "#### 项目里程碑与排期",
+            "| 里程碑节点 | 计划完成时间 | 关键交付物/动作 |",
+            "| --- | --- | --- |",
+            "| 供应商初筛 | 待确认 | 资质核验、过往案例评估 |",
+            "| 报价比选 | 待确认 | 综合评分、商务谈判 |",
+            "| 合同签署 | 待确认 | 条款确认、法务审批 |",
+            f"| 首批交付安装 | {_display(delivery_time)} | 到货安装、现场初验 |",
+            "",
+            "#### 当前假设",
+            "1. 现场清运仅覆盖本次采购新增家具包装，不包含原有家具拆除。",
+            "2. 首批交付完成并验收后再触发安装阶段付款。",
+            "3. 供应商可提供结构化配置清单并支持现场复尺。",
+            "",
+            "#### 待补充信息 / 高价值校准",
+            "- 高价值校准项：第二批交付（独立办公区与接待区）的截止日期与验收标准是否与首批一致。",
+            "- 建议补充项：详细 BOM 清单（品类、数量、材质/颜色偏好、人体工学等级）。",
+        ]
+    )
+    lines.extend(
+        [
+            f"计划建议：围绕「{delivery_time}」倒排，先完成供应商初筛与 RFX 发出，再完成报价澄清、评审定标、合同签署、到货安装和整体验收。",
+            "流程建议：若供应商范围不清，可先做信息收集；若规格明确，可直接比价；若方案差异大，再做方案型评审。",
         ]
     )
     return "\n".join(line for line in lines if line)
