@@ -179,38 +179,62 @@ textarea {
 }
 
 /* 右侧 Canvas 报告是 FLARE 通用组件；这里仅做 xiaocai 壳层的防溢出约束。 */
-.xiaocai-chat-page .flare-canvas-panel,
-.xiaocai-chat-page .flare-canvas-content,
-.xiaocai-chat-page .flare-canvas-content-main,
-.xiaocai-chat-page .flare-canvas-analysis-support-panel {
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-content,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-content-main,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-analysis-support-panel {
   max-width: 100%;
   min-width: 0;
 }
 
-.xiaocai-chat-page .flare-canvas-panel article,
-.xiaocai-chat-page .flare-canvas-panel p,
-.xiaocai-chat-page .flare-canvas-panel li,
-.xiaocai-chat-page .flare-canvas-panel blockquote {
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel article,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel p,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel li,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel blockquote {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-.xiaocai-chat-page .flare-canvas-panel table {
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel table {
   max-width: 100%;
   min-width: 0 !important;
   table-layout: fixed;
 }
 
-.xiaocai-chat-page .flare-canvas-panel th,
-.xiaocai-chat-page .flare-canvas-panel td {
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel th,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel td {
   overflow-wrap: anywhere;
   white-space: normal !important;
   word-break: break-word;
 }
 
-.xiaocai-chat-page .flare-canvas-panel pre {
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-panel pre {
   max-width: 100%;
   overflow-x: auto;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-content-main article {
+  min-width: 0;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-markdown-content {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-markdown-content table {
+  max-width: 100%;
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-markdown-content th,
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-markdown-content td {
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+  word-break: break-word;
 }
 
 .xiaocai-chat-page .flare-composer-quick-mode-toggle {
