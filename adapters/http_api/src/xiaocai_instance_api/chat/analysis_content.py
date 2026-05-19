@@ -96,7 +96,35 @@ def _unit_budget(values: dict[str, str]) -> str:
 def _contextual_notes(notes: list[str]) -> str:
     if not notes:
         return ""
-    return "\n".join(f"- 已识别信息：{item}" for item in notes)
+    filtered: list[str] = []
+    seen: set[str] = set()
+    for item in notes:
+        text = _to_text(item)
+        if not text:
+            continue
+        # 低置信占位句在正文里已经有最小标注（如“待确认”），不再重复罗列。
+        if any(marker in text for marker in ("待业务确认", "待确认", "待补充")):
+            continue
+        if text in seen:
+            continue
+        seen.add(text)
+        filtered.append(text)
+    if not filtered:
+        return ""
+    return "\n".join(f"- {item}" for item in filtered)
+
+
+def _section_dispatch_map() -> dict[str, Any]:
+    """Schema-like section dispatch contract to avoid hardcoded if/else chains."""
+    return {
+        "project-understanding": lambda values, notes, rfx_type: _section_project(values, notes),
+        "market-analysis": lambda values, notes, rfx_type: _section_market(values, notes),
+        "cost-analysis": lambda values, notes, rfx_type: _section_cost(values, notes),
+        "risk-analysis": lambda values, notes, rfx_type: _section_risk(values, notes),
+        "strategy-suggestion": lambda values, notes, rfx_type: _section_strategy(values, notes, rfx_type),
+        "supplier-selection": lambda values, notes, rfx_type: _section_supplier(values, notes),
+        "implementation-plan": lambda values, notes, rfx_type: _section_plan(values, notes),
+    }
 
 
 def _section_project(values: dict[str, str], notes: list[str]) -> str:
@@ -203,20 +231,9 @@ def compose_section_content(
     _ = user_message
     section_id = _to_text(section.get("id"))
     notes = assistant_notes.get(section_id, [])
-    if section_id == "project-understanding":
-        return _section_project(values, notes)
-    if section_id == "market-analysis":
-        return _section_market(values, notes)
-    if section_id == "cost-analysis":
-        return _section_cost(values, notes)
-    if section_id == "risk-analysis":
-        return _section_risk(values, notes)
-    if section_id == "strategy-suggestion":
-        return _section_strategy(values, notes, rfx_type)
-    if section_id == "supplier-selection":
-        return _section_supplier(values, notes)
-    if section_id == "implementation-plan":
-        return _section_plan(values, notes)
+    render = _section_dispatch_map().get(section_id)
+    if render:
+        return render(values, notes, rfx_type)
     title = _to_text(section.get("title")) or "分析章节"
     return f"围绕「{title}」生成结构化分析初稿，并保留缺口字段用于后续补证。"
 
