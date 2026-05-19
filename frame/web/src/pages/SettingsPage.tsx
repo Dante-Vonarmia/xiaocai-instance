@@ -10,7 +10,7 @@ type SettingsPageProps = {
   onLogout?: () => void
 }
 
-const FLARE_VERSION = '0.2.14'
+const FLARE_VERSION = '0.2.16'
 
 function SettingsPage({ onLogout }: SettingsPageProps) {
   const navigate = useNavigate()

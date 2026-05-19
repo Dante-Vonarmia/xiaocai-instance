@@ -15,7 +15,7 @@ type CoreEntryPageProps = {
 const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'auto'
 const DEFAULT_SESSION_TITLE = import.meta.env.VITE_FLARE_CHAT_DEFAULT_SESSION_TITLE || '新会话'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const FLARE_VERSION = '0.2.14'
+const FLARE_VERSION = '0.2.16'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const navigate = useNavigate()

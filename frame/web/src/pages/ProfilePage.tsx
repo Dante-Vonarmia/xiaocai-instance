@@ -9,7 +9,7 @@ type ProfilePageProps = {
   onLogout?: () => void
 }
 
-const FLARE_VERSION = '0.2.14'
+const FLARE_VERSION = '0.2.16'
 const PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 
 function ProfilePage({ onLogout }: ProfilePageProps) {
