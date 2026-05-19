@@ -162,3 +162,7 @@
 .xiaocai-settings-page .flare-source-drop-zone.is-drag-over::after {
   box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.14) !important;
 }
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page) .flare-canvas-content-main {
+  overflow-x: auto !important;
+}

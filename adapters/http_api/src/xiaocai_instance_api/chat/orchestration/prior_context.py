@@ -72,6 +72,7 @@ def _extract_analysis_template_sections(text: str) -> list[dict]:
                 "required_fields": [],
                 "optional_fields": [],
                 "block_on_missing_required": False,
+                "draft_allowed_when_missing": True,
             }
             sections.append(current)
             current_list = None
@@ -92,6 +93,9 @@ def _extract_analysis_template_sections(text: str) -> list[dict]:
             continue
         if stripped.startswith("block_on_missing_required:"):
             current["block_on_missing_required"] = stripped.split(":", 1)[1].strip().lower() == "true"
+            continue
+        if stripped.startswith("draft_allowed_when_missing:"):
+            current["draft_allowed_when_missing"] = stripped.split(":", 1)[1].strip().lower() == "true"
 
     return sections
 

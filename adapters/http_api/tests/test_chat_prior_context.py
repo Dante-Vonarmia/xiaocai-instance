@@ -109,6 +109,82 @@ def test_chat_run_injects_template_recommendation_prior(client, auth_token):
         assert "采购目的" not in kernel_context["required_missing"]
 
 
+def test_system_prompt_settings_compile_into_kernel_context(client, auth_token):
+    detailed_instruction = (
+        "一、项目理解与核心需求\n"
+        "根据用户输入的所有字段信息，总结概括，便于用户纠正。\n\n"
+        "五、采购策略分析\n"
+        "1、目标优先级权重（先AI生成，用户可配）\n"
+        "获取更详细市场信息、获取高质量解决方案、获取有竞争力的价格、使用更可靠的供应商。\n\n"
+        "六、供应商选择建议\n"
+        "给出供应商画像，并区分准入门槛和优选指标。\n\n"
+        "七、项目实施计划与执行建议\n"
+        "输出采购流程规划、文件与工具准备、资源保障。"
+    )
+    saved_templates = [
+        {
+            "key": "requirement_analysis",
+            "title": "需求分析与 RFX 策略研判",
+            "stage": "需求分析",
+            "input_fields": ["技术要求", "质量标准", "验收口径", "付款条款"],
+            "output_contract": [
+                "项目理解与核心需求",
+                "市场现状和分析",
+                "成本结构分析",
+                "项目风险分析",
+                "采购策略分析",
+                "供应商选择建议",
+                "项目实施计划与执行建议",
+            ],
+            "instruction": detailed_instruction,
+        }
+    ]
+    with (
+        patch("xiaocai_instance_api.chat.context_policy.load_domain_prompt_templates") as prompt_loader,
+        patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat,
+    ):
+        prompt_loader.return_value = saved_templates
+        mock_chat.return_value = {
+            "message": "已按系统设置模板生成。",
+            "cards": [],
+            "session_id": "test-system-prompt-session",
+            "metadata": {},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "message": "请基于现有需求生成RFX策略和需求分析报告",
+                "session_id": "test-system-prompt-session",
+                "context": {
+                    "mode": "auto",
+                    "技术要求": "办公桌符合人体工学",
+                    "质量标准": "三年质保",
+                    "验收口径": "数量、外观、稳定性验收",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        kernel_context = mock_chat.await_args.kwargs["context"]
+        prompt_instructions = kernel_context["domain_prompt_instructions"]
+        prompt_text = kernel_context["domain_system_prompt"]
+
+        assert kernel_context["domain_prompt_templates"] == saved_templates
+        assert prompt_instructions["source"] == "system_settings_and_domain_pack"
+        assert prompt_instructions["active_template"]["key"] == "requirement_analysis"
+        assert prompt_instructions["input_fields"][0]["field"] == "技术要求"
+        assert prompt_instructions["input_fields"][0]["value"] == "办公桌符合人体工学"
+        assert "目标优先级权重" in prompt_text
+        assert "供应商画像" in prompt_text
+        assert "采购流程规划" in prompt_text
+        assert "项目理解与核心需求" in prompt_instructions["output_sections"]
+        assert "采购策略分析" in prompt_instructions["output_sections"]
+        assert "供应商选择建议" in prompt_instructions["output_sections"]
+        assert "项目实施计划与执行建议" in prompt_instructions["output_sections"]
+
+
 def test_chat_prior_keeps_project_name_out_of_chat_question_priority(client, auth_token):
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.return_value = {

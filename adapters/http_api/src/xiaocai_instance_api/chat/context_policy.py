@@ -12,6 +12,10 @@ from xiaocai_instance_api.retrieval.policy_resolver import resolve_enabled_searc
 from xiaocai_instance_api.chat.orchestration.flare_intake_contract import (
     build_flare_intake_contract,
 )
+from xiaocai_instance_api.chat.orchestration.config_prompts import (
+    build_domain_prompt_instructions,
+    load_domain_prompt_templates,
+)
 from xiaocai_instance_api.chat.orchestration.prior_context import build_procurement_prior_context
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.settings import get_settings
@@ -98,6 +102,17 @@ async def enrich_kernel_context_with_retrieval_policy(
     kernel_context["clarification_policy"] = prior.domain_prior.get("clarification_policy", {})
     kernel_context["category_prior"] = prior.domain_prior.get("category_prior", {})
     kernel_context["confidence_policy"] = prior.domain_prior.get("confidence_policy", {})
+    prompt_templates = await load_domain_prompt_templates()
+    if prompt_templates:
+        kernel_context["domain_prompt_templates"] = prompt_templates
+    prompt_instructions = build_domain_prompt_instructions(
+        kernel_context=kernel_context,
+        prompt_templates=prompt_templates,
+        user_message=user_message,
+    )
+    if prompt_instructions:
+        kernel_context["domain_prompt_instructions"] = prompt_instructions
+        kernel_context["domain_system_prompt"] = prompt_instructions["prompt_text"]
     # Bridge xiaocai procurement semantics into FLARE's native intake contract.
     # FLARE remains the owner of question planning, chooser state and composer UI.
     kernel_context.update(

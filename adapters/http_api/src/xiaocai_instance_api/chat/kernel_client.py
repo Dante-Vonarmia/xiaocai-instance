@@ -18,6 +18,7 @@ from typing import Dict, Any, AsyncGenerator
 from functools import lru_cache
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.chat.mode_contract import canonicalize_kernel_context
+from xiaocai_instance_api.chat.kernel_prompt_compat import project_domain_prompt_for_flare
 from xiaocai_instance_api.chat.replay.hooks import (
     append_kernel_capture,
     begin_kernel_capture,
@@ -55,6 +56,7 @@ class KernelClient:
         context_dict = canonicalize_kernel_context(context)
         payload = dict(context_dict)
         payload["message"] = message
+        payload = project_domain_prompt_for_flare(payload)
 
         request_body: Dict[str, Any] = {
             "user_id": user_id,

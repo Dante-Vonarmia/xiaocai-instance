@@ -20,6 +20,12 @@ from xiaocai_instance_api.security.authorization import get_authorization_servic
 from xiaocai_instance_api.chat.kernel_client import KernelStreamConflictError, get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
+from xiaocai_instance_api.chat.analysis_projection import (
+    build_analysis_report_projection,
+    has_structured_analysis_content,
+)
+from xiaocai_instance_api.chat.analysis_events import extract_analysis_payload, with_analysis_payload
+from xiaocai_instance_api.chat.sourcing_projection import build_sourcing_candidates_projection
 from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
 from xiaocai_instance_api.chat.orchestration.mode_resolution import (
     INTAKE_MODE_ALIAS,
@@ -29,6 +35,7 @@ from xiaocai_instance_api.chat.orchestration.mode_resolution import (
 )
 from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
+from xiaocai_instance_api.chat.response_text import normalize_assistant_display_text, replace_event_text
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.chat.stream_turn import (
     build_stream_busy_events,
@@ -513,6 +520,7 @@ async def chat_run(
                 message = _to_text((current_question or {}).get("question_text"))
         if not _is_non_empty_text(message):
             message = EMPTY_ASSISTANT_MESSAGE
+        message = normalize_assistant_display_text(message)
 
         response = ChatRunResponse(
             message=message,
@@ -674,6 +682,8 @@ async def chat_stream(
                 exchange_persisted = False
                 emitted_projection_keys: set[str] = set()
                 emitted_suppressed_question = False
+                has_native_analysis_payload = False
+                has_native_structured_analysis_payload = False
                 event_iter = kernel_client.chat_stream(
                     user_id=claims.user_id,
                     message=request.message,
@@ -682,6 +692,13 @@ async def chat_stream(
                 )
                 async for event in event_iter:
                     event_type = event.get("type", "message")
+                    native_analysis_payload = extract_analysis_payload(event)
+                    if native_analysis_payload:
+                        has_native_analysis_payload = True
+                        has_native_structured_analysis_payload = (
+                            has_native_structured_analysis_payload
+                            or has_structured_analysis_content(native_analysis_payload)
+                        )
                     pending_contract = _build_pending_contract(
                         event if isinstance(event, dict) else {},
                         session_id=request.session_id,
@@ -717,6 +734,15 @@ async def chat_stream(
                     has_native_canvas_state = event_type == "canvas_state" and _has_usable_canvas_state_event(event)
                     if has_native_canvas_state:
                         projection_events = []
+                    if event_type != "sourcing_candidates":
+                        sourcing_payload = build_sourcing_candidates_projection(
+                            kernel_context=kernel_context,
+                            mode=mode,
+                            session_id=request.session_id,
+                            user_message=request.message,
+                        )
+                        if sourcing_payload:
+                            projection_events.append(("sourcing_candidates", sourcing_payload))
                     if native_pending_contract:
                         latest_pending_contract = native_pending_contract
                     if pending_contract:
@@ -735,6 +761,9 @@ async def chat_stream(
                         )
                         if not should_emit_event:
                             continue
+                        display_delta = normalize_assistant_display_text(chunk_delta)
+                        if display_delta != chunk_delta:
+                            event = replace_event_text(event, display_delta)
                         text_accumulator.append(chunk_delta)
                     if event_type in ("done", "complete"):
                         emitted_done_event = True
@@ -742,6 +771,9 @@ async def chat_stream(
                             event=event,
                             final_message_chunks=text_accumulator.chunks,
                         )
+                        if done_message:
+                            done_message = normalize_assistant_display_text(done_message)
+                            event = replace_event_text(event, done_message)
                         # Preserve FLARE text when it exists. Question fallback is
                         # only for native pending events that did not emit text.
                         suppress_contract = latest_pending_contract or native_pending_contract
@@ -762,6 +794,26 @@ async def chat_stream(
                         if done_message is None and not text_accumulator.chunks:
                             done_message = EMPTY_ASSISTANT_MESSAGE
                             event = {**event, "message": done_message}
+                        if not has_native_structured_analysis_payload:
+                            analysis_payload = build_analysis_report_projection(
+                                kernel_context=kernel_context,
+                                mode=mode,
+                                user_message=request.message,
+                                assistant_message=done_message or text_accumulator.final_message(),
+                                force=has_native_analysis_payload,
+                            )
+                            if analysis_payload:
+                                event = with_analysis_payload(event, analysis_payload)
+                                projection_events.append(("analysis_payload", analysis_payload))
+                    if event_type in ("done", "complete"):
+                        for projected_type, projected_payload in projection_events:
+                            event_key = f"{projected_type}:{projection_key(projected_payload)}"
+                            if event_key in emitted_projection_keys:
+                                continue
+                            emitted_projection_keys.add(event_key)
+                            yield f"event: {projected_type}\n"
+                            yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
+                        projection_events = []
                     yield f"event: {event_type}\n"
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                     if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
@@ -774,13 +826,14 @@ async def chat_stream(
                         emitted_projection_keys.add(event_key)
                         yield f"event: {projected_type}\n"
                         yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
-                final_message = done_message or text_accumulator.final_message()
+                final_message = normalize_assistant_display_text(done_message or text_accumulator.final_message())
                 if not _is_non_empty_text(final_message) and _should_suppress_assistant_message(latest_pending_contract):
                     pending_question = _as_object((latest_pending_contract or {}).get("question"))
                     current_question = _as_object((latest_pending_contract or {}).get("current_question"))
                     final_message = _to_text((pending_question or {}).get("question_text"))
                     if not final_message:
                         final_message = _to_text((current_question or {}).get("question_text"))
+                    final_message = normalize_assistant_display_text(final_message)
                 if not _is_non_empty_text(final_message):
                     final_message = EMPTY_ASSISTANT_MESSAGE
                 if not emitted_done_event:
