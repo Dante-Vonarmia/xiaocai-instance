@@ -1,13 +1,100 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Dict, List
 
+from xiaocai_instance_api.chat.orchestration.contract_loader import load_pack_mount_snapshot
 from .constants import CITY_KEYWORDS
 
 
 def contains_any(text: str, keywords: List[str]) -> bool:
     return any(keyword in text for keyword in keywords)
+
+
+def _line_indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _normalize(value: str) -> str:
+    return value.strip().strip("'").strip('"')
+
+
+def _resolve_intent_alias_rules_path() -> Path:
+    root = Path(load_pack_mount_snapshot().domain_packs_root)
+    return root / "shared" / "rules" / "clarification_relevance_rules.yaml"
+
+
+def _parse_intent_alias_rules(text: str) -> dict:
+    data = {
+        "direct_plan_keywords": [],
+        "product_service_aliases": {},
+    }
+    section = ""
+    current_alias = ""
+    alias_indent = 0
+
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = _line_indent(raw_line)
+        if stripped == "direct_plan_keywords:":
+            section = "direct_plan_keywords"
+            current_alias = ""
+            continue
+        if stripped == "product_service_aliases:":
+            section = "product_service_aliases"
+            current_alias = ""
+            continue
+        if section == "direct_plan_keywords" and indent == 0 and stripped.endswith(":") and stripped != "direct_plan_keywords:":
+            section = ""
+            current_alias = ""
+            continue
+        if section == "product_service_aliases" and indent == 0 and stripped.endswith(":") and stripped != "product_service_aliases:":
+            section = ""
+            current_alias = ""
+            continue
+        if section == "direct_plan_keywords" and stripped.startswith("- "):
+            data["direct_plan_keywords"].append(_normalize(stripped[2:]))
+            continue
+        if section == "product_service_aliases" and stripped.startswith("- alias:"):
+            current_alias = _normalize(stripped.split(":", 1)[1]).lower()
+            alias_indent = indent
+            continue
+        if section == "product_service_aliases" and current_alias and indent > alias_indent and stripped.startswith("canonical:"):
+            data["product_service_aliases"][current_alias] = _normalize(stripped.split(":", 1)[1])
+            current_alias = ""
+    return data
+
+
+@lru_cache(maxsize=1)
+def _load_intent_alias_rules() -> dict:
+    path = _resolve_intent_alias_rules_path()
+    try:
+        return _parse_intent_alias_rules(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"direct_plan_keywords": [], "product_service_aliases": {}}
+
+
+def is_direct_plan_request(message: str) -> bool:
+    text = (message or "").strip().lower()
+    if not text:
+        return False
+    rules = _load_intent_alias_rules()
+    keywords = [str(item).strip().lower() for item in rules.get("direct_plan_keywords", []) if str(item).strip()]
+    return contains_any(text, keywords)
+
+
+def _alias_product_service(text: str) -> str:
+    normalized = text.strip().lower()
+    if not normalized:
+        return ""
+    rules = _load_intent_alias_rules()
+    aliases = rules.get("product_service_aliases", {})
+    canonical = aliases.get(normalized)
+    return str(canonical).strip() if isinstance(canonical, str) else ""
 
 
 def extract_slots(text: str) -> Dict[str, str]:
@@ -47,6 +134,10 @@ def extract_slots(text: str) -> Dict[str, str]:
         raw = product_match.group(2).strip()
         if raw:
             slots["产品/服务"] = raw
+    elif not slots.get("产品/服务"):
+        aliased = _alias_product_service(text)
+        if aliased:
+            slots["产品/服务"] = aliased
 
     return slots
 

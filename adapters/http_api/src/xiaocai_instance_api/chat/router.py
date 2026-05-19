@@ -36,6 +36,7 @@ from xiaocai_instance_api.chat.orchestration.mode_resolution import (
 from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.display_projection import build_chat_run_display_projection
+from xiaocai_instance_api.chat.display_projection import build_direct_plan_with_missing_checklist
 from xiaocai_instance_api.chat.response_text import normalize_assistant_display_text, replace_event_text
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.chat.stream_turn import (
@@ -337,6 +338,16 @@ def _pending_question_text(pending_contract: dict | None) -> str:
     return _to_text((pending_question or {}).get("question_text")) or _to_text((current_question or {}).get("question_text"))
 
 
+def _confidence_action(
+    *,
+    pending_contract: dict | None,
+    kernel_context: dict | None,
+) -> str:
+    pending_policy = _as_object(_as_object(pending_contract or {}).get("confidence_policy")) or {}
+    context_policy = _as_object(_as_object(kernel_context or {}).get("confidence_policy")) or {}
+    return _to_text(pending_policy.get("action")) or _to_text(context_policy.get("action"))
+
+
 def _ensure_response_cards(
     cards: list[dict],
     mode: str | None,
@@ -521,6 +532,19 @@ async def chat_run(
                 message = _to_text((current_question or {}).get("question_text"))
         projection_metadata = {}
         message = normalize_assistant_display_text(message)
+        confidence_action = _confidence_action(
+            pending_contract=pending_contract,
+            kernel_context=kernel_context,
+        )
+        if confidence_action == "provide_draft_plan_with_missing_checklist":
+            message, projection_metadata = build_direct_plan_with_missing_checklist(
+                kernel_context=kernel_context,
+                mode=mode,
+                session_id=request.session_id,
+                user_message=request.message,
+                pending_contract=pending_contract,
+            )
+            message = normalize_assistant_display_text(message)
         if not _is_non_empty_text(message):
             message, projection_metadata = build_chat_run_display_projection(
                 kernel_context=kernel_context,
@@ -800,6 +824,22 @@ async def chat_stream(
                             else:
                                 done_message = None
                                 event = replace_event_text(event, "")
+                        confidence_action = _confidence_action(
+                            pending_contract=latest_pending_contract or native_pending_contract,
+                            kernel_context=kernel_context,
+                        )
+                        if confidence_action == "provide_draft_plan_with_missing_checklist":
+                            action_message, _ = build_direct_plan_with_missing_checklist(
+                                kernel_context=kernel_context,
+                                mode=mode,
+                                session_id=request.session_id,
+                                user_message=request.message,
+                                pending_contract=latest_pending_contract or native_pending_contract,
+                            )
+                            action_message = normalize_assistant_display_text(action_message)
+                            if _is_non_empty_text(action_message):
+                                done_message = action_message
+                                event = replace_event_text(event, action_message)
                         # Preserve FLARE text when it exists. Question fallback is
                         # only for native pending events that did not emit text.
                         suppress_contract = latest_pending_contract or native_pending_contract
@@ -862,6 +902,21 @@ async def chat_stream(
                         yield f"event: {projected_type}\n"
                         yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
                 final_message = normalize_assistant_display_text(done_message or text_accumulator.final_message())
+                final_confidence_action = _confidence_action(
+                    pending_contract=latest_pending_contract,
+                    kernel_context=kernel_context,
+                )
+                if final_confidence_action == "provide_draft_plan_with_missing_checklist":
+                    action_message, _ = build_direct_plan_with_missing_checklist(
+                        kernel_context=kernel_context,
+                        mode=mode,
+                        session_id=request.session_id,
+                        user_message=request.message,
+                        pending_contract=latest_pending_contract,
+                    )
+                    action_message = normalize_assistant_display_text(action_message)
+                    if _is_non_empty_text(action_message):
+                        final_message = action_message
                 if not _is_non_empty_text(final_message) and _should_suppress_assistant_message(latest_pending_contract):
                     pending_question = _as_object((latest_pending_contract or {}).get("question"))
                     current_question = _as_object((latest_pending_contract or {}).get("current_question"))

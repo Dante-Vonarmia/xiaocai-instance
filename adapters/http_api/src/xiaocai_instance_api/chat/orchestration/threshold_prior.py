@@ -46,6 +46,7 @@ def build_confidence_policy(
     category_prior: dict,
     readiness_score: float,
     clarification_policy: dict,
+    message_intent_signals: dict | None = None,
 ) -> dict:
     rules = _parse_threshold_rules(_resolve_threshold_rules_path().read_text(encoding="utf-8"))
     thresholds = rules.get("thresholds", {})
@@ -54,13 +55,17 @@ def build_confidence_policy(
     category_confidence = float(category_prior.get("confidence_score") or 0.0)
     ask_in_chat = clarification_policy.get("priority_order", [])
     defer_to_canvas = clarification_policy.get("defer_to_canvas", [])
+    intent_signals = message_intent_signals if isinstance(message_intent_signals, dict) else {}
 
     action = "proceed"
     should_clarify_before_commit = False
     should_defer_detail_fields_to_canvas = False
     rationale = "thresholds_passed"
 
-    if category_confidence < float(thresholds.get("category_confidence_lt_for_category_clarification", 0.0)):
+    if intent_signals.get("wants_direct_plan"):
+        action = str(policies.get("when_direct_plan_requested") or "provide_draft_plan_with_missing_checklist")
+        rationale = "direct_plan_requested"
+    elif category_confidence < float(thresholds.get("category_confidence_lt_for_category_clarification", 0.0)):
         action = str(policies.get("when_low_category_confidence") or "clarify_category_first")
         should_clarify_before_commit = True
         rationale = "low_category_confidence"

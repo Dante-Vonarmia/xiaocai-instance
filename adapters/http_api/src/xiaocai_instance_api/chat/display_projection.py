@@ -114,6 +114,53 @@ def _sourcing_message(payload: dict[str, Any] | None) -> str:
     )
 
 
+def build_direct_plan_with_missing_checklist(
+    *,
+    kernel_context: dict[str, Any],
+    mode: str | None,
+    session_id: str,
+    user_message: str,
+    pending_contract: dict[str, Any] | None,
+) -> tuple[str, dict[str, Any]]:
+    missing_fields = [
+        _to_text(item)
+        for item in _as_list(_as_dict(pending_contract).get("missing_fields"))
+        if _to_text(item)
+    ]
+    sourcing_payload = build_sourcing_candidates_projection(
+        kernel_context=kernel_context,
+        mode=mode,
+        session_id=session_id,
+        user_message=user_message,
+    )
+    sourcing_text = _sourcing_message(sourcing_payload)
+    if sourcing_text:
+        checklist = "\n".join(f"- {field}" for field in missing_fields) or "- 暂无"
+        message = "\n".join(
+            [
+                "已按当前信息给出初版寻源方案（可直接执行首轮筛选）。",
+                "",
+                sourcing_text,
+                "",
+                "## 待确认清单",
+                checklist,
+            ]
+        )
+        return message, {"sourcing_candidates": sourcing_payload}
+    checklist = "\n".join(f"- {field}" for field in missing_fields) or "- 暂无"
+    return (
+        "\n".join(
+            [
+                "已按当前信息生成初版执行方案。",
+                "",
+                "## 待确认清单",
+                checklist,
+            ]
+        ),
+        {},
+    )
+
+
 def build_chat_run_display_projection(
     *,
     kernel_context: dict[str, Any],

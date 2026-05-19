@@ -1,0 +1,22 @@
+pack_id: shared_intent_slot_alias
+version: v1
+scope: p0
+
+direct_plan_keywords:
+  - 直接给方案
+  - 直接给我方案
+  - 先给方案
+  - 直接找供应商
+  - 直接推荐供应商
+
+product_service_aliases:
+  - alias: crm
+    canonical: CRM系统
+  - alias: erp
+    canonical: ERP系统
+  - alias: oa
+    canonical: OA系统
+  - alias: bi
+    canonical: BI系统
+  - alias: saas
+    canonical: SaaS软件

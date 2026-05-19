@@ -7,7 +7,7 @@ from xiaocai_instance_api.chat.orchestration.contract_loader import (
     load_contracts,
     load_pack_mount_snapshot,
 )
-from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
+from xiaocai_instance_api.chat.orchestration.extractor import extract_slots, is_direct_plan_request
 from xiaocai_instance_api.chat.orchestration.field_prior import (
     build_missing_field_priorities,
 )
@@ -200,6 +200,9 @@ def build_procurement_prior_context(
     rfx_template = _extract_rfx_templates(contract_text)
     active_stage = _resolve_active_stage(mode)
     message_slots = extract_slots(user_message or "") if user_message else {}
+    message_intent_signals = {
+        "wants_direct_plan": is_direct_plan_request(user_message or ""),
+    }
     category_prior = build_taxonomy_prior(
         user_message=user_message,
         kernel_context=kernel_context,
@@ -251,6 +254,7 @@ def build_procurement_prior_context(
         category_prior=category_prior,
         readiness_score=readiness_score,
         clarification_policy=clarification_policy,
+        message_intent_signals=message_intent_signals,
     )
     clarification_policy["ask_missing_fields_one_by_one"] = confidence_policy["should_clarify_before_commit"]
     domain_prior = {
@@ -259,6 +263,7 @@ def build_procurement_prior_context(
         "required_fields": required_fields,
         "filled_fields": filled_fields,
         "message_extracted_fields": message_slots,
+        "message_intent_signals": message_intent_signals,
         "missing_fields": missing_fields,
         "missing_fields_with_priority": missing_fields_with_priority,
         "missing_fields_with_relevance": relevance_prior["missing_fields_with_relevance"],

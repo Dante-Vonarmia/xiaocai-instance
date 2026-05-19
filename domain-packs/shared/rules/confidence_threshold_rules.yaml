@@ -9,6 +9,7 @@ thresholds:
   readiness_score_lt_for_requirement_clarification: 0.35
 
 policies:
+  when_direct_plan_requested: provide_draft_plan_with_missing_checklist
   when_low_category_confidence: clarify_category_first
   when_low_readiness_score: clarify_requirement_first
   when_no_relevant_chat_fields: defer_to_canvas
