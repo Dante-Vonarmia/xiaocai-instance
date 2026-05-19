@@ -35,6 +35,7 @@ from xiaocai_instance_api.chat.orchestration.mode_resolution import (
 )
 from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
+from xiaocai_instance_api.chat.display_projection import build_chat_run_display_projection
 from xiaocai_instance_api.chat.response_text import normalize_assistant_display_text, replace_event_text
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.chat.stream_turn import (
@@ -518,9 +519,17 @@ async def chat_run(
             message = _to_text((pending_question or {}).get("question_text"))
             if not message:
                 message = _to_text((current_question or {}).get("question_text"))
+        projection_metadata = {}
+        message = normalize_assistant_display_text(message)
+        if not _is_non_empty_text(message):
+            message, projection_metadata = build_chat_run_display_projection(
+                kernel_context=kernel_context,
+                mode=mode,
+                session_id=request.session_id,
+                user_message=request.message,
+            )
         if not _is_non_empty_text(message):
             message = EMPTY_ASSISTANT_MESSAGE
-        message = normalize_assistant_display_text(message)
 
         response = ChatRunResponse(
             message=message,
@@ -534,6 +543,7 @@ async def chat_run(
             metadata={
                 **(result.get("metadata", {}) if isinstance(result.get("metadata"), dict) else {}),
                 **({"pending_contract": pending_contract} if pending_contract else {}),
+                **projection_metadata,
                 **({"intake_session_id": request.session_id} if mode and _is_intake_mode(mode) else {}),
             },
         )
@@ -762,9 +772,11 @@ async def chat_stream(
                         if not should_emit_event:
                             continue
                         display_delta = normalize_assistant_display_text(chunk_delta)
+                        if not display_delta:
+                            continue
                         if display_delta != chunk_delta:
                             event = replace_event_text(event, display_delta)
-                        text_accumulator.append(chunk_delta)
+                        text_accumulator.append(display_delta)
                     if event_type in ("done", "complete"):
                         emitted_done_event = True
                         done_message, event = _resolve_stream_terminal_message(
@@ -772,8 +784,13 @@ async def chat_stream(
                             final_message_chunks=text_accumulator.chunks,
                         )
                         if done_message:
-                            done_message = normalize_assistant_display_text(done_message)
-                            event = replace_event_text(event, done_message)
+                            normalized_done_message = normalize_assistant_display_text(done_message)
+                            if normalized_done_message:
+                                done_message = normalized_done_message
+                                event = replace_event_text(event, done_message)
+                            else:
+                                done_message = None
+                                event = replace_event_text(event, "")
                         # Preserve FLARE text when it exists. Question fallback is
                         # only for native pending events that did not emit text.
                         suppress_contract = latest_pending_contract or native_pending_contract
@@ -803,6 +820,11 @@ async def chat_stream(
                                 force=has_native_analysis_payload,
                             )
                             if analysis_payload:
+                                if not _is_non_empty_text(done_message):
+                                    projected_message = _to_text(analysis_payload.get("markdown"))
+                                    if projected_message:
+                                        done_message = projected_message
+                                        event = replace_event_text(event, projected_message)
                                 event = with_analysis_payload(event, analysis_payload)
                                 projection_events.append(("analysis_payload", analysis_payload))
                     if event_type in ("done", "complete"):

@@ -319,3 +319,71 @@ def test_sourcing_request_projects_candidate_payload(monkeypatch, tmp_path):
     assert "外部检索候选池" in response.text
     assert '"base_ready_for_matching": true' in response.text
     assert '"render_hint": "sourcing_candidates"' in response.text
+
+
+def test_chat_run_projects_intake_when_kernel_text_is_unusable(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _auth_headers(client)
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_run:
+        mock_run.return_value = {"message": "", "cards": [], "session_id": "sess-run-intake-projection"}
+
+        response = client.post(
+            "/chat/run",
+            headers=headers,
+            json={
+                "message": "我要采购一批办公桌椅，用于上海新办公室开放办公区，预算45万元，数量120套，2周内交付。请先帮我梳理需求。",
+                "session_id": "sess-run-intake-projection",
+                "context": {"mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    message = response.json()["message"]
+    assert "我这边没有拿到完整的可展示结果" not in message
+    assert "需求梳理草稿" in message
+    assert "办公桌椅" in message
+    assert "45万" in message
+    assert "120" in message
+    assert "上海" in message
+
+
+def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _auth_headers(client)
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def mock_generator():
+            yield {
+                "type": "text.delta",
+                "channel": "assistant",
+                "delta": "这个交互方式目前还没有开发到，暂时不能直接完成。",
+            }
+            yield {"type": "done", "session_id": "sess-unsupported-fallback"}
+
+        mock_stream.return_value = mock_generator()
+
+        response = client.post(
+            "/chat/stream",
+            headers=headers,
+            json={
+                "message": "请基于预算45万、120套办公桌椅、上海交付，生成RFX策略报告。",
+                "session_id": "sess-unsupported-fallback",
+                "context": {"mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    assert "这个交互方式目前还没有开发到" not in response.text
+    assert "暂时不能直接完成" not in response.text
+    assert "event: analysis_payload" in response.text
+    assert "需求分析与 RFX 策略报告" in response.text
+    assert "45万" in response.text
+    assert "120" in response.text
+    assert "上海" in response.text
