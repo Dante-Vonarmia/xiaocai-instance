@@ -145,10 +145,10 @@
   .settings-page {
     --settings-page-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
 
+    flex-direction: column-reverse;
     height: var(--xiaocai-app-viewport-height);
     min-height: var(--xiaocai-app-viewport-height);
     overflow: hidden;
-    position: relative;
     padding-left: var(--xiaocai-safe-left);
     padding-right: var(--xiaocai-safe-right);
   }
@@ -157,17 +157,15 @@
     align-items: center;
     border-right: 0;
     border-top: 1px solid #e5e7eb;
-    bottom: 0;
     box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06);
+    flex: 0 0 var(--settings-page-mobile-nav-height);
     flex-direction: row;
     gap: 10px;
     height: var(--settings-page-mobile-nav-height);
-    left: 0;
     min-height: 0;
     min-width: 0;
     padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
-    position: absolute;
-    right: 0;
+    position: relative;
     width: 100%;
     z-index: 30;
   }

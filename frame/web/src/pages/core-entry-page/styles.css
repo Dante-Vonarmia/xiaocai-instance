@@ -110,14 +110,27 @@
   overflow: hidden;
 }
 
+/*
+ * FLARE 内层根容器会内联 height: 100vh。
+ * 在 iOS Safari 下会把底部 composer 放到可视区外。
+ * 这里强制改为继承外层可视高度，避免被工具栏遮挡。
+ */
+.core-entry-main > .ant-app,
+.core-entry-main > div:first-child {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
 @media (max-width: 767px) {
   .core-entry-page {
     --core-entry-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
 
+    flex-direction: column-reverse;
     height: var(--xiaocai-app-viewport-height);
     min-height: var(--xiaocai-app-viewport-height);
     overflow: hidden;
-    position: relative;
     padding-left: var(--xiaocai-safe-left);
     padding-right: var(--xiaocai-safe-right);
   }
@@ -128,6 +141,13 @@
     min-height: 0;
     overflow: hidden;
     width: 100%;
+  }
+
+  .core-entry-main > .ant-app,
+  .core-entry-main > div:first-child {
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
   }
 
   .core-entry-sidebar {
@@ -142,14 +162,13 @@
     min-height: 0;
     min-width: 0;
     padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
-    position: absolute;
-    inset: auto 0 0;
+    position: relative;
     width: 100%;
     z-index: 30;
   }
 
   .core-entry-main .flare-chat-standalone-surface {
-    padding-bottom: var(--core-entry-mobile-nav-height);
+    padding-bottom: 0;
   }
 
   .core-entry-branding {

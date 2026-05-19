@@ -1,0 +1,22 @@
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    :root {
+      --xiaocai-app-viewport-height: -webkit-fill-available;
+    }
+
+    html,
+    body,
+    #root {
+      height: -webkit-fill-available;
+      min-height: -webkit-fill-available;
+    }
+
+    .core-entry-page {
+      --core-entry-mobile-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .settings-page {
+      --settings-page-mobile-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
