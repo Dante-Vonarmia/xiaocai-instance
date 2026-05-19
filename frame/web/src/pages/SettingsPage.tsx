@@ -3,14 +3,13 @@ import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SystemConfigPanel from '@/components/settings/SystemConfigPanel'
 import { APP_ROUTES } from '@/constants/routes'
+import { FLARE_VERSION } from '@/constants/version'
 import { SettingsProvider } from '@/context/SettingsContext'
 import './settings-page.css'
 
 type SettingsPageProps = {
   onLogout?: () => void
 }
-
-const FLARE_VERSION = '0.2.16'
 
 function SettingsPage({ onLogout }: SettingsPageProps) {
   const navigate = useNavigate()

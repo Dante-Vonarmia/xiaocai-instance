@@ -3,13 +3,13 @@ import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProfilePanel from '@/components/settings/ProfilePanel'
 import { APP_ROUTES } from '@/constants/routes'
+import { FLARE_VERSION } from '@/constants/version'
 import './settings-page.css'
 
 type ProfilePageProps = {
   onLogout?: () => void
 }
 
-const FLARE_VERSION = '0.2.16'
 const PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 
 function ProfilePage({ onLogout }: ProfilePageProps) {

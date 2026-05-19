@@ -2,6 +2,7 @@ import { FileTextOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from 
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { App as FlareChatCoreApp } from 'flare-chat-core'
+import { FLARE_VERSION } from '@/constants/version'
 import { APP_ROUTES } from '@/constants/routes'
 import { useBranding } from '@/hooks/chat/useBranding'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
@@ -15,7 +16,6 @@ type CoreEntryPageProps = {
 const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'auto'
 const DEFAULT_SESSION_TITLE = import.meta.env.VITE_FLARE_CHAT_DEFAULT_SESSION_TITLE || '新会话'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const FLARE_VERSION = '0.2.16'
 
 function CoreEntryPage({ onLogout }: CoreEntryPageProps) {
   const navigate = useNavigate()
