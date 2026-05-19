@@ -1,7 +1,11 @@
 .core-entry-page {
   background: #f6f8fc;
   display: flex;
-  height: 100vh;
+  height: var(--xiaocai-app-viewport-height);
+  min-height: var(--xiaocai-app-viewport-height);
+  overflow: hidden;
+  padding-left: var(--xiaocai-safe-left);
+  padding-right: var(--xiaocai-safe-right);
 }
 
 .core-entry-sidebar {
@@ -101,17 +105,21 @@
 
 .core-entry-main {
   flex: 1;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 767px) {
   .core-entry-page {
     --core-entry-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
 
-    height: 100dvh;
-    min-height: 0;
+    height: var(--xiaocai-app-viewport-height);
+    min-height: var(--xiaocai-app-viewport-height);
     overflow: hidden;
     position: relative;
+    padding-left: var(--xiaocai-safe-left);
+    padding-right: var(--xiaocai-safe-right);
   }
 
   .core-entry-main {

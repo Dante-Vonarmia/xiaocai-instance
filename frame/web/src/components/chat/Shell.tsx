@@ -35,7 +35,7 @@ export function Shell({ onLogout, onProfileClick, workspace }: ShellProps) {
   ), [onLogout])
 
   return (
-    <div className="xiaocai-chat-page" style={{ height: '100vh', display: 'flex', background: '#f6f8fc' }}>
+    <div className="xiaocai-chat-page" style={{ display: 'flex', background: '#f6f8fc' }}>
       <aside
         style={{
           width: '80px',

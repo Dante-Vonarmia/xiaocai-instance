@@ -1,8 +1,9 @@
 .auth-screen {
   align-items: center;
   display: grid;
-  min-height: 100vh;
-  padding: 24px;
+  min-height: var(--xiaocai-app-viewport-height);
+  padding: calc(var(--xiaocai-safe-top) + 24px) calc(var(--xiaocai-safe-right) + 24px)
+    calc(var(--xiaocai-safe-bottom) + 24px) calc(var(--xiaocai-safe-left) + 24px);
 }
 
 .auth-card {

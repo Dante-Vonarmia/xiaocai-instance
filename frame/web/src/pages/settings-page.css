@@ -1,7 +1,11 @@
 .settings-page {
   background: #f6f8fc;
   display: flex;
-  height: 100vh;
+  height: var(--xiaocai-app-viewport-height);
+  min-height: var(--xiaocai-app-viewport-height);
+  overflow: hidden;
+  padding-left: var(--xiaocai-safe-left);
+  padding-right: var(--xiaocai-safe-right);
 }
 
 .settings-page-sidebar {
@@ -112,8 +116,12 @@
 
 .settings-page-main {
   flex: 1;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 20px 24px;
 }
 
@@ -137,10 +145,12 @@
   .settings-page {
     --settings-page-mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
 
-    height: 100dvh;
-    min-height: 0;
+    height: var(--xiaocai-app-viewport-height);
+    min-height: var(--xiaocai-app-viewport-height);
     overflow: hidden;
     position: relative;
+    padding-left: var(--xiaocai-safe-left);
+    padding-right: var(--xiaocai-safe-right);
   }
 
   .settings-page-sidebar {
