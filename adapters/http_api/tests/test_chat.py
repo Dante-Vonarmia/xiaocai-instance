@@ -412,7 +412,11 @@ def test_chat_run_returns_error_when_kernel_fails_even_if_fallback_enabled(monke
 
         assert response.status_code == 200
         data = response.json()
-        assert data["message"] == EMPTY_ASSISTANT_MESSAGE
+        assert data["message"] != EMPTY_ASSISTANT_MESSAGE
+        assert "需求分析与 RFX 策略报告" in data["message"]
+        assert "50万" in data["message"]
+        assert "上海" in data["message"]
+        assert "500" in data["message"]
         assert data["metadata"]["degraded"] is True
 
 

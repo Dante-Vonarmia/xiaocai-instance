@@ -351,6 +351,37 @@ def test_chat_run_projects_intake_when_kernel_text_is_unusable(monkeypatch, tmp_
     assert "上海" in message
 
 
+def test_chat_run_projects_intake_when_kernel_raises(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _auth_headers(client)
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_run:
+        mock_run.side_effect = TimeoutError("kernel timeout")
+
+        response = client.post(
+            "/chat/run",
+            headers=headers,
+            json={
+                "message": "我要采购一批办公桌椅，用于上海新办公室开放办公区，预算45万元，数量120套，2周内交付。请先帮我梳理需求。",
+                "session_id": "sess-run-intake-raises",
+                "context": {"mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["metadata"]["degraded"] is True
+    assert "我这边没有拿到完整的可展示结果" not in payload["message"]
+    assert "需求梳理草稿" in payload["message"]
+    assert "办公桌椅" in payload["message"]
+    assert "45万" in payload["message"]
+    assert "120" in payload["message"]
+    assert "上海" in payload["message"]
+
+
 def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))

@@ -557,14 +557,23 @@ async def chat_run(
     except HTTPException:
         raise
     except Exception as e:
+        message, projection_metadata = build_chat_run_display_projection(
+            kernel_context=locals().get("kernel_context") if isinstance(locals().get("kernel_context"), dict) else {},
+            mode=locals().get("mode") if isinstance(locals().get("mode"), str) else None,
+            session_id=request.session_id,
+            user_message=request.message,
+        )
+        if not _is_non_empty_text(message):
+            message = EMPTY_ASSISTANT_MESSAGE
         fallback_response = ChatRunResponse(
-            message=EMPTY_ASSISTANT_MESSAGE,
+            message=message,
             cards=[],
             session_id=request.session_id,
             metadata={
                 "degraded": True,
                 "degrade_reason": "kernel_exception",
                 "degrade_detail": str(e),
+                **projection_metadata,
             },
         )
         conversation_store = get_conversation_store()
