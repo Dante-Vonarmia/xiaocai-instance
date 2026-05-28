@@ -2,29 +2,36 @@
 
 ## 目的
 
-统一约束以下分层，避免后续开发重复出现“在 instance 侧重写 FLARE 能力”问题：
+统一约束以下分层，避免后续开发重复出现“在 xiaocai 侧重写 FLARE 能力”问题：
 
 - `FLARE`：平台能力层（像组件库）
-- `xiaocai instance`：业务装配层（只配置，不重写内核）
+- `xiaocai instance`：采购实例层（使用、配置、连接和沉淀业务资产，不重写内核）
 
 ## 分层职责
 
 ### 1. FLARE（平台能力层）
 
-负责提供通用能力，不承载 xiaocai 业务定制内容：
+负责提供通用能力，不承载 xiaocai 采购业务定制内容：
 
 - 通用聊天交互框架（会话、输入区、空态、时间线、SSE 事件处理）
 - 通用插槽和协议（`starterPrompts`、`uiLabels`、`modeQuickEntries` 等）
 - 可复用状态管理与渲染机制
+- 通用 mode / workflow / intake / readiness / canvas canonical projection
+- 通用 stream / patch / event / provider normalization
+- 通用 MCP / tool / connector runtime 能力（若产品需要）
 
-### 2. xiaocai instance（业务装配层）
+### 2. xiaocai instance（采购实例层）
 
-负责装配 xiaocai 业务内容，不改 FLARE 内核行为：
+负责将 FLARE 能力实例化到采购场景，不改 FLARE 内核行为：
 
 - 品牌和文案（`product_name`、`brand_tag`、`uiLabels`）
 - 推荐模板内容（`starterPrompts`）
 - 模式入口配置（`modeQuickEntries`）
 - 项目/身份上下文、API 绑定、权限范围
+- 采购 domain pack、字段、品类、模板、术语、数据契约
+- 采购场景的外部数据源、MCP、供应商库、资料库连接配置
+- 用户、项目、会话、资料、上传、权限等 instance 使用层能力
+- 将采购上下文映射为 FLARE 已定义的输入合同，并消费 FLARE 输出投影
 
 ## 强制约束（MUST / MUST NOT）
 
@@ -33,28 +40,43 @@
 - 业务模板、业务文案、品牌信息必须放在 instance 配置层。
 - 仅通过 FLARE 暴露的 props/协议接入能力。
 - 当需求是“改模板内容/文案/模式项”时，只改 instance。
+- 采购字段、品类、模板、术语、外部数据源配置必须留在 xiaocai instance / domain pack。
+- FLARE 已有能力必须优先复用；如果现有接口不能承接，先向 FLARE 提能力缺口。
+- provider / LLM / MCP 返回必须先 normalize 到 xiaocai 或 FLARE 合同，再进入业务状态或投影。
 
 ### MUST NOT
 
 - 不在 instance 侧复制或重写 FLARE 组件交互逻辑。
 - 不将 xiaocai 业务文案硬编码到 FLARE 通用包。
 - 不因单一 instance 诉求直接改 FLARE 默认行为（除非确认是平台级能力缺口）。
+- 不在 xiaocai 本地新增 mode runtime、workflow engine、intake engine、readiness engine、canvas canonical engine。
+- 不用关键词、fallback、UI 投影或 domain pack 直接改变主流程状态。
+- 不把 domain pack 当作 runtime controller；domain pack 只能提供业务知识、字段、模板、策略配置。
+- 不把 UI projection 当作 authoritative backend state。
 
 ## 变更决策规则
 
 先问一个问题：这是“能力”还是“内容”？
 
 - 能力缺失（FLARE 现有 props 无法承接）：
-  - 先补 FLARE 通用扩展点，再由 instance 配置使用。
+  - 先记录为 FLARE 能力缺口；由 FLARE 补通用扩展点，再由 xiaocai 配置使用。
 - 内容调整（模板文本、文案、品牌、模式项）：
   - 只改 instance 配置，不改 FLARE 内核。
+- 采购资产调整（字段、品类、模板、MCP/source 配置）：
+  - 只改 xiaocai domain pack / instance config，不新增运行时机制。
+- 运行机制调整（mode、workflow、canvas、readiness、stream、patch、MCP runtime）：
+  - 不在 xiaocai 本地开发，必须回到 FLARE。
 
 ## 本仓库落点
 
 - instance 装配入口：
-  - [ChatPage.tsx](/Users/dantevonalcatraz/Development/procurement-agents/frame/web/src/pages/ChatPage.tsx)
+  - `/Users/dantevonalcatraz/Development/procurement-agents/frame/web/src/pages/chat-page/index.tsx`
 - 当前推荐模板配置示例：
   - `starterPrompts`（同文件内 `INSTANCE_STARTER_PROMPTS`）
+- instance API 主边界：
+  - `/Users/dantevonalcatraz/Development/procurement-agents/adapters/http_api/src/xiaocai_instance_api`
+- 采购业务资产：
+  - `/Users/dantevonalcatraz/Development/procurement-agents/domain-packs`
 - FLARE 包来源（外部仓库依赖）：
   - `@flare/chat-ui`
   - `@flare/chat-core`
@@ -65,3 +87,5 @@
 - 是否新增了任何对 FLARE 内部实现的复制代码？
 - 是否把业务词汇或业务模板放进了 FLARE 通用层？
 - 是否仍然通过 props/协议完成装配？
+- 是否在 xiaocai 本地新增了 runtime / workflow / canvas / readiness 机制？若是，必须停止并转 FLARE 缺口。
+- 是否只是采购业务资产或连接配置？若是，应落在 domain pack / instance config / adapter 使用层。

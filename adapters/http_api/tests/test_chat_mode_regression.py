@@ -201,7 +201,7 @@ def test_chat_002_t4_kernel_run_error_should_degrade_not_hard_fail(monkeypatch, 
     assert EMPTY_ASSISTANT_MESSAGE in response.json()["message"]
 
 
-def test_chat_002_t5_explicit_intake_mode_still_emits_canvas_projection(monkeypatch, tmp_path):
+def test_chat_002_t5_explicit_intake_mode_does_not_synthesize_canvas_projection(monkeypatch, tmp_path):
     client = _create_client(monkeypatch, tmp_path)
     headers = _auth_headers(client)
     project_id = "proj-chat-002-t5"
@@ -230,5 +230,6 @@ def test_chat_002_t5_explicit_intake_mode_still_emits_canvas_projection(monkeypa
         )
 
     assert response.status_code == 200
-    assert "event: canvas_state" in response.text
-    assert "# 需求梳理草稿" in response.text
+    assert "我先帮你梳理采购需求。" in response.text
+    assert "event: canvas_state" not in response.text
+    assert "# 需求梳理草稿" not in response.text

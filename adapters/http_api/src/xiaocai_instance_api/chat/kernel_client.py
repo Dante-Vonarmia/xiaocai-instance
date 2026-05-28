@@ -17,8 +17,7 @@ import httpx
 from typing import Dict, Any, AsyncGenerator
 from functools import lru_cache
 from xiaocai_instance_api.settings import get_settings
-from xiaocai_instance_api.chat.mode_contract import canonicalize_kernel_context
-from xiaocai_instance_api.chat.kernel_prompt_compat import project_domain_prompt_for_flare
+from xiaocai_instance_api.chat.kernel_request_body import build_kernel_request_body
 from xiaocai_instance_api.chat.replay.hooks import (
     append_kernel_capture,
     begin_kernel_capture,
@@ -28,7 +27,6 @@ from xiaocai_instance_api.chat.replay.hooks import (
 
 class KernelStreamConflictError(RuntimeError):
     """Raised when FLARE kernel reports an active stream for the same session."""
-
 
 class KernelClient:
     """FLARE Kernel 客户端"""
@@ -53,45 +51,16 @@ class KernelClient:
         session_id: str,
         context: Dict[str, Any] | None,
     ) -> Dict[str, Any]:
-        context_dict = canonicalize_kernel_context(context)
-        payload = dict(context_dict)
-        payload["message"] = message
-        payload = project_domain_prompt_for_flare(payload)
-
-        request_body: Dict[str, Any] = {
-            "user_id": user_id,
-            "message": message,
-            "session_id": session_id,
-            "context": context_dict,
-            "payload": payload,
-        }
-
-        # 兼容真实 FLARE kernel 的 KernelRequest 字段
-        for field in (
-            "tenant_id",
-            "instance_id",
-            "domain_pack_version",
-            "intent",
-            "intent_override",
-            "mode",
-            "manual_mode",
-            "current_mode",
-            "project_id",
-            "action_key",
-            "target_mode",
-            "action_status",
-            "action_reason",
-            "trace_id",
-        ):
-            value = context_dict.get(field)
-            if value is not None:
-                request_body[field] = value
-
-        # 如果未显式提供 intent，默认沿用 function_type
-        if "intent" not in request_body and isinstance(context_dict.get("function_type"), str):
-            request_body["intent"] = context_dict.get("function_type")
-
-        return request_body
+        settings = get_settings()
+        return build_kernel_request_body(
+            user_id=user_id,
+            message=message,
+            session_id=session_id,
+            context=context,
+            default_instance_id=settings.flare_instance_id,
+            default_domain_pack_domain=settings.flare_domain_pack_default_domain,
+            default_domain_pack_version=settings.flare_domain_pack_version,
+        )
 
     @staticmethod
     def _parse_sse_event(event_name: str | None, data_lines: list[str]) -> Dict[str, Any]:

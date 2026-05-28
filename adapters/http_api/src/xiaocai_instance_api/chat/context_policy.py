@@ -9,14 +9,6 @@ Chat kernel context policy helpers.
 from __future__ import annotations
 
 from xiaocai_instance_api.retrieval.policy_resolver import resolve_enabled_search_source_policy
-from xiaocai_instance_api.chat.orchestration.flare_intake_contract import (
-    build_flare_intake_contract,
-)
-from xiaocai_instance_api.chat.orchestration.config_prompts import (
-    build_domain_prompt_instructions,
-    load_domain_prompt_templates,
-)
-from xiaocai_instance_api.chat.orchestration.prior_context import build_procurement_prior_context
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.source_policy import build_retrieval_policy_signal
@@ -65,61 +57,26 @@ async def enrich_kernel_context_with_retrieval_policy(
     user_message: str | None = None,
     limit: int = 20,
 ) -> dict:
+    _ = user_message
     project_id = kernel_context.get("project_id")
-    if isinstance(project_id, str) and project_id.strip():
-        settings = get_settings()
-        store = get_source_store(upload_root=settings.upload_root)
-        records = await store.list_project_sources(
-            user_id=claims.user_id,
-            project_id=project_id.strip(),
-            query=None,
-        )
-        selected_source_ids = _selected_source_ids(kernel_context)
-        records = _filter_records_by_selected_sources(records, selected_source_ids)
-        search_source_policy = await resolve_enabled_search_source_policy(kernel_context.get("mode"))
-        policy = build_retrieval_policy_signal(
-            records,
-            limit=limit,
-            search_source_policy=search_source_policy,
-        )
-        kernel_context["retrieval_policy"] = policy
-        kernel_context["context_refs"] = policy.get("context_refs", [])
-
-    # 领域模板先验不依赖 project source，需稳定注入给 kernel，
-    # 让分析 / RFX 输出尽量贴近 procurement domain-pack 模板约束。
-    try:
-        prior = build_procurement_prior_context(
-            kernel_context=kernel_context,
-            mode=kernel_context.get("mode") if isinstance(kernel_context.get("mode"), str) else None,
-            user_message=user_message,
-        )
-    except Exception:
+    if not isinstance(project_id, str) or not project_id.strip():
         return kernel_context
 
-    kernel_context["analysis_template"] = prior.analysis_template
-    kernel_context["rfx_template"] = prior.rfx_template
-    kernel_context["domain_prior"] = prior.domain_prior
-    kernel_context["clarification_policy"] = prior.domain_prior.get("clarification_policy", {})
-    kernel_context["category_prior"] = prior.domain_prior.get("category_prior", {})
-    kernel_context["confidence_policy"] = prior.domain_prior.get("confidence_policy", {})
-    prompt_templates = await load_domain_prompt_templates()
-    if prompt_templates:
-        kernel_context["domain_prompt_templates"] = prompt_templates
-    prompt_instructions = build_domain_prompt_instructions(
-        kernel_context=kernel_context,
-        prompt_templates=prompt_templates,
-        user_message=user_message,
+    settings = get_settings()
+    store = get_source_store(upload_root=settings.upload_root)
+    records = await store.list_project_sources(
+        user_id=claims.user_id,
+        project_id=project_id.strip(),
+        query=None,
     )
-    if prompt_instructions:
-        kernel_context["domain_prompt_instructions"] = prompt_instructions
-        kernel_context["domain_system_prompt"] = prompt_instructions["prompt_text"]
-    # Bridge xiaocai procurement semantics into FLARE's native intake contract.
-    # FLARE remains the owner of question planning, chooser state and composer UI.
-    kernel_context.update(
-        build_flare_intake_contract(
-            kernel_context=kernel_context,
-            domain_prior=prior.domain_prior,
-            mode=kernel_context.get("mode") if isinstance(kernel_context.get("mode"), str) else None,
-        )
+    selected_source_ids = _selected_source_ids(kernel_context)
+    records = _filter_records_by_selected_sources(records, selected_source_ids)
+    search_source_policy = await resolve_enabled_search_source_policy(kernel_context.get("mode"))
+    policy = build_retrieval_policy_signal(
+        records,
+        limit=limit,
+        search_source_policy=search_source_policy,
     )
+    kernel_context["retrieval_policy"] = policy
+    kernel_context["context_refs"] = policy.get("context_refs", [])
     return kernel_context

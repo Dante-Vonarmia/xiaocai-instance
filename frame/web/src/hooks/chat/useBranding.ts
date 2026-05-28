@@ -4,9 +4,11 @@ import {
   DEFAULT_CANVAS_UI_LABELS,
   DEFAULT_FUNCTION_TYPE,
   DEFAULT_INTERACTION_MODE,
+  DEFAULT_INSTANCE_PROFILE,
   DEFAULT_PROJECT_SLOT,
   DEFAULT_STARTER_PROMPTS,
   type CanvasUiLabels,
+  type InstanceProfile,
   type InteractionMode,
   type ProjectSlot,
   type StarterPrompt,
@@ -18,6 +20,7 @@ type BrandingState = {
   interactionMode: InteractionMode
   projectSlot: ProjectSlot
   uiLabels: CanvasUiLabels
+  instanceProfile: InstanceProfile
   starterPrompts: StarterPrompt[]
 }
 
@@ -25,6 +28,13 @@ type BrandingPayload = {
   instance?: {
     displayName?: unknown
     subtitle?: unknown
+  }
+  branding?: {
+    logo?: {
+      light?: unknown
+      dark?: unknown
+      favicon?: unknown
+    }
   }
   ui?: {
     chat?: {
@@ -43,7 +53,35 @@ const DEFAULT_BRANDING_STATE: BrandingState = {
   interactionMode: DEFAULT_INTERACTION_MODE,
   projectSlot: DEFAULT_PROJECT_SLOT,
   uiLabels: DEFAULT_CANVAS_UI_LABELS,
+  instanceProfile: DEFAULT_INSTANCE_PROFILE,
   starterPrompts: DEFAULT_STARTER_PROMPTS,
+}
+
+function toInstanceProfile(
+  payload: BrandingPayload | null | undefined,
+  uiLabels: CanvasUiLabels,
+): InstanceProfile {
+  const logoUrl = toText(payload?.branding?.logo?.light) || DEFAULT_INSTANCE_PROFILE.logo_url
+  const logoText = uiLabels.product_name
+  const logoAlt = logoText
+
+  return {
+    product_name: uiLabels.product_name,
+    brand_tag: uiLabels.brand_tag,
+    logo_text: logoText,
+    logo_url: logoUrl,
+    ui_labels: {
+      ...uiLabels,
+      empty_state_logo_alt: logoAlt,
+      empty_state_logo_url: logoUrl,
+      logo_alt: logoAlt,
+      logo_url: logoUrl,
+      product_logo_alt: logoAlt,
+      product_logo_url: logoUrl,
+      sidebar_logo_alt: logoAlt,
+      sidebar_logo_url: logoUrl,
+    },
+  }
 }
 
 function normalizeBrandingState(payload: BrandingPayload | null | undefined): BrandingState {
@@ -61,19 +99,22 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     || toText(payload?.instance?.subtitle)
     || DEFAULT_CANVAS_UI_LABELS.brand_tag
   const starterPrompts = toStarterPrompts(chatConfig.starterPrompts)
+  const uiLabels = {
+    ...normalizedUiLabels,
+    product_name: productName,
+    brand_tag: brandTag,
+    empty_state_title: toText(rawUiLabels.empty_state_title) || `欢迎来到${productName}`,
+    empty_state_description: toText(rawUiLabels.empty_state_description)
+      || toText(chatConfig.welcomeMessage)
+      || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
+  }
+
   return {
     functionType: DEFAULT_FUNCTION_TYPE,
     interactionMode: DEFAULT_INTERACTION_MODE,
     projectSlot: DEFAULT_PROJECT_SLOT,
-    uiLabels: {
-      ...normalizedUiLabels,
-      product_name: productName,
-      brand_tag: brandTag,
-      empty_state_title: toText(rawUiLabels.empty_state_title) || `欢迎来到${productName}`,
-      empty_state_description: toText(rawUiLabels.empty_state_description)
-        || toText(chatConfig.welcomeMessage)
-        || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
-    },
+    uiLabels,
+    instanceProfile: toInstanceProfile(payload, uiLabels),
     starterPrompts,
   }
 }

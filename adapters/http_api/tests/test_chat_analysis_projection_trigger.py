@@ -15,7 +15,7 @@ def _auth_headers(client: TestClient) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def test_report_projection_triggers_from_assistant_output_even_when_user_asks_to_understand_attachment(monkeypatch, tmp_path):
+def test_stream_does_not_synthesize_report_projection_from_assistant_output(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -60,16 +60,10 @@ def test_report_projection_triggers_from_assistant_output_even_when_user_asks_to
         )
 
     assert response.status_code == 200
-    analysis_index = response.text.find("event: analysis_payload")
     complete_index = response.text.find("event: complete")
-    assert analysis_index != -1
+    assert "event: analysis_payload" not in response.text
     assert complete_index != -1
-    assert analysis_index < complete_index
-    assert "需求分析与 RFX 策略报告" in response.text
+    assert "需求分析与 RFX 策略报告" not in response.text
     assert "2026年新公司办公空间桌椅配置采购项目" in response.text
     assert "模块化快速交付方案" in response.text
-    assert "分析结论" in response.text
-    assert "供应商画像" in response.text
-    assert "目标优先级建议" in response.text
-    assert '"document"' in response.text
-    assert '"content"' in response.text
+    assert '"document"' not in response.text

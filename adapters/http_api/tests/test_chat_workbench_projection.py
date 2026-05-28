@@ -1,4 +1,3 @@
-from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
 from xiaocai_instance_api.chat.router import _has_usable_canvas_state_event
 from xiaocai_instance_api.chat.workbench_projection import build_intake_workbench_projection
 
@@ -19,44 +18,13 @@ def test_router_recognizes_flare_native_canvas_state_as_usable():
     assert _has_usable_canvas_state_event(event) is True
 
 
-def test_extract_slots_handles_server_intake_scene_and_week_deadline():
-    slots = extract_slots("我要采购一批测试服务器，用于AI模型训练和数据库压测，预算30万，2周内交付")
-
-    assert slots["预算金额"] == "30万"
-    assert slots["数量"] == "1"
-    assert slots["单位"] == "批"
-    assert slots["交付时间"] == "2周内"
-    assert slots["使用场景"] == "AI模型训练和数据库压测"
-    assert "采购目的" not in slots
-    assert "一级品类" not in slots
-    assert "二级品类" not in slots
-
-
-def test_extract_slots_does_not_confirm_category_from_keyword_only():
-    slots = extract_slots("我要采购一批测试服务器，请先帮我梳理采购需求并列出还缺的关键信息。")
-
-    assert slots["数量"] == "1"
-    assert slots["单位"] == "批"
-    assert "使用场景" not in slots
-    assert "一级品类" not in slots
-    assert "二级品类" not in slots
-
-
-def test_extract_slots_does_not_emit_pseudo_confirmed_values():
-    slots = extract_slots("质量、验收、发票和付款条款后续再补。")
-
-    assert "质量标准" not in slots
-    assert "验收口径" not in slots
-    assert "发票类型" not in slots
-    assert "付款条款" not in slots
-    assert "已由用户给出（会话上下文）" not in set(slots.values())
-
-
 def test_intake_workbench_projection_outputs_canvas_state():
     projection = build_intake_workbench_projection(
         pending_contract={
             "current_stage": "clarify_requirement",
             "missing_fields": ["采购目的"],
+            "confirmed_fields": {"预算金额": "30万"},
+            "required_coverage": 0.5,
             "current_question": {
                 "field_key": "采购目的",
                 "question_text": "请说明本次采购的业务目标。",
@@ -78,14 +46,14 @@ def test_intake_workbench_projection_outputs_canvas_state():
     assert pending["mode_key"] == "requirement_intake"
     assert canvas_payload["type"] == "canvas_state"
     assert canvas_payload["ui_signal"]["active_tab"] == "requirement"
-    assert canvas_state["progress"] > 0
+    assert canvas_state["progress"] == 0.5
     assert canvas_state["collected"]
     assert pending["current_question"]["options"][0]["label"] == "业务交付"
     assert canvas_state["current_question"]["options"][1]["value"] == "内部测试"
     assert any(item["field_key"] == "采购目的" for item in canvas_state["missing"])
 
 
-def test_intake_workbench_projection_outputs_display_draft_without_pending_contract():
+def test_intake_workbench_projection_does_not_output_display_draft_without_pending_contract():
     projection = build_intake_workbench_projection(
         pending_contract=None,
         mode="requirement_canvas",
@@ -93,21 +61,10 @@ def test_intake_workbench_projection_outputs_display_draft_without_pending_contr
         user_message="我要采购一批测试服务器，用于AI模型训练和数据库压测，预算30万，2周内交付",
     )
 
-    assert projection is not None
-    canvas_payload = projection["canvas_payload"]
-    canvas_state = canvas_payload["canvas_state"]
-
-    assert "pending_contract" not in projection
-    assert "plan_payload" not in projection
-    assert canvas_payload["ui_signal"]["active_tab"] == "requirement"
-    assert canvas_state["progress"] > 0
-    assert canvas_state["collected"]
-    assert canvas_state["current_question"] == {}
-    assert canvas_state["versions"][0]["content"].startswith("# 需求梳理草稿")
-    assert "## 原始需求" in canvas_state["versions"][0]["content"]
+    assert projection is None
 
 
-def test_intake_workbench_projection_shows_context_candidates_without_confirming_them():
+def test_intake_workbench_projection_ignores_context_candidates_without_native_pending_contract():
     projection = build_intake_workbench_projection(
         pending_contract=None,
         mode="requirement_canvas",
@@ -129,18 +86,7 @@ def test_intake_workbench_projection_shows_context_candidates_without_confirming
         },
     )
 
-    assert projection is not None
-    canvas_state = projection["canvas_payload"]["canvas_state"]
-    collected_keys = {item["field_key"] for item in canvas_state["collected"]}
-    candidate_keys = {item["field_key"] for item in canvas_state["candidate_fields"]}
-    markdown = canvas_state["versions"][0]["content"]
-
-    assert "pending_contract" not in projection
-    assert "一级品类" not in collected_keys
-    assert "二级品类" not in collected_keys
-    assert candidate_keys == {"一级品类", "二级品类"}
-    assert "## 模型建议（待确认）" in markdown
-    assert "- 二级品类: 办公家具、电器" in markdown
+    assert projection is None
 
 
 def test_intake_workbench_projection_does_not_fabricate_missing_field_question():
@@ -202,11 +148,11 @@ def test_intake_workbench_projection_keeps_model_candidates_separate_from_collec
     assert candidate_keys == {"一级品类", "二级品类"}
     assert pending["candidate_fields"][0]["normalization_status"] == "needs_confirmation"
     assert canvas_state["readiness"]["ready_for_submit"] is False
-    assert "## 模型建议（待确认）" in markdown
+    assert "## 候选信息（待确认）" in markdown
     assert "- 一级品类: 数据通讯设备" in markdown
 
 
-def test_intake_workbench_projection_exposes_rejected_candidates_for_audit():
+def test_intake_workbench_projection_does_not_reject_category_value_locally():
     projection = build_intake_workbench_projection(
         pending_contract={
             "current_stage": "collecting",
@@ -226,7 +172,7 @@ def test_intake_workbench_projection_exposes_rejected_candidates_for_audit():
     pending = projection["pending_contract"]
     canvas_state = projection["canvas_payload"]["canvas_state"]
 
-    assert pending["candidate_fields"] == []
-    assert canvas_state["candidate_fields"] == []
-    assert pending["rejected_candidates"][0]["rejection_reason"] == "noncanonical_category_value"
-    assert canvas_state["rejected_candidates"][0]["field_key"] == "一级品类"
+    assert pending["candidate_fields"][0]["field_key"] == "一级品类"
+    assert canvas_state["candidate_fields"][0]["value"] == "开放式办公区"
+    assert pending["rejected_candidates"] == []
+    assert canvas_state["rejected_candidates"] == []

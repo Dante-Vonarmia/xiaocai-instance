@@ -24,9 +24,8 @@ async def test_stream_turn_registry_rejects_same_active_session():
 def test_stream_busy_events_are_transient():
     events = build_stream_busy_events("session-1")
 
-    assert events[0][0] == "content"
-    assert events[0][1]["content"] == STREAM_BUSY_MESSAGE
+    assert events[0][0] == "error"
+    assert events[0][1]["code"] == "stream_busy"
+    assert events[0][1]["message"] == STREAM_BUSY_MESSAGE
     assert events[0][1]["transient"] is True
-    assert events[1][0] == "complete"
-    assert events[1][1]["status"] == "busy"
-    assert events[1][1]["transient"] is True
+    assert len(events) == 1

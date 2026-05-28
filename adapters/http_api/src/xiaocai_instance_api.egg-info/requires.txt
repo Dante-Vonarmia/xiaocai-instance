@@ -4,8 +4,13 @@ pydantic>=2.0
 pydantic-settings>=2.0
 PyJWT>=2.8
 httpx>=0.24
+psycopg[binary]>=3.2
 python-multipart>=0.0.9
 sse-starlette>=2.1
+flare-engines==1.0.0
+flare-kernel==1.0.0
+flare-kernel-client-py==1.0.0
+flare-storage-adapters==1.0.0
 
 [dev]
 pytest>=7.0

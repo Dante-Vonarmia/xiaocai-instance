@@ -1,21 +1,15 @@
-"""梳理工作台投影 - FLARE chat-core canvas contract."""
+"""Intake workbench projection for FLARE-native pending contracts."""
 
 from __future__ import annotations
 
 import json
-from functools import lru_cache
 from typing import Any
 
-from xiaocai_instance_api.chat.orchestration.contract_loader import load_contracts
-from xiaocai_instance_api.chat.orchestration.extractor import extract_slots
 from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
-from xiaocai_instance_api.chat.orchestration.question_options import (
-    normalize_question_options,
-)
+from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_options
 
 
 INTAKE_MODE_KEY = "requirement_intake"
-DEFAULT_REQUIRED_FIELDS = ["采购目的", "使用场景", "一级品类", "二级品类", "交付地点"]
 
 
 def _as_dict(value: object) -> dict[str, Any]:
@@ -42,15 +36,6 @@ def _dedupe(items: list[str]) -> list[str]:
     return result
 
 
-@lru_cache(maxsize=1)
-def _required_fields() -> list[str]:
-    try:
-        fields = load_contracts().stage_required.get("requirement-collection", [])
-    except Exception:
-        fields = []
-    return _dedupe([*(fields or []), *DEFAULT_REQUIRED_FIELDS])
-
-
 def _field_item(field_key: str, value: str = "", status: str = "missing") -> dict[str, object]:
     return {
         "field_key": field_key,
@@ -64,14 +49,14 @@ def _current_question(pending_contract: dict[str, Any]) -> dict[str, object]:
     question = _as_dict(pending_contract.get("current_question")) or _as_dict(pending_contract.get("question"))
     field_key = _to_text(question.get("field_key"))
     question_text = _to_text(question.get("question_text"))
-    if field_key and question_text:
-        return {
-            "field_key": field_key,
-            "field_label": _to_text(question.get("field_label")) or field_key,
-            "question_text": question_text,
-            "options": normalize_question_options(question.get("options")),
-        }
-    return {}
+    if not field_key or not question_text:
+        return {}
+    return {
+        "field_key": field_key,
+        "field_label": _to_text(question.get("field_label")) or field_key,
+        "question_text": question_text,
+        "options": normalize_question_options(question.get("options")),
+    }
 
 
 def _merge_candidate_payloads(*payloads: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
@@ -100,23 +85,49 @@ def _merge_candidate_payloads(*payloads: dict[str, Any]) -> dict[str, list[dict[
     }
 
 
+def _collected_fields(pending: dict[str, Any]) -> list[dict[str, object]]:
+    collected: list[dict[str, object]] = []
+    seen: set[str] = set()
+
+    for item in _as_list(pending.get("collected")):
+        data = _as_dict(item)
+        field_key = _to_text(data.get("field_key")) or _to_text(data.get("field")) or _to_text(data.get("key"))
+        value = _to_text(data.get("value"))
+        if field_key and value and field_key not in seen:
+            seen.add(field_key)
+            collected.append(_field_item(field_key, value, _to_text(data.get("status")) or "collected"))
+
+    for source_key in ("confirmed_fields", "fields"):
+        for field_key, raw_value in _as_dict(pending.get(source_key)).items():
+            value = _to_text(raw_value)
+            if field_key and value and field_key not in seen:
+                seen.add(str(field_key))
+                collected.append(_field_item(str(field_key), value, "collected"))
+
+    return collected
+
+
+def _coverage(pending: dict[str, Any], collected_count: int, missing_count: int) -> float:
+    for key in ("required_coverage", "total_coverage", "progress"):
+        value = pending.get(key)
+        if isinstance(value, (int, float)):
+            return max(0.0, min(1.0, float(value)))
+    total = collected_count + missing_count
+    return collected_count / total if total else 0.0
+
+
 def _markdown(
     collected: list[dict[str, object]],
     missing_fields: list[str],
-    candidates: list[dict[str, Any]] | None = None,
-    source_text: str = "",
+    candidates: list[dict[str, Any]],
 ) -> str:
-    lines = ["# 需求梳理草稿", ""]
-    source = _to_text(source_text)
-    if source:
-        lines.extend(["## 原始需求", source, ""])
-    lines.append("## 已识别信息")
+    lines = ["# 需求梳理草稿", "", "## 已确认信息"]
     if collected:
         lines.extend(f"- {item['field_label']}: {item['value']}" for item in collected)
     else:
-        lines.append("- 暂未识别到结构化字段")
+        lines.append("- 暂无")
     if candidates:
-        lines.extend(["", "## 模型建议（待确认）"])
+        lines.extend(["", "## 候选信息（待确认）"])
         lines.extend(
             f"- {item['field_key']}: {item['value']}"
             for item in candidates
@@ -143,39 +154,29 @@ def build_intake_workbench_projection(
     user_message: str,
     candidate_context: dict[str, Any] | None = None,
 ) -> dict[str, object] | None:
+    _ = user_message, candidate_context
     if mode != INTAKE_MODE_KEY and mode != "requirement_canvas":
         return None
+    if pending_contract is None:
+        return None
 
-    pending = dict(pending_contract or {})
-    candidate_payload = _merge_candidate_payloads(pending, dict(candidate_context or {}))
+    pending = dict(pending_contract)
+    candidate_payload = _merge_candidate_payloads(pending)
     candidate_fields = candidate_payload["candidate_fields"]
     rejected_candidates = candidate_payload["rejected_candidates"]
-    slots = extract_slots(user_message)
-    required = _required_fields()
-    collected = [
-        _field_item(field, slots[field], "collected")
-        for field in required
-        if _to_text(slots.get(field))
-    ]
+    collected = _collected_fields(pending)
     collected_keys = {str(item["field_key"]) for item in collected}
-    pending_missing = [_to_text(item) for item in _as_list(pending.get("missing_fields"))]
     missing_fields = _dedupe([
-        *(field for field in pending_missing if field not in collected_keys),
-        *(field for field in required if field not in collected_keys),
+        field
+        for field in (_to_text(item) for item in _as_list(pending.get("missing_fields")))
+        if field and field not in collected_keys
     ])
     missing = [_field_item(field) for field in missing_fields]
-    has_pending_contract = pending_contract is not None
     current_question = _current_question(pending)
-    progress = len(collected) / max(1, len(required))
     next_actions = _as_list(pending.get("next_actions"))
-    if current_question and not next_actions:
-        next_actions = [{
-            "action_key": "continue_collection",
-            "label": "继续补充",
-            "status": "available",
-            "target_mode": mode or INTAKE_MODE_KEY,
-        }]
-    mode_state = _to_text(pending.get("current_stage")) or "collecting"
+    mode_state = _to_text(pending.get("mode_state")) or _to_text(pending.get("current_stage")) or "pending"
+    progress = _coverage(pending, len(collected), len(missing_fields))
+    ready_for_submit = bool(pending.get("ready_for_submit")) if "ready_for_submit" in pending else not missing_fields
 
     enriched_pending = {
         **pending,
@@ -190,14 +191,10 @@ def build_intake_workbench_projection(
         "required_coverage": progress,
         "total_coverage": progress,
         "active_collecting": bool(missing_fields),
-        "ready_for_submit": not missing_fields,
+        "ready_for_submit": ready_for_submit,
         "has_active_question": bool(current_question),
     }
 
-    # Display-only fallback: if FLARE did not emit a pending intake node, still
-    # project the explicit fields and contract gaps into the workbench. Do not
-    # emit a pending contract or question here; those remain authoritative only
-    # when supplied by the runtime.
     canvas_state = {
         "session_id": session_id,
         "mode_key": INTAKE_MODE_KEY,
@@ -212,20 +209,16 @@ def build_intake_workbench_projection(
         "readiness": {
             "required_coverage": progress,
             "total_coverage": progress,
-            "ready_for_submit": not missing_fields,
+            "ready_for_submit": ready_for_submit,
             "missing_fields": missing_fields,
         },
         "next_actions": next_actions,
-        "versions": [{"content": _markdown(collected, missing_fields, candidate_fields, user_message)}],
+        "versions": [{"content": _markdown(collected, missing_fields, candidate_fields)}],
     }
 
-    authoritative_payload = {
+    return {
         "pending_contract": enriched_pending,
         "plan_payload": enriched_pending,
-    } if has_pending_contract else {}
-
-    return {
-        **authoritative_payload,
         "canvas_payload": {
             "type": "canvas_state",
             "mode_key": INTAKE_MODE_KEY,

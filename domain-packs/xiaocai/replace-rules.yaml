@@ -1,0 +1,64 @@
+{
+  "allow_auto_replace": false,
+  "replaceable_fields": ["产品/服务 说明","质量标准","验收口径","付款条款","评估项","权重","里程碑","输出物","输出格式"],
+  "requires_user_confirmation": true,
+  "reconciliation_policy": {
+    "artifact_types": {
+      "requirement": "requirements_document",
+      "analysis": "analysis_report",
+      "sourcing": "sourcing_result",
+      "rfx": "rfx_strategy"
+    },
+    "field_rules": [
+      {
+        "field_key": "交付地点",
+        "match_terms": ["地点", "交付地点", "服务地点", "收货地点", "城市", "举办城市"],
+        "change_type": "field_value_update",
+        "auto_apply": true,
+        "artifact_actions": {
+          "requirements_document": "patch",
+          "analysis_report": "patch",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "mark_stale"
+        }
+      },
+      {
+        "field_key": "预算金额",
+        "match_terms": ["预算", "预算金额", "预算上限", "金额"],
+        "change_type": "field_value_update",
+        "auto_apply": true,
+        "artifact_actions": {
+          "requirements_document": "patch",
+          "analysis_report": "patch",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "mark_stale"
+        }
+      },
+      {
+        "field_key": "采购目的",
+        "match_terms": ["采购目的", "目的", "核心目标", "业务目标"],
+        "change_type": "purpose_change",
+        "auto_apply": false,
+        "decision": "needs_confirmation",
+        "artifact_actions": {
+          "requirements_document": "regenerate_recommended",
+          "analysis_report": "regenerate_recommended",
+          "rfx_strategy": "regenerate_recommended"
+        }
+      },
+      {
+        "field_key": "采购品类",
+        "match_terms": ["品类", "类目", "一级品类", "二级品类"],
+        "change_type": "category_change",
+        "auto_apply": false,
+        "decision": "needs_confirmation",
+        "artifact_actions": {
+          "requirements_document": "regenerate_recommended",
+          "analysis_report": "regenerate_recommended",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "regenerate_recommended"
+        }
+      }
+    ]
+  }
+}

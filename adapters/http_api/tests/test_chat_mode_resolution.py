@@ -31,7 +31,17 @@ def test_real_frontend_procurement_intake_message_enters_requirement_canvas():
         message="我要采购一批办公桌椅，用于上海新办公室开放办公区，请先帮我梳理需求。",
     )
 
-    assert mode == INTAKE_MODE_ALIAS
+    assert mode is None
+
+
+def test_missing_request_mode_does_not_keep_intake_session_sticky():
+    mode = resolve_effective_mode(
+        request_mode=None,
+        session_mode="requirement_intake",
+        message="我要举办一台活动，要做哪些采购准备？",
+    )
+
+    assert mode is None
 
 
 def test_explicit_auto_request_does_not_keep_intake_session_sticky():
@@ -74,7 +84,7 @@ def test_supplier_request_does_not_force_requirement_canvas():
     assert mode is None
 
 
-def test_chat_stream_infers_mode_from_real_frontend_payload_without_mode(client, auth_token):
+def test_chat_stream_does_not_infer_mode_from_real_frontend_payload_without_mode(client, auth_token):
     captured = {}
     bind_response = client.post(
         "/projects/bind",
@@ -86,7 +96,7 @@ def test_chat_stream_infers_mode_from_real_frontend_payload_without_mode(client,
     async def fake_stream(self, **kwargs):
         _ = self
         captured["context"] = kwargs["context"]
-        yield {"type": "done", "message": "已进入需求梳理。"}
+        yield {"type": "done", "message": "普通回答。"}
 
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream", fake_stream):
         response = client.post(
@@ -106,11 +116,7 @@ def test_chat_stream_infers_mode_from_real_frontend_payload_without_mode(client,
         )
 
     assert response.status_code == 200
-    assert captured["context"]["mode"] == INTAKE_MODE_ALIAS
-    assert '"mode_key": "requirement_intake"' in response.text
-    assert '"candidate_fields": [{"field_key": "一级品类"' in response.text
-    assert '"value": "空间相关"' in response.text
-    assert '"value": "办公家具、电器"' in response.text
-    assert "一级品类" in response.text
-    assert "开放式办公区" not in response.text
-    assert "已由用户给出（会话上下文）" not in response.text
+    assert captured["context"].get("mode") is None
+    assert "普通回答。" in response.text
+    assert '"mode_key": "requirement_intake"' not in response.text
+    assert "event: canvas_state" not in response.text

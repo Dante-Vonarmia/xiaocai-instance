@@ -51,4 +51,25 @@ describe('useBranding', () => {
     })
     expect(result.current.starterPrompts).toEqual([prompt])
   })
+
+  it('将品牌 logo 与名称投影到 FLARE instanceProfile', async () => {
+    mockBrandingFetch({
+      instance: { displayName: '测试品牌', subtitle: '测试助手' },
+      branding: {
+        logo: {
+          light: '/assets/test-logo.svg',
+        },
+      },
+      ui: { chat: { uiLabels: {} } },
+    })
+
+    const { result } = renderHook(() => useBranding())
+
+    await waitFor(() => {
+      expect(result.current.instanceProfile.product_name).toBe('测试品牌')
+    })
+    expect(result.current.instanceProfile.brand_tag).toBe('测试助手')
+    expect(result.current.instanceProfile.logo_url).toBe('/assets/test-logo.svg')
+    expect(result.current.instanceProfile.ui_labels.sidebar_logo_url).toBe('/assets/test-logo.svg')
+  })
 })

@@ -71,7 +71,7 @@ def test_candidate_normalizer_rejects_alias_that_requires_split():
     assert rejection["rejection_reason"] == "multi_field_alias_requires_split"
 
 
-def test_candidate_normalizer_rejects_noncanonical_category_value():
+def test_candidate_normalizer_does_not_reject_category_value_locally():
     normalized = normalize_candidate_payload({
         "candidate_fields": [{
             "field_key": "一级品类",
@@ -79,10 +79,11 @@ def test_candidate_normalizer_rejects_noncanonical_category_value():
         }]
     })
 
-    assert normalized["candidate_fields"] == []
-    rejection = normalized["rejected_candidates"][0]
-    assert rejection["field_key"] == "一级品类"
-    assert rejection["rejection_reason"] == "noncanonical_category_value"
+    assert normalized["rejected_candidates"] == []
+    candidate = normalized["candidate_fields"][0]
+    assert candidate["field_key"] == "一级品类"
+    assert candidate["value"] == "开放式办公区"
+    assert candidate["normalization_status"] == "needs_confirmation"
 
 
 def test_candidate_normalizer_does_not_trust_provider_confirmed_status():

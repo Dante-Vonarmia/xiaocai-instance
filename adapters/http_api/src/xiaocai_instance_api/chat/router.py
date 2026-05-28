@@ -19,13 +19,6 @@ from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import KernelStreamConflictError, get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
-from xiaocai_instance_api.chat.pending_policy import apply_confidence_policy_to_pending_contract
-from xiaocai_instance_api.chat.analysis_projection import (
-    build_analysis_report_projection,
-    has_structured_analysis_content,
-)
-from xiaocai_instance_api.chat.analysis_events import extract_analysis_payload, with_analysis_payload
-from xiaocai_instance_api.chat.sourcing_projection import build_sourcing_candidates_projection
 from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
 from xiaocai_instance_api.chat.orchestration.mode_resolution import (
     INTAKE_MODE_ALIAS,
@@ -35,8 +28,6 @@ from xiaocai_instance_api.chat.orchestration.mode_resolution import (
 )
 from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
-from xiaocai_instance_api.chat.display_projection import build_chat_run_display_projection
-from xiaocai_instance_api.chat.display_projection import build_direct_plan_with_missing_checklist
 from xiaocai_instance_api.chat.response_text import normalize_assistant_display_text, replace_event_text
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.chat.stream_turn import (
@@ -54,11 +45,7 @@ import json
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-EMPTY_ASSISTANT_MESSAGE = (
-    "我这边没有拿到完整的可展示结果，先不直接给结论。\n"
-    "你可以继续补充采购目标、品类/规格、数量、预算、交付地点和时间；我会基于这些信息继续梳理需求。\n"
-    "如果这是系统异常，请稍后重试或回到上一步继续。"
-)
+EMPTY_ASSISTANT_MESSAGE = "暂时没有收到完整回复，请稍后重试。"
 
 
 def _is_non_empty_text(value: object) -> bool:
@@ -338,16 +325,6 @@ def _pending_question_text(pending_contract: dict | None) -> str:
     return _to_text((pending_question or {}).get("question_text")) or _to_text((current_question or {}).get("question_text"))
 
 
-def _confidence_action(
-    *,
-    pending_contract: dict | None,
-    kernel_context: dict | None,
-) -> str:
-    pending_policy = _as_object(_as_object(pending_contract or {}).get("confidence_policy")) or {}
-    context_policy = _as_object(_as_object(kernel_context or {}).get("confidence_policy")) or {}
-    return _to_text(pending_policy.get("action")) or _to_text(context_policy.get("action"))
-
-
 def _ensure_response_cards(
     cards: list[dict],
     mode: str | None,
@@ -512,14 +489,6 @@ async def chat_run(
             session_id=request.session_id,
             mode=mode,
         )
-        pending_contract = apply_confidence_policy_to_pending_contract(
-            pending_contract=pending_contract,
-            confidence_policy=kernel_context.get("confidence_policy"),
-            clarification_policy=kernel_context.get("clarification_policy"),
-            category_prior=kernel_context.get("category_prior"),
-            session_id=request.session_id,
-            mode=mode,
-        )
         # FLARE owns user-visible assistant text; adapter-side pending/projection
         # may only fill an otherwise empty response, never override kernel output.
         message = result.get("message") or result.get("reply", "")
@@ -530,28 +499,7 @@ async def chat_run(
             message = _to_text((pending_question or {}).get("question_text"))
             if not message:
                 message = _to_text((current_question or {}).get("question_text"))
-        projection_metadata = {}
         message = normalize_assistant_display_text(message)
-        confidence_action = _confidence_action(
-            pending_contract=pending_contract,
-            kernel_context=kernel_context,
-        )
-        if confidence_action == "provide_draft_plan_with_missing_checklist":
-            message, projection_metadata = build_direct_plan_with_missing_checklist(
-                kernel_context=kernel_context,
-                mode=mode,
-                session_id=request.session_id,
-                user_message=request.message,
-                pending_contract=pending_contract,
-            )
-            message = normalize_assistant_display_text(message)
-        if not _is_non_empty_text(message):
-            message, projection_metadata = build_chat_run_display_projection(
-                kernel_context=kernel_context,
-                mode=mode,
-                session_id=request.session_id,
-                user_message=request.message,
-            )
         if not _is_non_empty_text(message):
             message = EMPTY_ASSISTANT_MESSAGE
 
@@ -567,7 +515,6 @@ async def chat_run(
             metadata={
                 **(result.get("metadata", {}) if isinstance(result.get("metadata"), dict) else {}),
                 **({"pending_contract": pending_contract} if pending_contract else {}),
-                **projection_metadata,
                 **({"intake_session_id": request.session_id} if mode and _is_intake_mode(mode) else {}),
             },
         )
@@ -581,23 +528,14 @@ async def chat_run(
     except HTTPException:
         raise
     except Exception as e:
-        message, projection_metadata = build_chat_run_display_projection(
-            kernel_context=locals().get("kernel_context") if isinstance(locals().get("kernel_context"), dict) else {},
-            mode=locals().get("mode") if isinstance(locals().get("mode"), str) else None,
-            session_id=request.session_id,
-            user_message=request.message,
-        )
-        if not _is_non_empty_text(message):
-            message = EMPTY_ASSISTANT_MESSAGE
         fallback_response = ChatRunResponse(
-            message=message,
+            message=EMPTY_ASSISTANT_MESSAGE,
             cards=[],
             session_id=request.session_id,
             metadata={
                 "degraded": True,
                 "degrade_reason": "kernel_exception",
                 "degrade_detail": str(e),
-                **projection_metadata,
             },
         )
         conversation_store = get_conversation_store()
@@ -725,8 +663,6 @@ async def chat_stream(
                 exchange_persisted = False
                 emitted_projection_keys: set[str] = set()
                 emitted_suppressed_question = False
-                has_native_analysis_payload = False
-                has_native_structured_analysis_payload = False
                 event_iter = kernel_client.chat_stream(
                     user_id=claims.user_id,
                     message=request.message,
@@ -735,34 +671,21 @@ async def chat_stream(
                 )
                 async for event in event_iter:
                     event_type = event.get("type", "message")
-                    native_analysis_payload = extract_analysis_payload(event)
-                    if native_analysis_payload:
-                        has_native_analysis_payload = True
-                        has_native_structured_analysis_payload = (
-                            has_native_structured_analysis_payload
-                            or has_structured_analysis_content(native_analysis_payload)
-                        )
                     pending_contract = _build_pending_contract(
                         event if isinstance(event, dict) else {},
                         session_id=request.session_id,
                         mode=mode,
                     )
-                    pending_contract = apply_confidence_policy_to_pending_contract(
-                        pending_contract=pending_contract,
-                        confidence_policy=kernel_context.get("confidence_policy"),
-                        clarification_policy=kernel_context.get("clarification_policy"),
-                        category_prior=kernel_context.get("category_prior"),
-                        session_id=request.session_id,
-                        mode=mode,
-                    )
                     native_pending_contract = pending_contract
-                    workbench_projection = build_intake_workbench_projection(
-                        pending_contract=pending_contract,
-                        mode=mode,
-                        session_id=request.session_id,
-                        user_message=request.message,
-                        candidate_context=kernel_context,
-                    )
+                    workbench_projection = {}
+                    if pending_contract:
+                        workbench_projection = build_intake_workbench_projection(
+                            pending_contract=pending_contract,
+                            mode=mode,
+                            session_id=request.session_id,
+                            user_message=request.message,
+                            candidate_context=kernel_context,
+                        )
                     projection_events: list[tuple[str, dict]] = []
                     if workbench_projection:
                         projected_pending = _as_object(workbench_projection.get("pending_contract"))
@@ -777,15 +700,6 @@ async def chat_stream(
                     has_native_canvas_state = event_type == "canvas_state" and _has_usable_canvas_state_event(event)
                     if has_native_canvas_state:
                         projection_events = []
-                    if event_type != "sourcing_candidates":
-                        sourcing_payload = build_sourcing_candidates_projection(
-                            kernel_context=kernel_context,
-                            mode=mode,
-                            session_id=request.session_id,
-                            user_message=request.message,
-                        )
-                        if sourcing_payload:
-                            projection_events.append(("sourcing_candidates", sourcing_payload))
                     if native_pending_contract:
                         latest_pending_contract = native_pending_contract
                     if pending_contract:
@@ -824,22 +738,6 @@ async def chat_stream(
                             else:
                                 done_message = None
                                 event = replace_event_text(event, "")
-                        confidence_action = _confidence_action(
-                            pending_contract=latest_pending_contract or native_pending_contract,
-                            kernel_context=kernel_context,
-                        )
-                        if confidence_action == "provide_draft_plan_with_missing_checklist":
-                            action_message, _ = build_direct_plan_with_missing_checklist(
-                                kernel_context=kernel_context,
-                                mode=mode,
-                                session_id=request.session_id,
-                                user_message=request.message,
-                                pending_contract=latest_pending_contract or native_pending_contract,
-                            )
-                            action_message = normalize_assistant_display_text(action_message)
-                            if _is_non_empty_text(action_message):
-                                done_message = action_message
-                                event = replace_event_text(event, action_message)
                         # Preserve FLARE text when it exists. Question fallback is
                         # only for native pending events that did not emit text.
                         suppress_contract = latest_pending_contract or native_pending_contract
@@ -861,22 +759,6 @@ async def chat_stream(
                         if terminal_message_was_empty:
                             done_message = ""
                             event = {**event, "message": ""}
-                        if not has_native_structured_analysis_payload:
-                            analysis_payload = build_analysis_report_projection(
-                                kernel_context=kernel_context,
-                                mode=mode,
-                                user_message=request.message,
-                                assistant_message=done_message or text_accumulator.final_message(),
-                                force=has_native_analysis_payload,
-                            )
-                            if analysis_payload:
-                                if terminal_message_was_empty or not _is_non_empty_text(done_message):
-                                    projected_message = _to_text(analysis_payload.get("markdown"))
-                                    if projected_message:
-                                        done_message = projected_message
-                                        event = replace_event_text(event, projected_message)
-                                event = with_analysis_payload(event, analysis_payload)
-                                projection_events.append(("analysis_payload", analysis_payload))
                         if terminal_message_was_empty and not _is_non_empty_text(done_message):
                             done_message = EMPTY_ASSISTANT_MESSAGE
                             event = replace_event_text(event, done_message)
@@ -902,21 +784,6 @@ async def chat_stream(
                         yield f"event: {projected_type}\n"
                         yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
                 final_message = normalize_assistant_display_text(done_message or text_accumulator.final_message())
-                final_confidence_action = _confidence_action(
-                    pending_contract=latest_pending_contract,
-                    kernel_context=kernel_context,
-                )
-                if final_confidence_action == "provide_draft_plan_with_missing_checklist":
-                    action_message, _ = build_direct_plan_with_missing_checklist(
-                        kernel_context=kernel_context,
-                        mode=mode,
-                        session_id=request.session_id,
-                        user_message=request.message,
-                        pending_contract=latest_pending_contract,
-                    )
-                    action_message = normalize_assistant_display_text(action_message)
-                    if _is_non_empty_text(action_message):
-                        final_message = action_message
                 if not _is_non_empty_text(final_message) and _should_suppress_assistant_message(latest_pending_contract):
                     pending_question = _as_object((latest_pending_contract or {}).get("question"))
                     current_question = _as_object((latest_pending_contract or {}).get("current_question"))

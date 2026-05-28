@@ -1,8 +1,6 @@
-import { useCallback, useMemo } from 'react'
-import { useInRouterContext, useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { App as FlareChatCoreApp } from 'flare-chat-core'
 
-import { APP_ROUTES } from '@/constants/routes'
 import { DEFAULT_FUNCTION_TYPE, DEFAULT_PROJECT_SLOT, DEFAULT_SESSION_TITLE } from '@/constants/chat'
 import { Shell } from '@/components/chat/Shell'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
@@ -11,16 +9,9 @@ type ChatPageProps = {
   onLogout?: () => void
 }
 
-type ChatPageViewProps = ChatPageProps & {
-  navigate?: ReturnType<typeof useNavigate>
-}
-
-function ChatPageView({ onLogout, navigate }: ChatPageViewProps) {
+function ChatPageView() {
   const accessToken = getAccessToken()
   const currentUserId = getCurrentUserId() || 'anonymous-user'
-  const handleProfileClick = useCallback(() => {
-    navigate?.(APP_ROUTES.settingsProfile)
-  }, [navigate])
   const workspace = useMemo(() => (
     <FlareChatCoreApp
       apiBaseUrl={import.meta.env.VITE_API_BASE_URL || '/api'}
@@ -34,29 +25,11 @@ function ChatPageView({ onLogout, navigate }: ChatPageViewProps) {
     />
   ), [accessToken, currentUserId])
 
-  return (
-    <Shell
-      onLogout={onLogout}
-      onProfileClick={handleProfileClick}
-      workspace={workspace}
-    />
-  )
+  return <Shell workspace={workspace} />
 }
 
-function ChatPageWithRouter({ onLogout }: ChatPageProps) {
-  const navigate = useNavigate()
-
-  return <ChatPageView onLogout={onLogout} navigate={navigate} />
-}
-
-function ChatPage({ onLogout }: ChatPageProps) {
-  const inRouterContext = useInRouterContext()
-
-  if (inRouterContext) {
-    return <ChatPageWithRouter onLogout={onLogout} />
-  }
-
-  return <ChatPageView onLogout={onLogout} />
+function ChatPage(_props: ChatPageProps) {
+  return <ChatPageView />
 }
 
 export default ChatPage

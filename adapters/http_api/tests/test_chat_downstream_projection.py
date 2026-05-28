@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.chat.router import EMPTY_ASSISTANT_MESSAGE
 
 
 def _auth_headers(client: TestClient) -> dict[str, str]:
@@ -15,7 +16,7 @@ def _auth_headers(client: TestClient) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def test_analysis_request_projects_structured_report(monkeypatch, tmp_path):
+def test_analysis_request_does_not_synthesize_structured_report(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -54,29 +55,14 @@ def test_analysis_request_projects_structured_report(monkeypatch, tmp_path):
         )
 
     assert response.status_code == 200
-    assert "event: analysis_payload" in response.text
-    assert "需求分析与 RFX 策略报告" in response.text
-    assert "项目理解与核心需求" in response.text
-    assert "市场现状和分析" in response.text
-    assert "成本结构分析" in response.text
-    assert "项目风险分析" in response.text
-    assert "采购策略分析" in response.text
-    assert "供应商选择建议" in response.text
-    assert "项目实施计划与执行建议" in response.text
-    assert "| 维度 | 说明 |" in response.text
-    assert "| 条款项 | 要求 |" in response.text
-    assert "| 评估维度 | 权重 | 核心考察点 |" in response.text
-    assert "#### 当前假设" in response.text
+    assert "event: analysis_payload" not in response.text
+    assert "需求分析与 RFX 策略报告" not in response.text
+    assert "我先生成需求分析和RFX策略初稿。" in response.text
     assert "produce_output" not in response.text
     assert "当前步骤" not in response.text
-    assert "建议采用 RFQ 作为当前主路径" in response.text
-    assert "供应商画像" in response.text
-    assert "准入门槛" in response.text
-    assert "计划建议" in response.text
-    assert '"recommended_type": "RFQ"' in response.text
 
 
-def test_native_markdown_analysis_payload_gets_structured_projection(monkeypatch, tmp_path):
+def test_native_markdown_analysis_payload_passes_through_without_projection(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -120,13 +106,13 @@ def test_native_markdown_analysis_payload_gets_structured_projection(monkeypatch
 
     assert response.status_code == 200
     assert "基于证据的回答" in response.text
-    assert response.text.count("event: analysis_payload") == 2
-    assert "需求分析与 RFX 策略报告" in response.text
-    assert "项目概况：名称：办公空间桌椅采购；目的：支持员工入驻" in response.text
-    assert "关键里程碑：05-25 供应商初筛 → 06-15 首批交付安装" in response.text
+    assert response.text.count("event: analysis_payload") == 1
+    assert "需求分析与 RFX 策略报告" not in response.text
+    assert "名称：办公空间桌椅采购；目的：支持员工入驻" in response.text
+    assert "05-25 供应商初筛 → 06-15 首批交付安装" in response.text
 
 
-def test_terminal_markdown_analysis_payload_is_structured_before_complete(monkeypatch, tmp_path):
+def test_terminal_markdown_analysis_payload_stays_on_complete_event(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -171,17 +157,15 @@ def test_terminal_markdown_analysis_payload_is_structured_before_complete(monkey
         )
 
     assert response.status_code == 200
-    analysis_index = response.text.find("event: analysis_payload")
     complete_index = response.text.find("event: complete")
-    assert analysis_index != -1
+    assert "event: analysis_payload" not in response.text
     assert complete_index != -1
-    assert analysis_index < complete_index
-    assert "需求分析与 RFX 策略报告" in response.text
+    assert "需求分析与 RFX 策略报告" not in response.text
     assert "项目概况：名称：办公空间桌椅采购" in response.text
     assert "目的：支持员工入驻" in response.text
     complete_segment = response.text[complete_index:]
-    assert '"document"' in complete_segment
-    assert "项目实施计划与执行建议" in complete_segment
+    assert '"analysis_payload"' in complete_segment
+    assert '"document"' not in complete_segment
 
 
 def test_native_structured_analysis_payload_is_not_overridden(monkeypatch, tmp_path):
@@ -278,7 +262,7 @@ def test_stream_response_normalizes_html_break_tags(monkeypatch, tmp_path):
     assert "名称：办公桌采购；目的：支持入驻" in response.text
 
 
-def test_sourcing_request_projects_candidate_payload(monkeypatch, tmp_path):
+def test_sourcing_request_does_not_synthesize_candidate_payload(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -317,16 +301,13 @@ def test_sourcing_request_projects_candidate_payload(monkeypatch, tmp_path):
         )
 
     assert response.status_code == 200
-    assert "event: sourcing_candidates" in response.text
-    assert "候选供应商初筛" in response.text
-    assert "内部供应商库候选池" in response.text
-    assert "备用供应商库候选池" in response.text
-    assert "外部检索候选池" in response.text
-    assert '"base_ready_for_matching": true' in response.text
-    assert '"render_hint": "sourcing_candidates"' in response.text
+    assert "event: sourcing_candidates" not in response.text
+    assert "我先按当前条件生成候选供应商初筛。" in response.text
+    assert "内部供应商库候选池" not in response.text
+    assert '"render_hint": "sourcing_candidates"' not in response.text
 
 
-def test_chat_run_projects_intake_when_kernel_text_is_unusable(monkeypatch, tmp_path):
+def test_chat_run_uses_generic_empty_message_when_kernel_text_is_unusable(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -347,16 +328,10 @@ def test_chat_run_projects_intake_when_kernel_text_is_unusable(monkeypatch, tmp_
         )
 
     assert response.status_code == 200
-    message = response.json()["message"]
-    assert "我这边没有拿到完整的可展示结果" not in message
-    assert "需求梳理草稿" in message
-    assert "办公桌椅" in message
-    assert "45万" in message
-    assert "120" in message
-    assert "上海" in message
+    assert response.json()["message"] == EMPTY_ASSISTANT_MESSAGE
 
 
-def test_chat_run_projects_intake_when_kernel_raises(monkeypatch, tmp_path):
+def test_chat_run_uses_generic_empty_message_when_kernel_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -379,15 +354,11 @@ def test_chat_run_projects_intake_when_kernel_raises(monkeypatch, tmp_path):
     assert response.status_code == 200
     payload = response.json()
     assert payload["metadata"]["degraded"] is True
-    assert "我这边没有拿到完整的可展示结果" not in payload["message"]
-    assert "需求梳理草稿" in payload["message"]
-    assert "办公桌椅" in payload["message"]
-    assert "45万" in payload["message"]
-    assert "120" in payload["message"]
-    assert "上海" in payload["message"]
+    assert payload["metadata"]["degrade_reason"] == "kernel_exception"
+    assert payload["message"] == EMPTY_ASSISTANT_MESSAGE
 
 
-def test_chat_run_projects_sourcing_when_kernel_raises(monkeypatch, tmp_path):
+def test_chat_run_does_not_project_sourcing_when_kernel_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
     get_settings.cache_clear()
@@ -410,14 +381,10 @@ def test_chat_run_projects_sourcing_when_kernel_raises(monkeypatch, tmp_path):
     assert response.status_code == 200
     payload = response.json()
     assert payload["metadata"]["degraded"] is True
+    assert payload["metadata"]["degrade_reason"] == "kernel_exception"
+    assert payload["message"] == EMPTY_ASSISTANT_MESSAGE
     assert "需求分析与 RFX 策略报告" not in payload["message"]
-    assert "智能寻源候选初筛" in payload["message"]
-    assert "准入门槛" in payload["message"]
-    assert "优选指标" in payload["message"]
-    assert "候选清单字段" in payload["message"]
-    assert "数据来源" in payload["message"]
-    assert "待核验事项" in payload["message"]
-    assert len(payload["message"]) >= 600
+    assert "智能寻源候选初筛" not in payload["message"]
 
 
 def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_path):
@@ -457,8 +424,6 @@ def test_stream_suppresses_unsupported_interaction_fallback(monkeypatch, tmp_pat
     assert "这个交互方式目前还没有开发到" not in response.text
     assert "暂时不能直接完成" not in response.text
     assert "我这边没有拿到完整的可展示结果" not in response.text
-    assert "event: analysis_payload" in response.text
-    assert "需求分析与 RFX 策略报告" in response.text
-    assert "45万" in response.text
-    assert "120" in response.text
-    assert "上海" in response.text
+    assert "event: analysis_payload" not in response.text
+    assert "需求分析与 RFX 策略报告" not in response.text
+    assert EMPTY_ASSISTANT_MESSAGE in response.text

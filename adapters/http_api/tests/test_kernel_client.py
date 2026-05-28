@@ -98,6 +98,11 @@ async def test_kernel_client_run_uses_settings_path_and_reply(monkeypatch):
     assert fake_client.post_calls[0]["url"] == "http://kernel.local:8080/custom/run"
     assert fake_client.post_calls[0]["json"]["user_id"] == "user-1"
     assert fake_client.post_calls[0]["json"]["context"] == {"project_id": "proj-1"}
+    assert fake_client.post_calls[0]["json"]["instance_id"] == "xiaocai"
+    assert fake_client.post_calls[0]["json"]["domain_pack_version"] == "default"
+    assert fake_client.post_calls[0]["json"]["payload"]["domain_pack_domain"] == "xiaocai"
+    assert fake_client.post_calls[0]["json"]["payload"]["instance_id"] == "xiaocai"
+    assert fake_client.post_calls[0]["json"]["payload"]["domain_pack_version"] == "default"
     assert result["message"] == "hello"
     assert result["cards"] == [{"type": "card"}]
     assert result["session_id"] == "kernel-session"

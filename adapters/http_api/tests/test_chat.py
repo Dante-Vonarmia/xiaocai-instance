@@ -87,7 +87,6 @@ def test_chat_run_uses_neutral_message_when_kernel_reply_is_empty(client, auth_t
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == EMPTY_ASSISTANT_MESSAGE
-        assert data["message"].count("\n") >= 2
 
 
 def test_chat_run_without_auth(client):
@@ -146,8 +145,7 @@ def test_chat_stream_uses_neutral_message_when_done_event_has_no_content(client,
         )
 
         assert response.status_code == 200
-        assert EMPTY_ASSISTANT_MESSAGE.split("\n", 1)[0] in response.text
-        assert "\\n" in response.text
+        assert EMPTY_ASSISTANT_MESSAGE in response.text
 
 
 def test_chat_stream_emits_synthetic_done_when_kernel_stream_closes_without_done(client, auth_token):
@@ -169,8 +167,7 @@ def test_chat_stream_emits_synthetic_done_when_kernel_stream_closes_without_done
 
         assert response.status_code == 200
         assert "event: done" in response.text
-        assert EMPTY_ASSISTANT_MESSAGE.split("\n", 1)[0] in response.text
-        assert "\\n" in response.text
+        assert EMPTY_ASSISTANT_MESSAGE in response.text
 
 
 def test_chat_with_context(client, auth_token):
@@ -209,12 +206,12 @@ def test_chat_with_context(client, auth_token):
         assert call_args["context"]["project_id"] == "proj-123"
 
 
-def test_chat_run_injects_procurement_prior_context(client, auth_token):
+def test_chat_run_does_not_inject_procurement_prior_context(client, auth_token):
     with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
         mock_chat.return_value = {
-            "message": "已按需求分析模板生成建议",
+            "message": "FLARE 原生回复",
             "cards": [],
-            "session_id": "test-prior-session",
+            "session_id": "test-no-prior-session",
             "metadata": {},
         }
 
@@ -223,7 +220,7 @@ def test_chat_run_injects_procurement_prior_context(client, auth_token):
             headers={"Authorization": f"Bearer {auth_token}"},
             json={
                 "message": "请帮我做需求分析",
-                "session_id": "test-prior-session",
+                "session_id": "test-no-prior-session",
                 "context": {
                     "mode": "requirement_canvas",
                     "采购目的": "支持新品发布活动落地",
@@ -236,15 +233,21 @@ def test_chat_run_injects_procurement_prior_context(client, auth_token):
         kwargs = mock_chat.await_args.kwargs
         kernel_context = kwargs["context"]
 
-        assert "analysis_template" in kernel_context
-        assert "sections" in kernel_context["analysis_template"]
-        assert "rfx_template" in kernel_context
-        assert "domain_prior" in kernel_context
-        assert kernel_context["domain_prior"]["active_stage"] == "requirement-collection"
-        assert kernel_context["domain_prior"]["preferred_output_template_key"] == "analysis_template"
-        assert "采购目的" in kernel_context["domain_prior"]["filled_fields"]
-        assert "项目名称" in kernel_context["domain_prior"]["missing_fields"]
-
+        assert kernel_context["mode"] == "requirement_canvas"
+        assert kernel_context["采购目的"] == "支持新品发布活动落地"
+        assert kernel_context["使用场景"] == "新品发布会"
+        for local_key in (
+            "analysis_template",
+            "rfx_template",
+            "domain_prior",
+            "clarification_policy",
+            "category_prior",
+            "confidence_policy",
+            "field_definitions",
+            "required_fields",
+            "required_missing",
+        ):
+            assert local_key not in kernel_context
 
 def test_chat_run_intelligent_sourcing_keeps_empty_cards_when_kernel_returns_none(client, auth_token):
     bind_response = client.post(
@@ -412,12 +415,9 @@ def test_chat_run_returns_error_when_kernel_fails_even_if_fallback_enabled(monke
 
         assert response.status_code == 200
         data = response.json()
-        assert data["message"] != EMPTY_ASSISTANT_MESSAGE
-        assert "需求分析与 RFX 策略报告" in data["message"]
-        assert "50万" in data["message"]
-        assert "上海" in data["message"]
-        assert "500" in data["message"]
+        assert data["message"] == EMPTY_ASSISTANT_MESSAGE
         assert data["metadata"]["degraded"] is True
+        assert data["metadata"]["degrade_reason"] == "kernel_exception"
 
 
 def test_chat_mode_not_allowed(monkeypatch):

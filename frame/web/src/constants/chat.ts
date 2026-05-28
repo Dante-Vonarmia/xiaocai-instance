@@ -29,6 +29,14 @@ export type CanvasUiLabels = {
   scenario_title: string
 }
 
+export type InstanceProfile = {
+  product_name: string
+  brand_tag: string
+  logo_text: string
+  logo_url: string
+  ui_labels: CanvasUiLabels & Record<string, string>
+}
+
 export { FLARE_VERSION } from './version'
 export const DEFAULT_FUNCTION_TYPE = 'auto'
 export const DEFAULT_SESSION_TITLE = '新会话'
@@ -63,6 +71,24 @@ export const DEFAULT_CANVAS_UI_LABELS: CanvasUiLabels = {
   canvas_empty_result: '发送后在这里生成需求文档草稿，结构化结果会同步展示。',
   canvas_status_title: '文档进度',
   scenario_title: '起步入口',
+}
+
+export const DEFAULT_INSTANCE_PROFILE: InstanceProfile = {
+  product_name: DEFAULT_CANVAS_UI_LABELS.product_name,
+  brand_tag: DEFAULT_CANVAS_UI_LABELS.brand_tag,
+  logo_text: DEFAULT_CANVAS_UI_LABELS.product_name,
+  logo_url: '/assets/logo-light.svg',
+  ui_labels: {
+    ...DEFAULT_CANVAS_UI_LABELS,
+    empty_state_logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
+    empty_state_logo_url: '/assets/logo-light.svg',
+    logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
+    logo_url: '/assets/logo-light.svg',
+    product_logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
+    product_logo_url: '/assets/logo-light.svg',
+    sidebar_logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
+    sidebar_logo_url: '/assets/logo-light.svg',
+  },
 }
 
 export const DEFAULT_STARTER_PROMPTS: StarterPrompt[] = []

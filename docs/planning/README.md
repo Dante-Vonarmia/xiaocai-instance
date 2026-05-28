@@ -1,6 +1,6 @@
 # xiaocai Planning
 
-最后更新: 2026-05-18
+最后更新: 2026-05-22
 
 ## 1. 目的
 
@@ -113,6 +113,8 @@ planning/status alignment
 | 2026-05-21 | 分析/寻源输出模板 contract 补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，字段依赖与缺字段阻断明确 |
 | 2026-05-20 - 2026-05-22 | 分析报告模板投影串联与用户可见清洗 | `docs/planning/analysis-report-template-projection-plan.md` | 右侧报告按模板格式输出；内部代码、工作流、debug 概念不进入用户可见内容 |
 | 2026-05-22 | 契约与 domain-pack 回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
+| 2026-05-22 | LLM 输出稳定性与线上线下一致性排查收敛 | `docs/planning/README.md#p0llm-输出稳定性与线上线下一致性` | 线上/本地模型配置、structured reasoning、mode=auto、fallback 语义差异有明确任务 owner 与验收 |
+| 2026-05-22 | xiaocai instance 肃清与 FLARE 边界对齐 | `docs/architecture/07-flare-instance-boundary.md`、`docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md` | xiaocai 只保留 instance 使用层/配置层/业务资产层；runtime 缺口回 FLARE；不新增本地 kernel/workflow/canvas 机制 |
 | 2026-05-25 | FLARE handoff 包整理 | `docs/contracts/xiaocai-canonical-quality-gates.md` | canonical context 示例、字段策略、模板、验收命令可交付 |
 
 ### 3.2 采购智能配置中心排期
@@ -128,6 +130,16 @@ planning/status alignment
 | 2026-06-02 | 开发任务拆分 | `planning/ai-configuration-center-plan.md` | 前端、backend contract、workflow、测试边界明确 |
 
 ## 4. 当前任务分组
+
+### P0：xiaocai instance 肃清与 FLARE 边界对齐
+
+| 任务ID | 任务 | 状态 | Owner | 验收 |
+|---|---|---|---|---|
+| CLEAN-001 | instance / FLARE 边界文档对齐 | Done | xiaocai | `docs/architecture/07-flare-instance-boundary.md` 与 `docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md` 明确：xiaocai 不开发 kernel/runtime/workflow/canvas/readiness 底层机制，只做 instance 使用层、配置层、业务资产层 |
+| CLEAN-002 | xiaocai 本地 runtime-like 逻辑审计 | Done | xiaocai | 已在 `docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md#6-clean-002-本地-runtime-like-逻辑审计` 列出 `chat/router.py`、`chat/workbench_projection.py`、`chat/context_policy.py`、`chat/orchestration/*` 及相邻 projection/fallback helper 的保留/冻结/上报 FLARE 结论 |
+| CLEAN-003 | domain-pack 角色肃清 | Done | xiaocai | 已同步 FLARE 最新 `domain-packs/xiaocai` 为主业务包；`activity_procurement` / `gift_customization` 降为历史场景资产/兼容参考；logo、DB、auth、会员校验等实例运行配置保持在 instance 配置层，不进入业务 pack |
+| CLEAN-004 | xiaocai 当前精准能力表 | Planned | xiaocai | 形成“当前支持/不支持/依赖 FLARE/只由 xiaocai 配置”的能力表；普通问答、显式梳理、显式分析、显式寻源、MCP/source 连接边界清楚 |
+| CLEAN-005 | FLARE 缺口清单回传 | Planned | xiaocai + FLARE | 对 draft-first artifact、采购包/任务包投影、candidate/confirmed 状态、canvas patch、MCP runtime、domain-pack schema 扩展等能力，只记录缺口，不在 xiaocai 本地实现 |
 
 ### P0：下周联调闭环
 
@@ -148,6 +160,17 @@ planning/status alignment
 | LLM-FB-003 | health/quota 降级回归 | Planned | FLARE + xiaocai | disabled/exhausted provider 被跳过 |
 | LLM-FB-004 | timeout/error fallback 回归 | Planned | FLARE + xiaocai | primary timeout/500 返回 fallback 并记录 `provider_trace` |
 | LLM-FB-005 | chat/retrieval 联合验收 | Planned | xiaocai | 回复不中断，降级原因可审计 |
+
+### P0：LLM 输出稳定性与线上线下一致性
+
+| 任务ID | 任务 | 状态 | Owner | 验收 |
+|---|---|---|---|---|
+| LLM-STAB-001 | 线上/本地模型与推理配置对齐 | Planned | xiaocai | 明确 `DASHSCOPE_MODEL`、`MODEL_ROUTER_*`、`STRUCTURED_REASONING_ENABLED` 的 dev/prod 基线；同一输入在线上/本地使用同一模型策略可复现 |
+| LLM-STAB-002 | structured reasoning 默认策略降风险 | Planned | xiaocai + FLARE | 确认是否默认关闭或按意图启用；结构化推理失败/超时不覆盖主回复；JSON 抽取失败有可审计 trace |
+| LLM-STAB-003 | `mode=auto` 不绕过 xiaocai 意图解析 | Planned | xiaocai | 前端默认 `auto` 不直接落入 FLARE default；采购梳理/分析/寻源请求进入正确 instance mode；普通问候不被工作流化 |
+| LLM-STAB-004 | qwen-max 质量回归与替换策略 | Planned | xiaocai | 用固定采购 case 对比 `qwen-max` 与 FLARE 基线模型；产出是否继续使用 qwen-max 的结论 |
+| LLM-STAB-005 | prompt/config 注入边界复核 | Planned | xiaocai | 设置中心 prompt、domain prompt 与 FLARE track/context prompt 不让普通对话输出“当前目标/主要路径”等内部工作流语义 |
+| LLM-STAB-006 | 语义质量 fallback 边界评估 | Planned | xiaocai + FLARE | 明确 provider fallback 只处理技术失败还是也承接质量门禁；若需要质量门禁，先形成 eval/contract，不在 xiaocai 复制 FLARE runtime |
 
 ### P0：Chat projection / fallback owner 收敛
 

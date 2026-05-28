@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     kernel_stream_path: str = Field(default="/kernel/stream", description="Kernel 流式对话路径")
 
     # Domain Pack 配置（domain-packs）
+    flare_instance_id: str = Field(default="xiaocai", description="FLARE instance 标识")
+    flare_domain_pack_default_domain: str = Field(default="xiaocai", description="默认领域包 domain")
+    flare_domain_pack_version: str = Field(default="default", description="默认领域包版本")
     flare_domain_pack_root: str = Field(default=".", description="领域资产根目录（domain-packs）")
     upload_root: str = Field(default="/tmp/xiaocai-instance-uploads", description="上传文件存储根目录")
     storage_db_path: str = Field(default="/tmp/xiaocai-instance.db", description="SQLite 存储路径")

@@ -49,20 +49,10 @@ def get_stream_turn_registry() -> StreamTurnRegistry:
 def build_stream_busy_events(session_id: str) -> list[tuple[str, dict]]:
     return [
         (
-            "content",
+            "error",
             {
-                "type": "content",
-                "channel": "assistant",
-                "content": STREAM_BUSY_MESSAGE,
-                "session_id": session_id,
-                "transient": True,
-            },
-        ),
-        (
-            "complete",
-            {
-                "type": "complete",
-                "status": "busy",
+                "type": "error",
+                "code": "stream_busy",
                 "message": STREAM_BUSY_MESSAGE,
                 "session_id": session_id,
                 "transient": True,

@@ -12,12 +12,6 @@ CANDIDATE_LIST_KEYS = (
     "structured_fields",
 )
 CANDIDATE_NESTED_KEYS = ("intake_result", "result", "payload", "metadata", "canvas_state")
-CATEGORY_OPTION_FIELDS = {
-    "一级品类": "category_level1_options",
-    "二级品类": "category_level2_options",
-}
-
-
 def _to_text(value: object) -> str:
     return value.strip() if isinstance(value, str) and value.strip() else ""
 
@@ -77,16 +71,6 @@ def _canonical_field_key(raw_key: str) -> tuple[str, str]:
     return "", "unknown_field"
 
 
-def _category_rejection(field_key: str, value: str) -> str:
-    option_attr = CATEGORY_OPTION_FIELDS.get(field_key)
-    if not option_attr:
-        return ""
-    options = getattr(load_contracts(), option_attr, [])
-    if value in options:
-        return ""
-    return "noncanonical_category_value"
-
-
 def _candidate_status(item: dict[str, Any]) -> str:
     status = _to_text(item.get("status")) or _to_text(item.get("normalization_status"))
     return "rejected" if status == "rejected" else "needs_confirmation"
@@ -107,8 +91,6 @@ def _normalize_candidate(item: object) -> tuple[dict[str, Any] | None, dict[str,
     rejection_reason = "" if field_key else key_status
     if field_key and not value:
         rejection_reason = "empty_value"
-    if field_key and value:
-        rejection_reason = _category_rejection(field_key, value)
 
     base = {
         "field_key": field_key or raw_key,
