@@ -73,21 +73,24 @@ export const DEFAULT_CANVAS_UI_LABELS: CanvasUiLabels = {
   scenario_title: '起步入口',
 }
 
+const DEFAULT_LOGO_URL = '/assets/logo-xiaocai.svg'
+const DEFAULT_SIDEBAR_LOGO_URL = '/assets/logo-xiaocai-wordmark.svg'
+
 export const DEFAULT_INSTANCE_PROFILE: InstanceProfile = {
   product_name: DEFAULT_CANVAS_UI_LABELS.product_name,
   brand_tag: DEFAULT_CANVAS_UI_LABELS.brand_tag,
   logo_text: DEFAULT_CANVAS_UI_LABELS.product_name,
-  logo_url: '/assets/logo-light.svg',
+  logo_url: DEFAULT_LOGO_URL,
   ui_labels: {
     ...DEFAULT_CANVAS_UI_LABELS,
     empty_state_logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
-    empty_state_logo_url: '/assets/logo-light.svg',
+    empty_state_logo_url: DEFAULT_LOGO_URL,
     logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
-    logo_url: '/assets/logo-light.svg',
+    logo_url: DEFAULT_LOGO_URL,
     product_logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
-    product_logo_url: '/assets/logo-light.svg',
+    product_logo_url: DEFAULT_LOGO_URL,
     sidebar_logo_alt: DEFAULT_CANVAS_UI_LABELS.product_name,
-    sidebar_logo_url: '/assets/logo-light.svg',
+    sidebar_logo_url: DEFAULT_SIDEBAR_LOGO_URL,
   },
 }
 

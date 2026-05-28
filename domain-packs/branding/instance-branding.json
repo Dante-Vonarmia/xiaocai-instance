@@ -11,9 +11,10 @@
 
   "branding": {
     "logo": {
-      "light": "/assets/logo-light.svg",
-      "dark": "/assets/logo-dark.svg",
-      "favicon": "/assets/favicon.ico"
+      "light": "/assets/logo-xiaocai.svg",
+      "dark": "/assets/logo-xiaocai.svg",
+      "sidebar": "/assets/logo-xiaocai-wordmark.svg",
+      "favicon": "/assets/logo-xiaocai.svg"
     },
 
     "colors": {

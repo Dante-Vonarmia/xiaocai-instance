@@ -72,4 +72,25 @@ describe('useBranding', () => {
     expect(result.current.instanceProfile.logo_url).toBe('/assets/test-logo.svg')
     expect(result.current.instanceProfile.ui_labels.sidebar_logo_url).toBe('/assets/test-logo.svg')
   })
+
+  it('左侧栏支持单独注入带标题字标', async () => {
+    mockBrandingFetch({
+      instance: { displayName: '测试品牌', subtitle: '测试助手' },
+      branding: {
+        logo: {
+          light: '/assets/test-logo.svg',
+          sidebar: '/assets/test-wordmark.svg',
+        },
+      },
+      ui: { chat: { uiLabels: {} } },
+    })
+
+    const { result } = renderHook(() => useBranding())
+
+    await waitFor(() => {
+      expect(result.current.instanceProfile.logo_url).toBe('/assets/test-logo.svg')
+    })
+    expect(result.current.instanceProfile.ui_labels.product_logo_url).toBe('/assets/test-logo.svg')
+    expect(result.current.instanceProfile.ui_labels.sidebar_logo_url).toBe('/assets/test-wordmark.svg')
+  })
 })

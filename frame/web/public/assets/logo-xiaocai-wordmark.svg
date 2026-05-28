@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 188 32" role="img" aria-label="小采 采购助手">
+  <defs>
+    <linearGradient id="xiaocai-wordmark-bg" x1="4" y1="3" x2="30" y2="29" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14B8A6"/>
+      <stop offset="0.56" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.5" y="2" width="28" height="28" rx="8" fill="url(#xiaocai-wordmark-bg)"/>
+  <path d="M9 15h13l-1.8 10H10.8L9 15Z" fill="#FFFFFF" fill-opacity="0.18" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M11 15c1-4 8-4 9 0" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M12.4 20l2.3 2.2 4.7-5.6" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M23.5 6.7l0.9 2.3 2.4 1-2.4 1-0.9 2.3-1-2.3-2.3-1 2.3-1 1-2.3Z" fill="#FDE68A"/>
+  <text x="39" y="21.5" fill="#0F172A" font-family="Inter, Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="17" font-weight="760" letter-spacing="0.02em">小采</text>
+  <text x="87" y="20.4" fill="#7C6F9F" font-family="Inter, Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="650" letter-spacing="0.12em">采购助手</text>
+</svg>

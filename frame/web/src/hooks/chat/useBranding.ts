@@ -33,7 +33,9 @@ type BrandingPayload = {
     logo?: {
       light?: unknown
       dark?: unknown
+      sidebar?: unknown
       favicon?: unknown
+      wordmark?: unknown
     }
   }
   ui?: {
@@ -62,6 +64,9 @@ function toInstanceProfile(
   uiLabels: CanvasUiLabels,
 ): InstanceProfile {
   const logoUrl = toText(payload?.branding?.logo?.light) || DEFAULT_INSTANCE_PROFILE.logo_url
+  const sidebarLogoUrl = toText(payload?.branding?.logo?.sidebar)
+    || toText(payload?.branding?.logo?.wordmark)
+    || logoUrl
   const logoText = uiLabels.product_name
   const logoAlt = logoText
 
@@ -79,7 +84,7 @@ function toInstanceProfile(
       product_logo_alt: logoAlt,
       product_logo_url: logoUrl,
       sidebar_logo_alt: logoAlt,
-      sidebar_logo_url: logoUrl,
+      sidebar_logo_url: sidebarLogoUrl,
     },
   }
 }
