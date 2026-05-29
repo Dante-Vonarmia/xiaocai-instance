@@ -205,6 +205,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_FLARE_CORE_ENTRY_URL: ${VITE_FLARE_CORE_ENTRY_URL}
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
     container_name: inst-xiaocai-web
     ports:
       - "23001:80"

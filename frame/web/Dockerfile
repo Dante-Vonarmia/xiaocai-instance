@@ -2,8 +2,11 @@ FROM node:20-alpine AS build
 
 WORKDIR /workspace/frame/web
 
+ARG NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+
 # 复制 package 清单并安装依赖
 COPY frame/web/package*.json ./
+RUN npm config set registry "$NPM_CONFIG_REGISTRY"
 RUN npm ci --no-audit --no-fund
 
 COPY frame/web ./
