@@ -1,5 +1,13 @@
 # {{项目名称}} 需求分析报告
 
+## 高层结论与建议路径
+
+- 当前结论：{{goal_summary}}
+- 推荐采购推进路径：{{next_steps}}
+- 关键决策：{{decision_points}}
+- 主要约束：{{constraints}}
+- 暂不确定但影响重大的事项：{{missing_information}}
+
 ## 项目理解与核心需求
 
 - 采购目的：{{采购目的}}
@@ -9,6 +17,17 @@
 - 数量与单位：{{数量}} {{单位}}
 - 交付要求：{{交付时间}}，{{交付地点}}
 - 预算信息：{{预算金额}} {{预算币种}}
+- 成功标准：{{success_criteria}}
+
+## 采购包策略与边界
+
+| 采购包 / 方向 | 目标与范围 | 不包含事项 | 关键交付物 | 供应商类型 | 信息状态 |
+| --- | --- | --- | --- | --- | --- |
+| {{package_name}} | {{package_scope}} | {{package_exclusions}} | {{package_deliverables}} | {{vendor_profile}} | 已确认 / 候选 / 待验证 |
+
+- 拆包依据：{{package_reasoning}}
+- 包间依赖：{{package_dependencies}}
+- 可能合并或拆分的条件：{{package_options}}
 
 ## 需求完整性与待确认
 
@@ -29,9 +48,14 @@
 - 供给格局：{{market_snapshot}}
 - 可选方案：{{supply_status}}
 - 关键供应商类型：{{vendor_profile}}
+- 供给成熟度与差异：{{supply_maturity}}
 - 信息依据：{{evidence_summary}}
 
-## 成本结构分析
+## 成本结构分析 / 成本拆解与预算校准
+
+| 成本项 | 影响因素 | 可控性 | 预算校准建议 |
+| --- | --- | --- | --- |
+| {{cost_item}} | {{cost_drivers}} | 高 / 中 / 低 | {{budget_hint}} |
 
 - 成本驱动项：{{cost_drivers}}
 - 预算或价格区间：{{budget_hint}}
@@ -39,6 +63,10 @@
 - 需进一步确认：{{cost_open_points}}
 
 ## 项目风险分析
+
+| 风险 | 触发条件 | 影响 | 缓解措施 | 责任 / 关注点 |
+| --- | --- | --- | --- | --- |
+| {{risk_list}} | {{risk_trigger}} | {{risk_impact}} | {{mitigations}} | {{risk_owner}} |
 
 - 需求风险：{{risk_list}}
 - 交付风险：{{delivery_risk}}
@@ -48,21 +76,20 @@
 
 ## 采购策略分析
 
-### 目标优先级权重
-
-| 目标 | 建议权重 | 说明 |
-| --- | --- | --- |
-| 获取更详细市场信息 | {{market_info_weight}} | 适用于需求边界、预算或供应格局仍需验证的项目。 |
-| 获取高质量解决方案 | {{solution_quality_weight}} | 适用于方案创意、专业能力或复杂交付影响较大的项目。 |
-| 获取有竞争力的价格 | {{price_competitiveness_weight}} | 适用于预算明确、供应充分且可比价的项目。 |
-| 使用更可靠的供应商 | {{supplier_reliability_weight}} | 适用于交付稳定性、资质和履约风险较高的项目。 |
-
-### 关键约束
-
-- 时间紧迫性：{{交付时间}}
-- 合规性与采购规模：{{compliance_constraints}}
+- 推荐采购策略：{{procurement_strategy}}
+- 适用理由：{{strategy_reasoning}}
+- 关键约束：{{compliance_constraints}}
 - 供应商竞争程度：{{supplier_competition}}
 - 内部制度 / 审批：{{internal_constraints}}
+
+## 评估模型与权重建议
+
+| 目标 | 建议权重 | 说明 | 适用条件 |
+| --- | --- | --- | --- |
+| 获取更详细市场信息 | {{market_info_weight}} | 适用于需求边界、预算或供应格局仍需验证的项目。 | RFI / 市场调研 |
+| 获取高质量解决方案 | {{solution_quality_weight}} | 适用于方案创意、专业能力或复杂交付影响较大的项目。 | RFP / 方案评审 |
+| 获取有竞争力的价格 | {{price_competitiveness_weight}} | 适用于预算明确、供应充分且可比价的项目。 | RFQ / 比价 |
+| 使用更可靠的供应商 | {{supplier_reliability_weight}} | 适用于交付稳定性、资质和履约风险较高的项目。 | 准入审核 / 履约评估 |
 
 ## 供应商选择建议
 
@@ -81,7 +108,9 @@
 ## RFX 路径与执行计划
 
 - RFX 类型建议：{{RFX类型}}
+- 选择理由：{{rfx_type_reasoning}}
 - 文件准备：需求说明、技术/服务要求、报价模板、评估表、合同关键条款。
 - 推荐流程：{{next_steps}}
 - 决策点：{{decision_points}}
 - 里程碑：{{里程碑}}
+- 输出物：{{rfx_documents}}

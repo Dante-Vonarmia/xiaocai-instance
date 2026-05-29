@@ -17,6 +17,14 @@
 - 可替代方案：{{alternative_options}}
 - 信息依据：{{evidence_summary}}
 
+## 行业 / 规格偏好
+
+- 适用行业 / 场景：{{industry_context}}
+- 常见规格结构：{{spec_structure}}
+- 用户或历史记录偏好：{{preference_structure}}
+- 需要沿用的模板或字段：{{preferred_template_fields}}
+- 不适用或需排除的结构：{{excluded_structure}}
+
 ## 成本结构分析
 
 - 价格区间：{{price_band}}
@@ -49,6 +57,14 @@
 - 排除范围：{{excluded_scope}}
 
 ## 供应商画像与准入/优选
+
+## 供应商画像分层
+
+| 层级 | 供应商类型 | 适用场景 | 关注点 |
+| --- | --- | --- | --- |
+| 核心候选 | {{primary_supplier_profile}} | 与当前规格和交付要求高度匹配 | 能力、案例、交付稳定性 |
+| 备选候选 | {{backup_supplier_profile}} | 可替代或补充供应 | 价格、响应、区域覆盖 |
+| 待验证候选 | {{unverified_supplier_profile}} | 信息不足但可能相关 | 来源可信度、资质、实际履约 |
 
 ### 准入门槛
 

@@ -21,6 +21,14 @@
 - 适用前提：{{rfx_assumptions}}
 - 不适用或需调整情形：{{rfx_exclusions}}
 
+## 模板适配与结构对齐
+
+- 采用的结构来源：{{template_source}}
+- 本次适配理由：{{template_fit_reason}}
+- 需要沿用的公司模板字段：{{company_template_fields}}
+- 需要按本项目新增的字段：{{project_specific_fields}}
+- 不适用或暂不采用的模板部分：{{template_exclusions}}
+
 ## 采购目标、范围与需求规格
 
 - 采购目的：{{采购目的}}
