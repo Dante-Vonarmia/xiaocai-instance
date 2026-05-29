@@ -66,7 +66,7 @@
   - `我要采购一批办公桌椅，请帮我梳理需求。`
 - 预期：
   - 当前问题和选项可展示；
-  - 一级/二级品类选项必须来自 `domain-packs/category-fields/procurement-category-fields.yaml`；
+  - 一级/二级品类选项必须来自 `domain-packs/xiaocai/taxonomy.yaml`；
   - 字段问法和字段定义必须可追溯到字段字典、品类目录、配置中心或 FLARE canonical planner；
   - 不允许由 xiaocai runtime Python 常量硬编码业务选项。
 

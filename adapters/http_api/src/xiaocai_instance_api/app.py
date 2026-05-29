@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.auth.router import router as auth_router
 from xiaocai_instance_api.chat.router import router as chat_router
+from xiaocai_instance_api.chat.action_compat import router as chat_action_compat_router
 from xiaocai_instance_api.projects.router import router as projects_router
 from xiaocai_instance_api.sessions.router import router as sessions_router, chat_compat_router
 from xiaocai_instance_api.sessions.message_append import (
@@ -73,6 +74,7 @@ def create_app() -> FastAPI:
     # 注册路由
     app.include_router(auth_router)
     app.include_router(chat_router)
+    app.include_router(chat_action_compat_router)
     app.include_router(projects_router)
     app.include_router(sessions_router)
     app.include_router(session_message_append_router)

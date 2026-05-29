@@ -3,6 +3,8 @@
 > 版本 v0.1  
 > 更新时间 2026-05-09
 
+> 当前 domain-pack opt-in 口径：xiaocai 只有显式指定 `domain_pack_domain=xiaocai` 时才启用；当前 module capability 只启用 `requirement_intake` 与 `analysis_mode`。
+
 ## 0.1 目的
 
 本章用于说明 xiaocai 产品结合 FLARE / AgentRuntime 后，当前已经具备哪些能力、哪些能力只是部分具备、哪些能力还没有完成。
@@ -21,7 +23,7 @@
 | 层 | 负责能力 | 当前状态 |
 |---|---|---|
 | FLARE / AgentRuntime | kernel runtime、stream、session primitive、model provider router、通用 tool/source/tracker/eval primitive | Partial |
-| xiaocai instance | 采购语义、需求闭环、字段状态、工作台投影、寻源策略、权限策略、租户配置 | Partial |
+| xiaocai instance | 采购语义、需求闭环、字段状态、工作台投影、寻源资产准备、权限策略、租户配置 | Partial |
 | Glue / Adapter | LLM、外部搜索、MCP、外部数据库、OCR/vector/storage 的接入与 normalize | Partial |
 | Manual / Eval | 使用手册、能力边界、smoke/eval case、验收口径 | Partial |
 
@@ -63,6 +65,8 @@
 | fallback | FLARE | Partial | FLARE provider router 配置项已列入手册；xiaocai 不重写 provider router | 需完成联调与 fallback smoke |
 
 ## 0.6 寻源与证据能力
+
+当前 xiaocai domain pack 未启用 `intelligent_sourcing` module。下表描述的是寻源相关资产、连接和未来能力准备状态，不代表当前 capability projection 会展示寻源入口。
 
 | 能力 | Owner | 状态 | 当前已有 | 主要缺口 |
 |---|---|---|---|---|
@@ -111,11 +115,12 @@
 
 1. xiaocai 是运行在 FLARE 之上的采购 instance。
 2. 已有采购 domain pack、字段、品类、术语、模板 prior。
-3. 已有需求梳理所需的字段缺失、追问、gate、next action 的最小合同。
-4. 已有 session、message、source、artifact、project ownership 的基础持久化。
-5. 已有 connector registry、search source policy、retrieval route plan 的配置与模拟验收。
-6. 已有 private visibility isolation 的基础安全测试。
-7. LLM provider fallback 由 FLARE 负责，xiaocai 消费配置与 trace。
+3. 当前显式启用的 module capability 是 `requirement_intake` 与 `analysis_mode`。
+4. 已有需求梳理所需的字段缺失、追问、gate、next action 的最小合同。
+5. 已有 session、message、source、artifact、project ownership 的基础持久化。
+6. 已有 connector registry、search source policy、retrieval route plan 的配置与模拟验收。
+7. 已有 private visibility isolation 的基础安全测试。
+8. LLM provider fallback 由 FLARE 负责，xiaocai 消费配置与 trace。
 
 不应对外承诺为已完成：
 
@@ -124,9 +129,10 @@
 3. 真实多源外部搜索执行。
 4. 外部只读 DB adapter。
 5. supplier candidate 正式 ranking contract。
-6. 字段级权限矩阵。
-7. 完整可视化 observability / audit console。
-8. 生产级 OCR / vector recall。
+6. 当前 `xiaocai` pack 下的 `intelligent_sourcing` module capability。
+7. 字段级权限矩阵。
+8. 完整可视化 observability / audit console。
+9. 生产级 OCR / vector recall。
 
 ## 0.11 下一步最小补齐顺序
 

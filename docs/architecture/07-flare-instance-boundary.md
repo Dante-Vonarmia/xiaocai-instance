@@ -81,6 +81,24 @@
   - `@flare/chat-ui`
   - `@flare/chat-core`
 
+## Domain pack opt-in 与能力展示
+
+最新 FLARE 口径下，domain pack 不再隐式回退到 generic：
+
+- 未显式配置 `domain_pack_domain` 时，canonical `module_prompt_registry` 应为空。
+- `domain_pack_domain=generic` 只表示显式选择 generic 开放基座。
+- `domain_pack_domain=xiaocai` 只表示显式选择 xiaocai 业务实例。
+- xiaocai instance 转发 FLARE 请求时必须显式携带 `instance_id=xiaocai`、`domain_pack_domain=xiaocai`、`domain_pack_version=default`。
+- 当前 xiaocai pack 只启用 `requirement_intake` 与 `analysis_mode`，不启用 `intelligent_sourcing`。
+
+能力展示边界：
+
+- backend canonical `module_prompt_registry` / capability projection 是唯一展示来源。
+- 前端和 instance app 不得本地补默认 module。
+- xiaocai 不得从 generic 继承 module。
+- UI 不得根据 tab、mode、历史默认值猜测 capability。
+- `intelligent_sourcing` 缺失表示未配置/未启用，不是前端隐藏。
+
 ## PR 自检清单
 
 - 这次需求是否只是“内容变更”？若是，是否只改 instance？

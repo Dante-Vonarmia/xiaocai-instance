@@ -736,7 +736,7 @@ def test_chat_run_allows_analysis_mode_to_override_sticky_intake(client, auth_to
     assert call_args["context"]["mode"] == "analysis_mode"
 
 
-def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_token):
+def test_chat_run_does_not_synthesize_pending_contract_metadata(client, auth_token):
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -753,8 +753,6 @@ def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_
             "command_type": "continue_collection",
             "missing_fields": ["category"],
             "question": {"question_text": "请先确认采购类别"},
-            "chooser": {"field_key": "category", "options": ["活动执行", "服务器"]},
-            "interaction_node": {"id": "category"},
             "gate": {"status": "blocked", "reason": "missing_required_fields"},
             "summary_confirmed": False,
             "metadata": {},
@@ -773,26 +771,10 @@ def test_chat_run_emits_pending_contract_and_suppresses_long_reply(client, auth_
     assert response.status_code == 200
     body = response.json()
     assert body["message"] == "这是一段普通长回答，不应该在字段收集回合抢答"
-    pending_contract = body["metadata"]["pending_contract"]
-    assert pending_contract["current_stage"] == "collecting"
-    assert pending_contract["command_type"] == "continue_collection"
-    assert pending_contract["missing_fields"] == ["category"]
-    assert pending_contract["intake_session_id"] == "sess-pending-run"
-    assert pending_contract["current_question"]["options"][0]["label"] == "活动执行"
-    assert pending_contract["current_question"]["options"][1]["value"] == "服务器"
-    for required_key in (
-        "current_question",
-        "question",
-        "chooser",
-        "interaction_node",
-        "next_actions",
-        "gate",
-        "summary_confirmed",
-    ):
-        assert required_key in pending_contract
+    assert "pending_contract" not in body["metadata"]
 
 
-def test_chat_stream_intake_filters_text_and_emits_next_actions_contract(client, auth_token):
+def test_chat_stream_intake_does_not_emit_adapter_next_actions_contract(client, auth_token):
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -806,8 +788,6 @@ def test_chat_stream_intake_filters_text_and_emits_next_actions_contract(client,
             yield {
                 "type": "early_patch",
                 "question": {"question_text": "请先确认采购类别"},
-                "chooser": {"field_key": "category", "options": ["活动执行", "服务器"]},
-                "interaction_node": {"id": "category"},
                 "missing_fields": ["category"],
                 "command_type": "continue_collection",
                 "gate": {"status": "blocked", "reason": "missing_required_fields"},
@@ -830,8 +810,9 @@ def test_chat_stream_intake_filters_text_and_emits_next_actions_contract(client,
     assert response.status_code == 200
     assert "event: token" in response.text
     assert "event: early_patch" in response.text
-    assert "\"intake_session_id\": \"sess-pending-stream\"" in response.text
-    assert "\"current_stage\": \"collecting\"" in response.text
+    assert "event: next_actions" not in response.text
+    assert "\"intake_session_id\": \"sess-pending-stream\"" not in response.text
+    assert "\"current_stage\": \"collecting\"" not in response.text
 
 
 def test_chat_run_forbidden_when_project_not_bound(client, auth_token):

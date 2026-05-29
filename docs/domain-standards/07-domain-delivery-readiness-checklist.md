@@ -21,7 +21,7 @@
 ### C. Workflow Readiness
 
 - [ ] 首轮关键阶段可进入/退出/回退
-- [ ] blocker 与 chooser 触发条件明确
+- [ ] blocker 与 canonical interaction 触发条件明确
 
 ### D. Search/Sourcing/Replace Readiness
 

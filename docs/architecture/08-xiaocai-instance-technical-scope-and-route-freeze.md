@@ -2,19 +2,16 @@
 
 ## 1. 一句话定稿
 
-小采 instance 是采购领域 canonical-state 驱动的任务系统，不是关键词路由聊天壳；核心抽象固定为 `CanonicalState + FieldPolicy + WorkItem + Artifact + ContractMapper`，扩展固定走规则/模板/知识/评分配置，不改 `service/router/UI` 主流程代码。
+小采 instance 是采购领域 canonical-state 驱动的任务系统，不是关键词路由聊天壳；核心抽象固定为 `CanonicalState + FieldPolicy + WorkItem + Artifact + ContractMapper`，扩展固定走规则/模板/知识/评分配置，不改 `service/router/UI` 主流程代码。当前 domain-pack capability 按显式 opt-in 生效，只启用 `requirement_intake` 与 `analysis_mode`。
 
 ## 2. 技术范围冻结（本期）
 
-### 2.1 本期必须覆盖
+### 2.1 当前启用能力
 
 1. 需求梳理（字段推进、缺口识别、问题生成）
 2. 需求分析（readiness 触发、分析输出）
-3. 智能检索（证据回填）
-4. 智能寻源（候选筛选与评分结果入状态）
-5. RFX 策略与草稿输出（RFI/RFQ/RFP/RFB）
-6. 文档输出与 Project 归档
-7. 知识调用与沉淀复用
+
+启用来源只能是 backend canonical `module_prompt_registry` / capability projection。当前 `xiaocai` pack 不启用 `intelligent_sourcing`。
 
 ### 2.2 本期不覆盖
 
@@ -22,13 +19,16 @@
 2. 自定义流程设计器
 3. 脱离 canonical contract 的 UI 私有流程
 4. 重写 FLARE 底座能力
+5. `intelligent_sourcing` module capability（当前未配置/未启用，不是隐藏寻源）
+6. 从 generic domain pack 继承 module capability
+7. 前端或 instance app 本地补默认 module
 
 ## 3. 固定技术路线
 
 1. 主状态：单一 `CanonicalState` authoritative truth
 2. 编排：统一主流程 + WorkItem 子任务
 3. 问题生成：`apply_answer -> select_next_field -> build_question`（policy 驱动）
-4. 执行：analysis/retrieval/sourcing/document 均走 executor 契约回写
+4. 执行：当前启用的 analysis 走 executor 契约回写；retrieval/sourcing/document 只有在对应 module 显式启用后才进入能力展示和执行链路
 5. 产物：artifact schema 化（非自由文本）
 6. 对外：contract mapper 对接现有 external contract，保持兼容
 

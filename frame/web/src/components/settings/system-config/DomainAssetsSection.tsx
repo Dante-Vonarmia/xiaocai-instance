@@ -12,9 +12,9 @@ import {
 } from './domain-assets-model'
 import './domain-assets-section.css'
 
-const CATEGORY_ASSET_PATH = 'domain-packs/category-fields/procurement-category-fields.yaml'
-const QUESTION_FLOW_PATH = 'domain-packs/activity_procurement/question_flow.yaml'
-const ANALYSIS_TEMPLATE_PATH = 'domain-packs/activity_procurement/analysis_template.md'
+const CATEGORY_ASSET_PATH = 'domain-packs/xiaocai/taxonomy.yaml'
+const QUESTION_FLOW_PATH = 'domain-packs/xiaocai/workflow.yaml'
+const ANALYSIS_TEMPLATE_PATH = 'domain-packs/xiaocai/templates/analysis.md'
 const CONFIG_KEY = 'procurement_domain_assets'
 const CONFIG_SCOPE = 'procurement'
 

@@ -46,7 +46,7 @@
 - 分析与 RFX 模板契约: `domain-pack/contracts/procurement-analysis-rfx-templates.yaml`
 - FLARE 映射草案: `domain-pack/contracts/flare-contract-mapping.yaml`
 - 类目目录占位: `domain-pack/category-fields/procurement-category-fields.yaml`
-- UI 卡片模板: `domain-pack/cards/procurement-ui-cards.yaml`
+- UI 卡片模板: 已移除，展示层对齐 FLARE canonical projection
 - 场景 fixture: `domain-pack/contracts/scenarios/*.yaml`
 - 一致性校验脚本: `domain-pack/scripts/validate_domain_pack.rb`
 

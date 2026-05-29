@@ -74,7 +74,9 @@ def _session_list_function_type_filter(function_type: str | None) -> str | None:
 
 def _message_response(item) -> dict:
     """Preserve FLARE message artifacts so history reload keeps workbench state."""
-    return {
+    plan_payload = item.plan_payload if isinstance(item.plan_payload, dict) else None
+    canvas_state = item.canvas_state if isinstance(item.canvas_state, dict) else None
+    response = {
         "message_id": item.message_id,
         "role": item.role,
         "content": item.content,
@@ -89,13 +91,20 @@ def _message_response(item) -> dict:
         "knowledge_search": item.knowledge_search,
         "sourcing_candidates": item.sourcing_candidates,
         "knowledge_citation": item.knowledge_citation,
-        "canvas_state": item.canvas_state,
+        "canvas_state": canvas_state,
         "analysis_payload": item.analysis_payload,
         "context_usage": item.context_usage,
         "provider_trace": item.provider_trace,
         "context_authority": item.context_authority,
-        "plan_payload": item.plan_payload,
+        "plan_payload": plan_payload,
     }
+    if plan_payload and isinstance(plan_payload.get("workflow_projection"), dict):
+        response["workflow_projection"] = plan_payload["workflow_projection"]
+    if plan_payload and isinstance(plan_payload.get("track_result"), dict):
+        response["track_result"] = plan_payload["track_result"]
+    if canvas_state and isinstance(canvas_state.get("artifact_edit_request"), dict):
+        response["artifact_edit_request"] = canvas_state["artifact_edit_request"]
+    return response
 
 
 @router.get("", response_model=SessionListResponse)

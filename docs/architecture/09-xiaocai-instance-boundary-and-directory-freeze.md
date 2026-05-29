@@ -67,7 +67,7 @@ docs/
 ## 4. 兼容层冻结
 
 1. `chat/orchestration/flows.py` 仅作为过渡 fallback，不新增业务能力。
-2. `router` 中 pending_contract 推断逻辑仅允许保留兼容映射，不允许继续扩展业务语义。
+2. `router` 中不得再新增 pending_contract / canvas_state / next_actions 本地合成逻辑。
 3. 前端兜底逻辑仅保留渲染容错，不得参与业务判断。
 
 ## 5. 当前肃清检查项
@@ -96,7 +96,6 @@ docs/
 审计范围：
 
 - `adapters/http_api/src/xiaocai_instance_api/chat/router.py`
-- `adapters/http_api/src/xiaocai_instance_api/chat/workbench_projection.py`
 - `adapters/http_api/src/xiaocai_instance_api/chat/context_policy.py`
 - `adapters/http_api/src/xiaocai_instance_api/chat/orchestration/*`
 - 审计中发现被 router 直接依赖的相邻 projection / fallback helper 一并记录。
@@ -105,9 +104,9 @@ docs/
 
 | 文件/模块 | 当前合理职责 | runtime-like 风险 | 处理结论 |
 |---|---|---|---|
-| `chat/router.py` | instance API facade：auth、session、limit、project scope、调用 FLARE kernel、SSE 转发、会话写回 | 文件过大；包含 `_build_pending_contract`、adapter-side `next_actions`、`canvas_state`、analysis/sourcing projection fallback、空回复 fallback，容易变成本地 runtime | 保留 transport/facade；冻结 pending/canvas/next_action/projection fallback 扩展；后续按 FLARE native contract 收敛或删除 |
+| `chat/router.py` | instance API facade：auth、session、limit、project scope、调用 FLARE kernel、SSE 转发、会话写回 | 文件过大；若重新加入 pending/canvas/next_action fallback，容易变成本地 runtime | 保留 transport/facade；已移除 pending/canvas/next_action 本地合成；后续只允许透传 FLARE native event |
 | `chat/context_policy.py` | 组装 kernel context：auth scope、retrieval policy、domain prior、prompt/config 输入 | 注入 `clarification_policy`、`confidence_policy`、`domain_system_prompt`，可能影响模型行为和流程表现 | 保留为输入组装层；不得决定 workflow；prompt/domain injection 后续需对齐 FLARE context injection contract |
-| `chat/workbench_projection.py` | 将 FLARE/native pending 或兼容 pending 映射为前端 canvas payload | 本地计算 required/missing/progress/ready_for_submit/current_question/next_actions，接近 canvas canonical runtime | 仅作为兼容投影保留；不得新增采购包/draft/workflow 能力；FLARE canvas_state 足够后删除或降级为 shape mapping |
+| `chat/workbench_projection.py` | 已删除 | 曾本地计算 required/missing/progress/ready_for_submit/current_question/next_actions，接近 canvas canonical runtime | 不再保留；canvas/workbench 状态由 FLARE native event 提供，xiaocai 不本地合成 |
 | `chat/pending_policy.py` | 将 policy trace 附加到已有 pending contract | 当前不合成问题，风险较低 | 保留；只能附加 trace，不能生成 pending/question |
 | `chat/display_projection.py` | FLARE 无可展示文本时的用户可见兜底 | 会生成初版寻源方案、待确认清单、intake markdown，容易替代 FLARE 正式输出 | 冻结；只允许短期兜底；后续由 FLARE output/projection 统一承接 |
 | `chat/analysis_projection.py` / `chat/sourcing_projection.py` | 将采购模板/候选信息映射为右侧结构化展示 | 本地生成 analysis/sourcing 用户可见结构，可能变成本地 artifact runtime | 保留为 instance projection mapping；不得承担分析/寻源执行；若 FLARE 提供 native projection，应迁移 |
@@ -118,7 +117,7 @@ docs/
 | `orchestration/extractor.py` | 从文本中抽取预算、数量、时间、地点等候选字段 | `extract_slots` 可作为候选来源；未使用的 `detect_intent` 若接回主链会重新制造本地 intent runtime | 仅作为 candidate extraction 使用；不得驱动 mode/workflow；未使用 intent helper 后续可清理 |
 | `orchestration/taxonomy_prior.py`、`template_prior.py`、`relevance_prior.py`、`field_prior.py`、`threshold_prior.py` | 从 domain pack 计算 category/template/field relevance prior | 计算分数、阈值、clarification action，容易从 prior 变成 runtime decision | 暂作为 advisory prior；不得直接控制 workflow/readiness；规则执行与阈值解释能力应回 FLARE |
 | `orchestration/config_prompts.py` | 将设置中心 prompt/domain prompt 编译为模型输入 | prompt 可能把内部 stage/workflow 语义暴露给用户可见回复 | 保留但需审计用户可见污染；不允许用 prompt 替代 workflow/runtime |
-| `orchestration/field_candidates.py` / `question_options.py` | normalize candidates/options | 职责清晰，风险较低 | 保留为 normalization helper |
+| `orchestration/field_candidates.py` | normalize candidates | 职责清晰，风险较低 | 保留为 normalization helper |
 
 ### 6.2 本轮禁止继续扩展的本地能力
 

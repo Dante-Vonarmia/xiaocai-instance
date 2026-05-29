@@ -88,8 +88,8 @@ export function normalizeDomainFields(payload: unknown): DomainFieldsSummary {
   }, {} as Record<FieldGroupKey, DomainFieldItem[]>)
 
   return {
-    packId: asString(record.pack_id) || 'activity_procurement',
-    version: asString(record.version) || 'v1',
+    packId: asString(record.pack_id) || 'xiaocai',
+    version: asString(record.version) || 'default',
     groups,
   }
 }
@@ -141,10 +141,45 @@ function readAnalysisSections(text: string): string[] {
 }
 
 export function parsePromptAssets(questionFlowText: string, analysisTemplateText: string): PromptAssetSummary {
+  const workflow = parseWorkflowAsset(questionFlowText)
+  if (workflow) {
+    return {
+      askOrder: workflow.askOrder,
+      followupTemplates: workflow.followupTemplates,
+      analysisSections: readAnalysisSections(analysisTemplateText),
+    }
+  }
   return {
     askOrder: readListBlock(questionFlowText, 'ask_order'),
     followupTemplates: readTemplateBlock(questionFlowText),
     analysisSections: readAnalysisSections(analysisTemplateText),
+  }
+}
+
+function parseWorkflowAsset(text: string): Pick<PromptAssetSummary, 'askOrder' | 'followupTemplates'> | null {
+  try {
+    const workflow = JSON.parse(text) as Record<string, unknown>
+    const blockerPolicy = asRecord(workflow.blocker_policies)
+    const intakeStrategy = asRecord(workflow.intake_strategy)
+    const registry = asArray(workflow.module_prompt_registry)
+    const askOrder = [
+      ...asArray(blockerPolicy.required_fields).map(asString),
+      ...asArray(blockerPolicy.confirmation_fields).map(asString),
+      ...asArray(intakeStrategy.framework_fields).map(asString),
+    ].filter(Boolean)
+    const followupTemplates = registry.flatMap((item) => {
+      const module = asRecord(item)
+      return asArray(module.prompt_templates).map((template) => {
+        const record = asRecord(template)
+        return {
+          key: asString(record.key) || asString(module.module_key),
+          text: asString(record.prompt),
+        }
+      })
+    }).filter((item) => item.key || item.text)
+    return { askOrder: Array.from(new Set(askOrder)), followupTemplates }
+  } catch {
+    return null
   }
 }
 

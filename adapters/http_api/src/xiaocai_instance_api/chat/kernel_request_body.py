@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from xiaocai_instance_api.chat.mode_contract import canonicalize_kernel_context
+from xiaocai_instance_api.contracts.chat_contract import FLARE_PAYLOAD_EXTRA_CONTEXT_KEY
 
 
 def _clean_text(value: Any) -> str:
@@ -29,6 +30,13 @@ def build_kernel_request_body(
     """Build the request body passed from instance API to FLARE kernel."""
 
     context_dict = canonicalize_kernel_context(context)
+    payload_extra = context_dict.get(FLARE_PAYLOAD_EXTRA_CONTEXT_KEY)
+    payload_extra_dict = dict(payload_extra) if isinstance(payload_extra, dict) else {}
+    kernel_context = {
+        key: value
+        for key, value in context_dict.items()
+        if key != FLARE_PAYLOAD_EXTRA_CONTEXT_KEY
+    }
     instance_id = _default_text(context_dict.get("instance_id"), _default_text(default_instance_id, "xiaocai"))
     domain_pack_version = _default_text(
         context_dict.get("domain_pack_version"),
@@ -39,7 +47,7 @@ def build_kernel_request_body(
         _default_text(default_domain_pack_domain, "xiaocai"),
     )
 
-    payload = dict(context_dict)
+    payload = {**kernel_context, **payload_extra_dict}
     payload.setdefault("instance_id", instance_id)
     payload.setdefault("domain_pack_version", domain_pack_version)
     payload.setdefault("domain_pack_domain", domain_pack_domain)
@@ -49,7 +57,7 @@ def build_kernel_request_body(
         "user_id": user_id,
         "message": message,
         "session_id": session_id,
-        "context": context_dict,
+        "context": kernel_context,
         "payload": payload,
     }
 
@@ -68,16 +76,22 @@ def build_kernel_request_body(
         "action_status",
         "action_reason",
         "trace_id",
+        "command",
+        "run_id",
+        "client_request_id",
+        "question_id",
+        "field_key",
+        "field_value",
     ):
-        value = context_dict.get(field)
+        value = payload.get(field, kernel_context.get(field))
         if value is not None:
             request_body[field] = value
 
     request_body.setdefault("instance_id", instance_id)
     request_body.setdefault("domain_pack_version", domain_pack_version)
 
-    if "intent" not in request_body and isinstance(context_dict.get("function_type"), str):
-        request_body["intent"] = context_dict.get("function_type")
+    if "intent" not in request_body and isinstance(kernel_context.get("function_type"), str):
+        request_body["intent"] = kernel_context.get("function_type")
 
     return request_body
 

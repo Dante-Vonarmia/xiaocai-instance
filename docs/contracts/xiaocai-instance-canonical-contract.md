@@ -1,5 +1,7 @@
 # xiaocai instance canonical contract（锁版）
 
+> 当前 domain-pack source/path 以 `docs/contracts/xiaocai-domain-pack-source-contract.md` 为准。legacy domain-pack 目录已删除，本文所有主链路字段与品类引用均指向 `domain-packs/xiaocai/`。
+
 ## 1. 目标
 
 统一 instance 内部 authoritative source 到 canonical state，同时对外兼容当前 pending contract 输出。
@@ -38,8 +40,8 @@
 ## 4. Candidate -> Confirmed 晋级规则
 
 1. `confirmed_fields` 只保存已通过 canonical 校验的权威字段。
-2. 字段名必须存在于 `domain-packs/schema/procurement-field-dictionary.yaml`。
-3. `一级品类` / `二级品类` 必须命中 `domain-packs/category-fields/procurement-category-fields.yaml`。
+2. 字段名必须存在于 `domain-packs/xiaocai/fields.yaml#field_definitions`。
+3. `一级品类` / `二级品类` 必须命中 `domain-packs/xiaocai/taxonomy.yaml#procurement_categories`。
 4. `model_inferred` 默认只能进入 `candidate_fields`，不能直接晋级为 confirmed。
 5. `user_explicit` 可在字段名和值均通过 canonical 校验后晋级。
 6. `rule_extracted` 可在有明确原文 evidence 且规则不发明业务值时晋级。

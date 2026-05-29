@@ -118,6 +118,34 @@ def test_append_exchange_updates_default_session_title(client):
     assert get_response.json()["title"] == "采购100个保温杯"
 
 
+def test_append_exchange_ignores_blank_noop_turn(client):
+    token = _auth_token(client, user_id="blank-append-user")
+    create_response = client.post(
+        "/sessions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"title": "新会话", "function_type": "auto"},
+    )
+    assert create_response.status_code == 200
+    session_id = create_response.json()["sessionId"]
+
+    append_response = client.post(
+        f"/sessions/{session_id}/messages/append",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "user_message": "",
+            "assistant_message": "",
+        },
+    )
+    assert append_response.status_code == 200
+
+    messages_response = client.get(
+        f"/sessions/{session_id}/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert messages_response.status_code == 200
+    assert messages_response.json()["messages"] == []
+
+
 def test_append_exchange_preserves_flare_message_artifacts(client):
     token = _auth_token(client, user_id="artifact-user")
     create_response = client.post(

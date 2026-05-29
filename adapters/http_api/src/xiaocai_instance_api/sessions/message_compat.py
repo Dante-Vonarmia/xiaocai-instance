@@ -15,6 +15,10 @@ from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.sessions.title_compat import apply_auto_title_after_exchange
+from xiaocai_instance_api.sessions.writeback_projection import (
+    has_writeback_content,
+    normalize_writeback_projection,
+)
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 
 
@@ -40,6 +44,9 @@ class ChatMessageWritebackRequest(BaseModel):
     provider_trace: dict[str, Any] | None = None
     context_authority: dict[str, Any] | None = None
     plan_payload: dict[str, Any] | None = None
+    workflow_projection: dict[str, Any] | None = None
+    track_result: dict[str, Any] | None = None
+    artifact_edit_request: dict[str, Any] | None = None
     artifacts: dict[str, Any] | None = None
 
 
@@ -52,9 +59,12 @@ async def append_chat_core_messages(
     authz = get_authorization_service()
     await authz.require_conversation_write(claims=claims, conversation_id=session_id)
 
-    artifact_payload = request.model_dump()
+    artifact_payload = normalize_writeback_projection(request.model_dump())
     if isinstance(request.artifacts, dict):
         artifact_payload.update(request.artifacts)
+        artifact_payload = normalize_writeback_projection(artifact_payload)
+    if not has_writeback_content(artifact_payload):
+        return {"success": True}
 
     store = get_conversation_store()
     success = await store.append_exchange(

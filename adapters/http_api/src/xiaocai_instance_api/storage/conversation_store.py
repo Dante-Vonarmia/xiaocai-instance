@@ -803,53 +803,68 @@ class ConversationStore:
                 return False
 
             artifacts = artifact_payload if isinstance(artifact_payload, dict) else {}
-            now = _now_iso()
-            self._runtime.execute(
-                f"""
-                INSERT INTO messages (
-                    message_id, session_id, user_id, sender_user_id, role, content, created_at,
-                    {_MESSAGE_ARTIFACT_COLUMN_SQL}
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, {_MESSAGE_ARTIFACT_PLACEHOLDERS})
-                """,
-                (
-                    _new_id("msg_user"),
-                    session_id,
-                    user_id,
-                    user_id,
-                    "user",
-                    user_message,
-                    now,
-                    *_message_artifact_values(artifacts, assistant=False),
-                ),
-            )
-            assistant_created_at = _now_iso()
-            self._runtime.execute(
-                f"""
-                INSERT INTO messages (
-                    message_id, session_id, user_id, sender_user_id, role, content, created_at,
-                    {_MESSAGE_ARTIFACT_COLUMN_SQL}
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, {_MESSAGE_ARTIFACT_PLACEHOLDERS})
-                """,
-                (
-                    _new_id("msg_assistant"),
-                    session_id,
-                    user_id,
-                    user_id,
-                    "assistant",
-                    assistant_message,
-                    assistant_created_at,
-                    *_message_artifact_values(artifacts, assistant=True),
-                ),
-            )
+            user_text = str(user_message or "")
+            assistant_text = str(assistant_message or "")
+            if user_text.strip():
+                now = _now_iso()
+                self._runtime.execute(
+                    f"""
+                    INSERT INTO messages (
+                        message_id, session_id, user_id, sender_user_id, role, content, created_at,
+                        {_MESSAGE_ARTIFACT_COLUMN_SQL}
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, {_MESSAGE_ARTIFACT_PLACEHOLDERS})
+                    """,
+                    (
+                        _new_id("msg_user"),
+                        session_id,
+                        user_id,
+                        user_id,
+                        "user",
+                        user_text,
+                        now,
+                        *_message_artifact_values(artifacts, assistant=False),
+                    ),
+                )
+            if assistant_text.strip() or artifacts:
+                assistant_created_at = _now_iso()
+                self._runtime.execute(
+                    f"""
+                    INSERT INTO messages (
+                        message_id, session_id, user_id, sender_user_id, role, content, created_at,
+                        {_MESSAGE_ARTIFACT_COLUMN_SQL}
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, {_MESSAGE_ARTIFACT_PLACEHOLDERS})
+                    """,
+                    (
+                        _new_id("msg_assistant"),
+                        session_id,
+                        user_id,
+                        user_id,
+                        "assistant",
+                        assistant_text,
+                        assistant_created_at,
+                        *_message_artifact_values(artifacts, assistant=True),
+                    ),
+                )
             updated_at = _now_iso()
-            self._runtime.execute(
-                """
-                UPDATE sessions
-                SET preview = ?, updated_at = ?
-                WHERE session_id = ?
-                """,
-                (assistant_message[:80], updated_at, session_id),
-            )
+            preview = assistant_text.strip() or user_text.strip()
+            if preview:
+                self._runtime.execute(
+                    """
+                    UPDATE sessions
+                    SET preview = ?, updated_at = ?
+                    WHERE session_id = ?
+                    """,
+                    (preview[:80], updated_at, session_id),
+                )
+            else:
+                self._runtime.execute(
+                    """
+                    UPDATE sessions
+                    SET updated_at = ?
+                    WHERE session_id = ?
+                    """,
+                    (updated_at, session_id),
+                )
             self._runtime.commit()
             return True
 

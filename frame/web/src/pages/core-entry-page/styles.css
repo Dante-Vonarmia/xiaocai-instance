@@ -20,6 +20,29 @@
 }
 
 /*
+ * xiaocai owns the app shell branding. FLARE core can temporarily render its
+ * built-in fallback before/after stream profile sync, so the shell pins the
+ * sidebar mark to the xiaocai wordmark instead of exposing FLARE defaults.
+ */
+.core-entry-page .flare-sidebar-logo-slot > div:first-child {
+  background: url('/assets/logo-xiaocai-wordmark.svg') left center / contain no-repeat;
+  height: 32px;
+  min-width: 188px;
+}
+
+.core-entry-page .flare-sidebar-logo-slot > div:first-child > * {
+  visibility: hidden;
+}
+
+/*
+ * xiaocai keeps user identity inside auth/session contracts only.
+ * Do not expose FLARE's raw footer user-id label in the product shell.
+ */
+.core-entry-page .flare-workspace-footer-left > .ant-typography-secondary:first-child {
+  display: none;
+}
+
+/*
  * FLARE 内层根容器会内联 height: 100vh。
  * 在 iOS Safari 下会把底部 composer 放到可视区外。
  * 这里强制改为继承外层可视高度，避免被工具栏遮挡。

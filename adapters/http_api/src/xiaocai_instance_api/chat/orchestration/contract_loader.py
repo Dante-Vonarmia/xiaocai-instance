@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+import json
 from pathlib import Path
+from typing import Any
 
 from xiaocai_instance_api.settings import get_settings
 
@@ -25,197 +27,19 @@ class PackMountSnapshot:
     domain_packs_root: str
 
 
-def _line_indent(line: str) -> int:
-    return len(line) - len(line.lstrip(" "))
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
 
 
-def _extract_list_block(text: str, key_name: str) -> list[str]:
-    lines = text.splitlines()
-    target_prefix = f"{key_name}:"
-    start = -1
-    base_indent = 0
-    for idx, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped == target_prefix:
-            start = idx + 1
-            base_indent = _line_indent(line)
-            break
-    if start < 0:
-        return []
-
-    values: list[str] = []
-    for line in lines[start:]:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        indent = _line_indent(line)
-        if indent <= base_indent and not stripped.startswith("- "):
-            break
-        if stripped.startswith("- "):
-            values.append(stripped[2:].strip().strip("'").strip('"'))
-    return values
+def _as_list(value: object) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
-def _extract_nested_list_block(text: str, parent_key: str, child_key: str) -> list[str]:
-    lines = text.splitlines()
-    parent_prefix = f"{parent_key}:"
-    child_prefix = f"{child_key}:"
-    in_parent = False
-    parent_indent = 0
-    child_indent = 0
-    in_child = False
-    values: list[str] = []
-
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        indent = _line_indent(line)
-        if not in_parent:
-            if stripped == parent_prefix:
-                in_parent = True
-                parent_indent = indent
-            continue
-        if indent <= parent_indent and not stripped.startswith("- "):
-            break
-        if not in_child and stripped == child_prefix:
-            in_child = True
-            child_indent = indent
-            continue
-        if in_child:
-            if indent <= child_indent and not stripped.startswith("- "):
-                break
-            if stripped.startswith("- "):
-                values.append(stripped[2:].strip().strip("'").strip('"'))
-
-    return values
-
-
-def _extract_rfx_template_required(text: str) -> dict[str, list[str]]:
-    lines = text.splitlines()
-    mapping: dict[str, list[str]] = {}
-    current_type: str | None = None
-    in_required = False
-    required_indent = 0
-
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        indent = _line_indent(line)
-        if stripped.startswith("- type:"):
-            current_type = stripped.split(":", 1)[1].strip().strip("'").strip('"')
-            mapping.setdefault(current_type, [])
-            in_required = False
-            continue
-        if current_type and stripped == "required_fields:":
-            in_required = True
-            required_indent = indent
-            continue
-        if in_required:
-            if indent <= required_indent and not stripped.startswith("- "):
-                in_required = False
-                continue
-            if stripped.startswith("- "):
-                mapping[current_type].append(stripped[2:].strip().strip("'").strip('"'))
-    return mapping
-
-
-def _extract_field_metadata(text: str) -> dict[str, dict[str, str]]:
-    fields: dict[str, dict[str, str]] = {}
-    current: dict[str, str] | None = None
-
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("- 字段名称:"):
-            key = stripped.split(":", 1)[1].strip().strip("'").strip('"')
-            current = {"字段名称": key}
-            fields[key] = current
-            continue
-        if current is None or ":" not in stripped:
-            continue
-        key, value = stripped.split(":", 1)
-        current[key.strip()] = value.strip().strip("'").strip('"')
-
-    return fields
-
-
-def _extract_field_aliases(text: str) -> dict[str, dict[str, object]]:
-    aliases: dict[str, dict[str, object]] = {}
-    current: dict[str, object] | None = None
-    in_aliases = False
-    in_canonical_fields = False
-
-    for raw_line in text.splitlines():
-        stripped = raw_line.strip()
-        if not stripped:
-            continue
-        indent = _line_indent(raw_line)
-        if stripped == "field_aliases:":
-            in_aliases = True
-            continue
-        if in_aliases and indent == 0 and not stripped.startswith("- "):
-            break
-        if not in_aliases:
-            continue
-        if stripped.startswith("- external_name:"):
-            external_name = stripped.split(":", 1)[1].strip().strip("'").strip('"')
-            current = {"external_name": external_name, "canonical_fields": []}
-            aliases[external_name] = current
-            in_canonical_fields = False
-            continue
-        if current is None:
-            continue
-        if stripped == "canonical_fields:":
-            in_canonical_fields = True
-            continue
-        if in_canonical_fields and stripped.startswith("- "):
-            current_fields = current.setdefault("canonical_fields", [])
-            if isinstance(current_fields, list):
-                current_fields.append(stripped[2:].strip().strip("'").strip('"'))
-            continue
-        if ":" not in stripped:
-            continue
-        key, value = stripped.split(":", 1)
-        normalized_value = value.strip().strip("'").strip('"')
-        current[key.strip()] = normalized_value
-        in_canonical_fields = False
-
-    return aliases
-
-
-def _extract_category_options(text: str) -> tuple[list[str], list[str]]:
-    level1: list[str] = []
-    level2: list[str] = []
-    seen_l1: set[str] = set()
-    seen_l2: set[str] = set()
-    in_owner_section = False
-
-    for raw_line in text.splitlines():
-        stripped = raw_line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if stripped == "采购负责类:":
-            in_owner_section = True
-            continue
-        if not in_owner_section:
-            continue
-
-        indent = _line_indent(raw_line)
-        if indent == 6 and stripped.startswith("- 名称:"):
-            value = stripped.split(":", 1)[1].strip().strip("'").strip('"')
-            if value and value not in seen_l1:
-                seen_l1.add(value)
-                level1.append(value)
-        if indent == 10 and stripped.startswith("- 名称:"):
-            value = stripped.split(":", 1)[1].strip().strip("'").strip('"')
-            if value and value != "/" and value not in seen_l2:
-                seen_l2.add(value)
-                level2.append(value)
-
-    return level1, level2
+def _to_text(value: object) -> str:
+    return value.strip() if isinstance(value, str) and value.strip() else ""
 
 
 def _resolve_domain_packs_root() -> Path:
@@ -227,9 +51,104 @@ def _resolve_domain_packs_root() -> Path:
         raw_root.parent / "domain-packs",
     ]
     for candidate in candidates:
-        if (candidate / "schema" / "procurement.yaml").exists():
+        if (candidate / "xiaocai" / "workflow.yaml").exists():
             return candidate
     return raw_root / "domain-packs"
+
+
+def _field_metadata(fields_data: dict[str, Any]) -> dict[str, dict[str, str]]:
+    metadata: dict[str, dict[str, str]] = {}
+    for item in _as_list(fields_data.get("field_definitions")):
+        if not isinstance(item, dict):
+            continue
+        key = _to_text(item.get("key")) or _to_text(item.get("label"))
+        if not key:
+            continue
+        metadata[key] = {
+            str(name): str(value)
+            for name, value in item.items()
+            if isinstance(name, str) and isinstance(value, (str, int, float, bool))
+        }
+    for key, item in (fields_data.get("field_semantics") or {}).items():
+        field_key = _to_text(key)
+        if not field_key or not isinstance(item, dict):
+            continue
+        current = dict(metadata.get(field_key, {}))
+        current.update({
+            str(name): str(value)
+            for name, value in item.items()
+            if isinstance(name, str) and isinstance(value, (str, int, float, bool))
+        })
+        current.setdefault("key", field_key)
+        current.setdefault("label", field_key)
+        metadata[field_key] = current
+    return metadata
+
+
+def _field_aliases(fields_data: dict[str, Any]) -> dict[str, dict[str, object]]:
+    aliases = fields_data.get("field_aliases")
+    if not isinstance(aliases, list):
+        return {}
+    result: dict[str, dict[str, object]] = {}
+    for item in aliases:
+        if not isinstance(item, dict):
+            continue
+        external_name = _to_text(item.get("external_name"))
+        if external_name:
+            result[external_name] = dict(item)
+    return result
+
+
+def _category_options(taxonomy_data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    categories = taxonomy_data.get("procurement_categories")
+    if not isinstance(categories, dict):
+        return [], []
+    level1 = [_to_text(key) for key in categories.keys()]
+    level2: list[str] = []
+    seen: set[str] = set()
+    for children in categories.values():
+        if not isinstance(children, dict):
+            continue
+        for key in children.keys():
+            value = _to_text(key)
+            if value and value not in seen:
+                seen.add(value)
+                level2.append(value)
+    return [item for item in level1 if item], level2
+
+
+def _module_required(fields_data: dict[str, Any], module_name: str) -> list[str]:
+    module_sets = fields_data.get("module_field_sets")
+    if not isinstance(module_sets, dict):
+        return []
+    module = module_sets.get(module_name)
+    if not isinstance(module, dict):
+        return []
+    return [_to_text(item) for item in _as_list(module.get("required_fields")) if _to_text(item)]
+
+
+def _workflow_required(workflow_data: dict[str, Any], key: str) -> list[str]:
+    policy = workflow_data.get("blocker_policies")
+    if not isinstance(policy, dict):
+        return []
+    return [_to_text(item) for item in _as_list(policy.get(key)) if _to_text(item)]
+
+
+def _stage_required(fields_data: dict[str, Any], workflow_data: dict[str, Any]) -> dict[str, list[str]]:
+    intake_required = (
+        _workflow_required(workflow_data, "required_fields")
+        + _workflow_required(workflow_data, "confirmation_fields")
+    )
+    return {
+        "requirement-collection": intake_required,
+        "requirement-analysis": _module_required(fields_data, "需求分析"),
+        "rfx-strategy": _module_required(fields_data, "RFX策略"),
+    }
+
+
+def _rfx_template_required(fields_data: dict[str, Any]) -> dict[str, list[str]]:
+    required = _module_required(fields_data, "RFX策略")
+    return {"default": required} if required else {}
 
 
 @lru_cache(maxsize=1)
@@ -240,36 +159,25 @@ def load_pack_mount_snapshot() -> PackMountSnapshot:
 
 @lru_cache(maxsize=1)
 def load_contracts() -> OrchestrationContracts:
-    # 当前运行统一基于 domain-packs contract。
-    _ = load_pack_mount_snapshot()
-
     root = _resolve_domain_packs_root()
-    schema_text = (root / "schema" / "procurement.yaml").read_text(encoding="utf-8")
-    field_dictionary_text = (root / "schema" / "procurement-field-dictionary.yaml").read_text(encoding="utf-8")
-    category_text = (root / "category-fields" / "procurement-category-fields.yaml").read_text(encoding="utf-8")
-    workflow_text = (root / "workflows" / "procurement-workflow-nodes.yaml").read_text(encoding="utf-8")
-    sourcing_text = (root / "contracts" / "procurement-search-sourcing-replace.yaml").read_text(encoding="utf-8")
-    analysis_rfx_text = (root / "contracts" / "procurement-analysis-rfx-templates.yaml").read_text(encoding="utf-8")
-    category_level1_options, category_level2_options = _extract_category_options(category_text)
-
-    stage_required = {
-        "requirement-collection": _extract_nested_list_block(schema_text, "stage_field_sets", "需求梳理必填集"),
-        "requirement-analysis": _extract_nested_list_block(schema_text, "stage_field_sets", "需求分析必填集"),
-        "rfx-strategy": _extract_nested_list_block(schema_text, "stage_field_sets", "RFX策略必填集"),
-    }
+    xiaocai_root = root / "xiaocai"
+    fields_data = _read_json(xiaocai_root / "fields.yaml")
+    workflow_data = _read_json(xiaocai_root / "workflow.yaml")
+    taxonomy_data = _read_json(xiaocai_root / "taxonomy.yaml")
+    level1_options, level2_options = _category_options(taxonomy_data)
 
     return OrchestrationContracts(
-        stage_order=_extract_list_block(workflow_text, "stage_order"),
-        stage_required=stage_required,
-        sourcing_required_fields=_extract_nested_list_block(
-            sourcing_text,
-            "sourcing_rules",
-            "required_requirement_fields",
-        ),
-        rfx_allowed_types=_extract_nested_list_block(analysis_rfx_text, "rfx_templates", "allowed_types"),
-        rfx_template_required=_extract_rfx_template_required(analysis_rfx_text),
-        field_metadata=_extract_field_metadata(field_dictionary_text),
-        field_aliases=_extract_field_aliases(field_dictionary_text),
-        category_level1_options=category_level1_options,
-        category_level2_options=category_level2_options,
+        stage_order=[
+            "requirement-collection",
+            "requirement-analysis",
+            "rfx-strategy",
+        ],
+        stage_required=_stage_required(fields_data, workflow_data),
+        sourcing_required_fields=_module_required(fields_data, "智能寻源"),
+        rfx_allowed_types=[],
+        rfx_template_required=_rfx_template_required(fields_data),
+        field_metadata=_field_metadata(fields_data),
+        field_aliases=_field_aliases(fields_data),
+        category_level1_options=level1_options,
+        category_level2_options=level2_options,
     )

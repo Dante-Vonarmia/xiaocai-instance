@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate xiaocai domain-packs (P0 minimal checks)."""
+"""Validate the active xiaocai domain-pack only."""
 
 from __future__ import annotations
 
@@ -9,6 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+
+ACTIVE_PACK = "xiaocai"
+EXPECTED_MODULES = {"requirement_intake", "analysis_mode"}
+DISABLED_INTENT_ALIASES = {"寻源", "供应商"}
 
 
 def _load_yaml_with_ruby(path: Path) -> Any:
@@ -36,199 +41,139 @@ def load_yaml(path: Path) -> Any:
         return _load_yaml_with_ruby(path)
 
 
-def expect_keys(obj: dict[str, Any], keys: list[str], path: Path, errors: list[str]) -> None:
-    for k in keys:
-        if k not in obj:
-            errors.append(f"{path}: missing required key '{k}'")
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
-def build_field_set(common_fields: dict[str, Any], pack_fields: dict[str, Any], pack_name: str, errors: list[str]) -> set[str]:
-    keys: list[str] = []
-
-    common_list = common_fields.get("fields", [])
-    if not isinstance(common_list, list):
-        errors.append("shared common_fields.yaml: 'fields' must be list")
-        common_list = []
-    for f in common_list:
-        if isinstance(f, dict) and f.get("key"):
-            keys.append(str(f["key"]))
-
-    field_groups = pack_fields.get("field_groups", {}) if isinstance(pack_fields, dict) else {}
-    if not isinstance(field_groups, dict):
-        errors.append(f"{pack_name} fields.yaml: 'field_groups' must be dict")
-        field_groups = {}
-
-    for bucket in ("required", "recommended", "optional"):
-        group = field_groups.get(bucket, [])
-        if not isinstance(group, list):
-            errors.append(f"{pack_name} fields.yaml: field_groups.{bucket} must be list")
-            continue
-        for f in group:
-            if isinstance(f, dict) and f.get("key"):
-                keys.append(str(f["key"]))
-
-    dup = sorted({k for k in keys if keys.count(k) > 1})
-    if dup:
-        errors.append(f"{pack_name}: duplicate field keys found: {dup}")
-
-    return set(keys)
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
-def validate_question_flow(qf: dict[str, Any], field_keys: set[str], pack_name: str, errors: list[str]) -> None:
-    expect_keys(
-        qf,
-        [
-            "stage",
-            "ask_order",
-            "field_dependencies",
-            "blocking_conditions",
-            "followup_question_templates",
-            "stop_asking_conditions",
-            "fallback_defaults",
-            "escalation_rules",
-        ],
-        Path(f"{pack_name}/question_flow.yaml"),
-        errors,
+def _field_names(fields: dict[str, Any]) -> set[str]:
+    names = set(str(item) for item in _as_list(fields.get("required_fields")) if str(item).strip())
+    names.update(str(item) for item in _as_list(fields.get("recommended_fields")) if str(item).strip())
+    names.update(str(item) for item in _as_list(fields.get("optional_fields")) if str(item).strip())
+    names.update(
+        str(item.get("key"))
+        for item in _as_list(fields.get("field_definitions"))
+        if isinstance(item, dict) and str(item.get("key") or "").strip()
     )
-
-    ask_order = qf.get("ask_order", [])
-    if isinstance(ask_order, list):
-        for k in ask_order:
-            if k not in field_keys:
-                errors.append(f"{pack_name}/question_flow.yaml: ask_order field '{k}' not found in fields")
-
-    deps = qf.get("field_dependencies", {})
-    if isinstance(deps, dict):
-        for k, vals in deps.items():
-            if k not in field_keys:
-                errors.append(f"{pack_name}/question_flow.yaml: dependency key '{k}' not in fields")
-            if isinstance(vals, list):
-                for v in vals:
-                    if v not in field_keys:
-                        errors.append(f"{pack_name}/question_flow.yaml: dependency '{k}->{v}' not in fields")
+    semantics = fields.get("field_semantics")
+    if isinstance(semantics, dict):
+        names.update(str(key) for key in semantics.keys())
+    return names
 
 
-def validate_artifact_mapping(mapping: dict[str, Any], artifact_specs: dict[str, Any], pack_name: str, errors: list[str]) -> None:
-    expect_keys(mapping, ["artifacts"], Path(f"{pack_name}/artifact_mapping.yaml"), errors)
+def _collect_field_refs(workflow: dict[str, Any]) -> dict[str, list[Any]]:
+    refs: dict[str, list[Any]] = {}
+    blocker_policies = _as_dict(workflow.get("blocker_policies"))
+    for key in ("required_fields", "confirmation_fields", "candidate_only_fields"):
+        refs[f"blocker_policies.{key}"] = _as_list(blocker_policies.get(key))
 
-    spec_list = artifact_specs.get("artifact_specs", []) if isinstance(artifact_specs, dict) else []
-    spec_keys = {str(x.get("key")) for x in spec_list if isinstance(x, dict) and x.get("key")}
+    intake_strategy = _as_dict(workflow.get("intake_strategy"))
+    for key in ("framework_fields", "candidate_fields", "pre_workspace_required_fields"):
+        refs[f"intake_strategy.{key}"] = _as_list(intake_strategy.get(key))
 
-    artifacts = mapping.get("artifacts", [])
-    if isinstance(artifacts, list):
-        for item in artifacts:
-            if not isinstance(item, dict):
-                continue
-            key = item.get("artifact_key")
-            if key not in spec_keys:
-                errors.append(f"{pack_name}/artifact_mapping.yaml: artifact_key '{key}' not in shared artifact_specs")
-
-
-def validate_supplier_scorecard(scorecard: dict[str, Any], pack_name: str, errors: list[str]) -> None:
-    expect_keys(
-        scorecard,
-        ["hard_gates", "bonus_items", "score_dimensions", "scoring_algorithm", "veto_items", "recommendation_levels"],
-        Path(f"{pack_name}/supplier_scorecard.yaml"),
-        errors,
+    field_value_policy = _as_dict(workflow.get("field_value_policy"))
+    question_policy = _as_dict(field_value_policy.get("question_policy"))
+    refs["field_value_policy.question_policy.suppressed_question_fields"] = _as_list(
+        question_policy.get("suppressed_question_fields")
     )
+    for key in ("candidate_before_question_fields", "high_value_confirmation_fields"):
+        refs[f"field_value_policy.{key}"] = _as_list(field_value_policy.get(key))
 
-    dims = scorecard.get("score_dimensions", [])
-    if not isinstance(dims, list) or not dims:
-        errors.append(f"{pack_name}/supplier_scorecard.yaml: score_dimensions must be non-empty list")
-        return
-
-    for i, d in enumerate(dims):
-        if not isinstance(d, dict):
-            errors.append(f"{pack_name}/supplier_scorecard.yaml: score_dimensions[{i}] must be dict")
+    for key, values in _as_dict(field_value_policy.get("field_value_roles")).items():
+        if key == "adapter_authoritative_when_available":
             continue
-        for k in ("key", "label", "weight", "score_range"):
-            if k not in d:
-                errors.append(f"{pack_name}/supplier_scorecard.yaml: score_dimensions[{i}] missing '{k}'")
+        refs[f"field_value_policy.field_value_roles.{key}"] = _as_list(values)
+
+    for key, values in _as_dict(workflow.get("analysis_slot_field_mapping")).items():
+        refs[f"analysis_slot_field_mapping.{key}"] = _as_list(values)
+    return refs
 
 
-def validate_rfx_rules(rfx: dict[str, Any], errors: list[str]) -> None:
-    expect_keys(rfx, ["input_signals", "decision_conditions", "thresholds"], Path("shared/rules/rfx_rules.yaml"), errors)
-    cond = rfx.get("decision_conditions", [])
-    actions = set()
-    if isinstance(cond, list):
-        for c in cond:
-            if isinstance(c, dict) and c.get("recommended_action"):
-                actions.add(str(c["recommended_action"]))
-    missing = {"RFI", "RFP", "RFQ", "RFB"} - actions
-    if missing:
-        errors.append(f"shared/rules/rfx_rules.yaml: missing actions {sorted(missing)}")
+def _validate_required_files(pack_root: Path, errors: list[str]) -> None:
+    required = [
+        "fields.yaml",
+        "workflow.yaml",
+        "taxonomy.yaml",
+        "replace-rules.yaml",
+        "search-mapping.yaml",
+        "templates/requirements-document.md",
+        "templates/analysis.md",
+    ]
+    for item in required:
+        if not (pack_root / item).exists():
+            errors.append(f"{ACTIVE_PACK}: missing required file {item}")
+
+
+def _validate_fields(fields: dict[str, Any], errors: list[str]) -> None:
+    definitions = _as_list(fields.get("field_definitions"))
+    keys = [str(item.get("key")) for item in definitions if isinstance(item, dict) and item.get("key")]
+    if len(definitions) != 81:
+        errors.append(f"xiaocai fields.yaml: expected 81 field_definitions, got {len(definitions)}")
+    if len(keys) != len(set(keys)):
+        errors.append("xiaocai fields.yaml: duplicate field_definitions keys")
+    if len(_as_list(fields.get("required_fields"))) != 14:
+        errors.append("xiaocai fields.yaml: required_fields count must be 14")
+
+
+def _validate_taxonomy(taxonomy: dict[str, Any], errors: list[str]) -> None:
+    aliases = _as_dict(taxonomy.get("intent_aliases"))
+    for key in sorted(DISABLED_INTENT_ALIASES):
+        if key in aliases:
+            errors.append(f"xiaocai taxonomy.yaml: '{key}' must not alias to intelligent_sourcing")
+    if not _as_dict(taxonomy.get("procurement_categories")):
+        errors.append("xiaocai taxonomy.yaml: procurement_categories must be non-empty")
+
+
+def _validate_workflow(workflow: dict[str, Any], fields: dict[str, Any], pack_root: Path, errors: list[str]) -> None:
+    defined_fields = _field_names(fields)
+    for path, values in _collect_field_refs(workflow).items():
+        missing = [str(field) for field in values if str(field) not in defined_fields]
+        if missing:
+            errors.append(f"xiaocai workflow.yaml: {path} references undefined fields {missing}")
+
+    registry = {
+        item.get("module_key"): item
+        for item in _as_list(workflow.get("module_prompt_registry"))
+        if isinstance(item, dict) and item.get("module_key")
+    }
+    if set(registry) != EXPECTED_MODULES:
+        errors.append(f"xiaocai workflow.yaml: module_prompt_registry must be {sorted(EXPECTED_MODULES)}")
+
+    artifact_templates = _as_dict(workflow.get("artifact_templates"))
+    for key, template in artifact_templates.items():
+        if not isinstance(template, dict):
+            continue
+        template_file = template.get("template")
+        if isinstance(template_file, str) and template_file and not (pack_root / "templates" / template_file).exists():
+            errors.append(f"xiaocai workflow.yaml: artifact_templates.{key} missing template {template_file}")
 
 
 def validate(root: Path) -> list[str]:
     errors: list[str] = []
-
-    yaml_files = sorted(root.rglob("*.yaml"))
-    parsed: dict[Path, Any] = {}
-    for f in yaml_files:
-        try:
-            parsed[f] = load_yaml(f)
-        except Exception as e:  # noqa: BLE001
-            errors.append(f"{f}: YAML parse error: {e}")
-
-    # stop early if parse failed massively
+    pack_root = root / ACTIVE_PACK
+    _validate_required_files(pack_root, errors)
     if errors:
         return errors
 
-    shared_common = parsed[root / "shared" / "fields" / "common_fields.yaml"]
-    shared_artifacts = parsed[root / "shared" / "artifacts" / "artifact_specs.yaml"]
-    shared_rfx = parsed[root / "shared" / "rules" / "rfx_rules.yaml"]
+    try:
+        fields = load_yaml(pack_root / "fields.yaml")
+        workflow = load_yaml(pack_root / "workflow.yaml")
+        taxonomy = load_yaml(pack_root / "taxonomy.yaml")
+    except Exception as exc:  # noqa: BLE001
+        return [f"xiaocai domain-pack parse failed: {exc}"]
 
-    expect_keys(shared_common, ["fields"], root / "shared/fields/common_fields.yaml", errors)
-    expect_keys(shared_artifacts, ["artifact_specs"], root / "shared/artifacts/artifact_specs.yaml", errors)
-
-    validate_rfx_rules(shared_rfx, errors)
-
-    # recommendation policy assets (TASK-DP-011)
-    rec_rules = parsed.get(root / "shared" / "rules" / "template_recommendation_rules.yaml", {})
-    rec_registry = parsed.get(root / "shared" / "rules" / "recommendation_policy_registry.yaml", {})
-    rec_audit = parsed.get(root / "shared" / "artifacts" / "recommendation_audit_schema.yaml", {})
-
-    expect_keys(rec_rules, ["rules"], root / "shared/rules/template_recommendation_rules.yaml", errors)
-    if isinstance(rec_rules, dict) and isinstance(rec_rules.get("rules", []), list):
-        for i, r in enumerate(rec_rules.get("rules", [])):
-            if not isinstance(r, dict):
-                errors.append(f"shared/rules/template_recommendation_rules.yaml: rules[{i}] must be dict")
-                continue
-            for k in ("rule_id", "scenario", "stage", "trigger_conditions", "weighted_candidates", "fallback_template"):
-                if k not in r:
-                    errors.append(f"shared/rules/template_recommendation_rules.yaml: rules[{i}] missing '{k}'")
-
-    expect_keys(
-        rec_registry,
-        ["policy_id", "version", "status", "effective_at", "owner", "change_reason", "policy_defaults", "explanation_schema"],
-        root / "shared/rules/recommendation_policy_registry.yaml",
-        errors,
-    )
-    expect_keys(rec_audit, ["required_fields", "version"], root / "shared/artifacts/recommendation_audit_schema.yaml", errors)
-
-    for pack in ("activity_procurement", "gift_customization"):
-        fields_obj = parsed[root / pack / "fields.yaml"]
-        qf_obj = parsed[root / pack / "question_flow.yaml"]
-        score_obj = parsed[root / pack / "supplier_scorecard.yaml"]
-        map_obj = parsed[root / pack / "artifact_mapping.yaml"]
-
-        expect_keys(fields_obj, ["pack_id", "version", "field_groups"], root / f"{pack}/fields.yaml", errors)
-
-        field_keys = build_field_set(shared_common, fields_obj, pack, errors)
-        validate_question_flow(qf_obj, field_keys, pack, errors)
-        validate_artifact_mapping(map_obj, shared_artifacts, pack, errors)
-        validate_supplier_scorecard(score_obj, pack, errors)
-
+    _validate_fields(_as_dict(fields), errors)
+    _validate_taxonomy(_as_dict(taxonomy), errors)
+    _validate_workflow(_as_dict(workflow), _as_dict(fields), pack_root, errors)
     return errors
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate xiaocai domain-packs")
-    parser.add_argument(
-        "--root",
-        default="domain-packs",
-        help="domain-packs root path (default: domain-packs)",
-    )
+    parser = argparse.ArgumentParser(description="Validate active xiaocai domain-pack")
+    parser.add_argument("--root", default="domain-packs", help="domain-packs root path")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -238,12 +183,12 @@ def main() -> int:
 
     errors = validate(root)
     if errors:
-        print("[FAIL] domain-packs validation errors:")
-        for e in errors:
-            print(f"- {e}")
+        print("[FAIL] xiaocai domain-pack validation errors:")
+        for error in errors:
+            print(f"- {error}")
         return 1
 
-    print(f"[OK] domain-packs validation passed: {root}")
+    print(f"[OK] active xiaocai domain-pack validation passed: {root / ACTIVE_PACK}")
     return 0
 
 

@@ -12,7 +12,7 @@
 1. taxonomy classification fixtures
 2. field extraction golden cases
 3. workflow transition cases
-4. chooser/blocker trigger cases
+4. canonical interaction/blocker trigger cases
 5. search mapping cases
 6. sourcing recommendation cases
 7. replace rule cases
@@ -32,7 +32,7 @@
 - 输入示例
 - 预期分类
 - 预期字段提取
-- 预期 blocker/chooser 行为
+- 预期 blocker/canonical interaction 行为
 - 预期 search target
 - 预期输出形态（analysis/RFX）
 

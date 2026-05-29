@@ -153,12 +153,11 @@ import { ChatWorkspace } from '@flare/chat-ui'
 ## 开发注意事项
 
 1. **不要重新实现 chat UI** - 使用 FLARE 的 ChatWorkspace
-2. **domain-packs 配置** - UI 卡片、术语等从 domain-packs/ 读取
+2. **domain-packs 配置** - 领域字段、术语等从 domain-packs/ 读取
 3. **Token 管理** - 使用 localStorage 存储，注意安全性
 4. **SSE 流式响应** - 使用 `fetch` 读取 `text/event-stream`
 
 ## 参考文档
 
 - 业务需求: `../../docs/discussions/phase-1-*.md`
-- UI 卡片配置: `../../domain-packs/cards/procurement-ui-cards.yaml`
 - FLARE 文档: `/Users/dantevonalcatraz/Development/F.L.A.R.E/`

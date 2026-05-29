@@ -110,7 +110,7 @@ planning/status alignment
 | 2026-05-18 | planning 状态与测试先行门禁对齐 | `docs/planning/README.md` | 后续任务均有先验收/先测试规则 |
 | 2026-05-19 | 数据契约字段与别名闭合 | `/Users/dantevonalcatraz/Downloads/数据契约和测试/数据契约20260411.xlsx` | 字段、别名、阶段归属与 domain-pack contract 可追溯 |
 | 2026-05-20 | canonical readiness / 权重 contract 固化 | `docs/contracts/xiaocai-canonical-quality-gates.md` | 字段权重、阻断阈值、草稿阈值、可分析阈值可验收；不新增 runtime |
-| 2026-05-21 | 分析/寻源输出模板 contract 补齐 | `domain-packs/contracts/procurement-analysis-rfx-templates.yaml` | 输出覆盖数据契约要求章节，字段依赖与缺字段阻断明确 |
+| 2026-05-21 | 分析/寻源输出模板 contract 补齐 | `domain-packs/xiaocai/templates/analysis.md`、`domain-packs/xiaocai/workflow.yaml` | 输出覆盖数据契约要求章节，字段依赖与缺字段阻断明确 |
 | 2026-05-20 - 2026-05-22 | 分析报告模板投影串联与用户可见清洗 | `docs/planning/analysis-report-template-projection-plan.md` | 右侧报告按模板格式输出；内部代码、工作流、debug 概念不进入用户可见内容 |
 | 2026-05-22 | 契约与 domain-pack 回归验收 | `tests/domain_packs/` | 字段别名、权重、评分、输出结构回归通过 |
 | 2026-05-22 | LLM 输出稳定性与线上线下一致性排查收敛 | `docs/planning/README.md#p0llm-输出稳定性与线上线下一致性` | 线上/本地模型配置、structured reasoning、mode=auto、fallback 语义差异有明确任务 owner 与验收 |
@@ -137,7 +137,7 @@ planning/status alignment
 |---|---|---|---|---|
 | CLEAN-001 | instance / FLARE 边界文档对齐 | Done | xiaocai | `docs/architecture/07-flare-instance-boundary.md` 与 `docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md` 明确：xiaocai 不开发 kernel/runtime/workflow/canvas/readiness 底层机制，只做 instance 使用层、配置层、业务资产层 |
 | CLEAN-002 | xiaocai 本地 runtime-like 逻辑审计 | Done | xiaocai | 已在 `docs/architecture/09-xiaocai-instance-boundary-and-directory-freeze.md#6-clean-002-本地-runtime-like-逻辑审计` 列出 `chat/router.py`、`chat/workbench_projection.py`、`chat/context_policy.py`、`chat/orchestration/*` 及相邻 projection/fallback helper 的保留/冻结/上报 FLARE 结论 |
-| CLEAN-003 | domain-pack 角色肃清 | Done | xiaocai | 已同步 FLARE 最新 `domain-packs/xiaocai` 为主业务包；`activity_procurement` / `gift_customization` 降为历史场景资产/兼容参考；logo、DB、auth、会员校验等实例运行配置保持在 instance 配置层，不进入业务 pack |
+| CLEAN-003 | domain-pack 角色肃清 | Done | xiaocai | 已同步 FLARE 最新 `domain-packs/xiaocai` 为主业务包；legacy packs 已从主仓库删除；logo、DB、auth、会员校验等实例运行配置保持在 instance 配置层，不进入业务 pack |
 | CLEAN-004 | xiaocai 当前精准能力表 | Planned | xiaocai | 形成“当前支持/不支持/依赖 FLARE/只由 xiaocai 配置”的能力表；普通问答、显式梳理、显式分析、显式寻源、MCP/source 连接边界清楚 |
 | CLEAN-005 | FLARE 缺口清单回传 | Planned | xiaocai + FLARE | 对 draft-first artifact、采购包/任务包投影、candidate/confirmed 状态、canvas patch、MCP runtime、domain-pack schema 扩展等能力，只记录缺口，不在 xiaocai 本地实现 |
 

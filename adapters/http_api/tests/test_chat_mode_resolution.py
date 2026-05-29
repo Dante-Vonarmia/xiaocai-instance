@@ -34,6 +34,26 @@ def test_real_frontend_procurement_intake_message_enters_requirement_canvas():
     assert mode is None
 
 
+def test_explicit_sync_to_requirement_intake_message_enters_intake_mode():
+    mode = resolve_effective_mode(
+        request_mode=None,
+        session_mode=None,
+        message="同步到需求梳理中去",
+    )
+
+    assert mode == "requirement_intake"
+
+
+def test_explicit_sync_to_requirement_intake_overrides_auto_mode():
+    mode = resolve_effective_mode(
+        request_mode="auto",
+        session_mode=None,
+        message="同步到需求梳理中去",
+    )
+
+    assert mode == "requirement_intake"
+
+
 def test_missing_request_mode_does_not_keep_intake_session_sticky():
     mode = resolve_effective_mode(
         request_mode=None,
@@ -120,3 +140,39 @@ def test_chat_stream_does_not_infer_mode_from_real_frontend_payload_without_mode
     assert "普通回答。" in response.text
     assert '"mode_key": "requirement_intake"' not in response.text
     assert "event: canvas_state" not in response.text
+
+
+def test_chat_stream_sync_message_sets_requirement_intake_mode(client, auth_token):
+    captured = {}
+    bind_response = client.post(
+        "/projects/bind",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"project_id": "project-sync-intake"},
+    )
+    assert bind_response.status_code == 200
+
+    async def fake_stream(self, **kwargs):
+        _ = self
+        captured["context"] = kwargs["context"]
+        yield {"type": "done", "message": "已同步到需求梳理。"}
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream", fake_stream):
+        response = client.post(
+            "/chat/stream",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "session_id": "sess-sync-intake-mode",
+                "command": "send_message",
+                "project_id": "project-sync-intake",
+                "user_id": "mode-resolution-user",
+                "payload": {
+                    "message": "同步到需求梳理中去",
+                    "project_id": "project-sync-intake",
+                    "user_id": "mode-resolution-user",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert captured["context"].get("mode") == "requirement_intake"
+    assert "已同步到需求梳理。" in response.text

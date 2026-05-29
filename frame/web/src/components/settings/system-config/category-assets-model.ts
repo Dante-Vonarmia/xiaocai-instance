@@ -69,6 +69,11 @@ export function countCategoryTree(tree: CategoryOwnerNode[]): CategoryCounts {
 }
 
 export function parseCategoryAsset(text: string): CategoryAssetSummary {
+  const taxonomy = parseTaxonomyAsset(text)
+  if (taxonomy) {
+    return taxonomy
+  }
+
   const categoryTree: CategoryOwnerNode[] = []
   let currentOwner: CategoryOwnerNode | null = null
   let currentLevel1: CategoryLevel1Node | null = null
@@ -102,6 +107,36 @@ export function parseCategoryAsset(text: string): CategoryAssetSummary {
     level1Names: flat.level1Names,
     level2Names: flat.level2Names,
     categoryTree,
+  }
+}
+
+function parseTaxonomyAsset(text: string): CategoryAssetSummary | null {
+  try {
+    const payload = JSON.parse(text) as Record<string, unknown>
+    const categories = asRecord(payload.procurement_categories)
+    if (!Object.keys(categories).length) {
+      return null
+    }
+    const categoryTree = Object.entries(categories).map(([ownerName, level1Value]) => {
+      const level1Record = asRecord(level1Value)
+      return {
+        name: ownerName,
+        level1: Object.entries(level1Record).map(([level1Name, level2Value]) => ({
+          name: level1Name,
+          level2Names: asArray(level2Value).map(asString).filter(Boolean),
+        })),
+      }
+    })
+    const flat = flattenCategoryTree(categoryTree)
+    return {
+      ...countCategoryTree(categoryTree),
+      ownerNames: flat.ownerNames,
+      level1Names: flat.level1Names,
+      level2Names: flat.level2Names,
+      categoryTree,
+    }
+  } catch {
+    return null
   }
 }
 

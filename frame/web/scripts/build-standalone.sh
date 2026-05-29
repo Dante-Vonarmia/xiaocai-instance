@@ -21,8 +21,8 @@ if [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-core/package.json" ] && [ -f "$LO
   npm install --no-save \
     flare-chat-core@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-core" \
     flare-chat-ui@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-ui" \
-    flare-canvas-ui@1.0.0 \
-    flare-generative-ui@1.0.0
+    flare-canvas-ui@1.0.1 \
+    flare-generative-ui@1.0.1
 fi
 
 VITE_API_BASE_URL="$API_BASE_URL" VITE_FLARE_CORE_ENTRY_URL="$CORE_ENTRY_URL" npm run build

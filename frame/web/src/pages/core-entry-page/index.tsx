@@ -6,6 +6,9 @@ import './styles.css'
 const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'auto'
 const DEFAULT_SESSION_TITLE = import.meta.env.VITE_FLARE_CHAT_DEFAULT_SESSION_TITLE || '新会话'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const INSTANCE_ID = import.meta.env.VITE_FLARE_CHAT_INSTANCE_ID || 'xiaocai'
+const DOMAIN_PACK_DOMAIN = import.meta.env.VITE_FLARE_CHAT_DOMAIN_PACK_DOMAIN || 'xiaocai'
+const DOMAIN_PACK_VERSION = import.meta.env.VITE_FLARE_CHAT_DOMAIN_PACK_VERSION || 'default'
 
 function CoreEntryPage() {
   const branding = useBranding()
@@ -23,7 +26,10 @@ function CoreEntryPage() {
           backendMode="real"
           defaultProjectName={projectSlot.name}
           defaultSessionTitle={DEFAULT_SESSION_TITLE}
+          domainPackDomain={DOMAIN_PACK_DOMAIN}
+          domainPackVersion={DOMAIN_PACK_VERSION}
           functionType={FUNCTION_TYPE}
+          instanceId={INSTANCE_ID}
           instanceProfile={branding.instanceProfile}
           projectId=""
           productName={uiLabels.product_name}

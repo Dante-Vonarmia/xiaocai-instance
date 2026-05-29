@@ -1,5 +1,5 @@
 {
-  "intent_aliases": {"采购": "requirement_intake","采购需求": "requirement_intake","需求梳理": "requirement_intake","需求分析": "analysis_mode","RFX": "analysis_mode","RFP": "analysis_mode","RFQ": "analysis_mode","寻源": "intelligent_sourcing","供应商": "intelligent_sourcing","购买": "requirement_intake"},
+  "intent_aliases": {"采购": "requirement_intake","采购需求": "requirement_intake","需求梳理": "requirement_intake","需求分析": "analysis_mode","分析报告": "analysis_mode","RFX": "analysis_mode","RFP": "analysis_mode","RFQ": "analysis_mode","购买": "requirement_intake"},
   "category_summary": {"requirement_rows": 96,"sourcing_rows": 96,"requirement_category_specific_fields_non_empty": 0,"sourcing_category_specific_elements_non_empty": 0},
   "procurement_categories": {
     "市场营销与传播": {"创意与品牌": ["整合营销（全案）","品牌创意与策划"],"公共关系": ["官方媒体","公关运营","危机公关","舆情监测"],"媒介管理": ["媒介策略与服务","媒介采买","达人采买","媒体监测","直播服务"],"内容制作": ["视频拍摄","平面摄影","视觉动画","后期制作","物料制作","文案","素材及版权购买"],"数字化营销": ["网站设计和制作","小程序制作","社交媒体运营","SEM/SEO/GEO"]},

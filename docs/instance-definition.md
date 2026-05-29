@@ -25,6 +25,18 @@ xiaocai instance 是基于 FLARE Core 的采购领域实例层，用领域资产
 - 通用状态、执行框架、协议与运行时
 - 不含采购行业特定语义
 
+## 当前运行口径（domain-pack opt-in）
+
+- FLARE 不默认启用 generic domain pack；未显式配置 `domain_pack_domain` 时，不展示任何 module capability。
+- xiaocai 是显式 opt-in 业务实例；请求或会话必须显式指定 `domain_pack_domain=xiaocai` 才启用 xiaocai pack。
+- xiaocai instance 转发给 FLARE 的请求必须携带：
+  - `instance_id=xiaocai`
+  - `domain_pack_domain=xiaocai`
+  - `domain_pack_version=default`
+- 当前 xiaocai pack 只启用 `requirement_intake` 与 `analysis_mode`。
+- 当前不启用 `intelligent_sourcing`；这表示未配置/未启用寻源模块，不是前端隐藏寻源。
+- UI 只能渲染 backend 返回的 canonical `module_prompt_registry` / capability projection，不得本地补默认 module 或从 generic 继承 module。
+
 ## 不负责范围
 - 不重写 FLARE 的 mode/orchestration/kernel 主流程
 - 不做“另一个通用聊天产品”
@@ -34,7 +46,7 @@ xiaocai instance 是基于 FLARE Core 的采购领域实例层，用领域资产
 
 ## 第一阶段边界（P0）
 - 场景：活动采购、礼品定制
-- 目标：完成“需求梳理 -> 需求分析 -> 供应商筛选与评分 -> RFX动作建议 -> 标准产物输出”最小闭环
+- 目标：完成“需求梳理 -> 需求分析 -> 供应商筛选与评分 -> RFX动作建议 -> 标准产物输出”最小闭环；当前实际展示能力以 `module_prompt_registry` 中启用的 `requirement_intake`、`analysis_mode` 为准
 - 交付形态：文档化 domain assets + 可被后续开发直接消费的规范
 
 ## 输入 / 输出 / 依赖 / 暂不做

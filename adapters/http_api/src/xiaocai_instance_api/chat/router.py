@@ -19,14 +19,13 @@ from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import KernelStreamConflictError, get_kernel_client
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
-from xiaocai_instance_api.chat.orchestration.field_candidates import normalize_candidate_payload
+from xiaocai_instance_api.chat.instance_profile_projection import project_instance_profile_event
 from xiaocai_instance_api.chat.orchestration.mode_resolution import (
     INTAKE_MODE_ALIAS,
     INTAKE_MODE_PREFIX,
     is_intake_mode,
     resolve_effective_mode,
 )
-from xiaocai_instance_api.chat.orchestration.question_options import normalize_question_payload
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.response_text import normalize_assistant_display_text, replace_event_text
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
@@ -34,10 +33,6 @@ from xiaocai_instance_api.chat.stream_turn import (
     build_stream_busy_events,
     get_stream_turn_registry,
     serialize_sse_event,
-)
-from xiaocai_instance_api.chat.workbench_projection import (
-    build_intake_workbench_projection,
-    projection_key,
 )
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
@@ -138,191 +133,10 @@ def _resolve_effective_mode(
     )
 
 
-def _as_object(value: object) -> dict | None:
-    if isinstance(value, dict):
-        return value
-    return None
-
-
-def _as_list(value: object) -> list:
-    if isinstance(value, list):
-        return value
-    return []
-
-
-def _has_usable_canvas_state_event(event: dict) -> bool:
-    """Respect FLARE-native canvas state when it already carries intake UI state."""
-    canvas_state = _as_object(event.get("canvas_state"))
-    if not canvas_state:
-        payload = _as_object(event.get("payload"))
-        canvas_state = _as_object((payload or {}).get("canvas_state"))
-    if not canvas_state:
-        return False
-    if _as_object(canvas_state.get("current_question")):
-        return True
-    if _as_list(canvas_state.get("question_plan")):
-        return True
-    if _as_list(canvas_state.get("collected")) or _as_list(canvas_state.get("missing")):
-        return True
-    progress = canvas_state.get("progress")
-    return isinstance(progress, (int, float)) and progress > 0
-
-
 def _to_text(value: object) -> str:
     if _is_non_empty_text(value):
         return str(value).strip()
     return ""
-
-
-def _to_bool(value: object) -> bool:
-    return bool(value is True)
-
-
-def _has_interaction_node(payload: dict) -> bool:
-    question = _as_object(payload.get("question"))
-    chooser = _as_object(payload.get("chooser"))
-    interaction_node = _as_object(payload.get("interaction_node"))
-    current_question = _as_object(payload.get("current_question"))
-    missing_fields = _as_list(payload.get("missing_fields")) or _as_list(payload.get("required_missing"))
-    return bool(question or chooser or interaction_node or current_question or missing_fields)
-
-
-def _extract_pending_source(payload: dict) -> dict:
-    for candidate in (
-        payload,
-        _as_object(payload.get("pending")),
-        _as_object(payload.get("result")),
-        _as_object(payload.get("payload")),
-        _as_object(_as_object(payload.get("metadata")) or {}).get("pending"),
-    ):
-        if isinstance(candidate, dict) and candidate:
-            if _has_interaction_node(candidate):
-                return candidate
-            gate = _as_object(candidate.get("gate"))
-            command_type = _to_text(candidate.get("command_type"))
-            if gate or command_type == "continue_collection":
-                return candidate
-    return {}
-
-
-def _build_pending_contract(
-    payload: dict,
-    *,
-    session_id: str,
-    mode: str | None,
-) -> dict | None:
-    if not _is_intake_mode(mode):
-        return None
-
-    source = _extract_pending_source(payload)
-    if not source:
-        return None
-
-    missing_fields = _as_list(source.get("missing_fields")) or _as_list(source.get("required_missing"))
-    question = normalize_question_payload(_as_object(source.get("question")))
-    chooser = normalize_question_payload(_as_object(source.get("chooser")))
-    interaction_node = _as_object(source.get("interaction_node"))
-    current_question = normalize_question_payload(_as_object(source.get("current_question")))
-    gate = _as_object(source.get("gate")) or {}
-    command_type = _to_text(source.get("command_type")) or "continue_collection"
-    current_stage = _to_text(source.get("current_stage")) or "collecting"
-    summary_confirmed = _to_bool(source.get("summary_confirmed"))
-    candidate_payload = normalize_candidate_payload(source)
-
-    if not current_question:
-        question_text = ""
-        for candidate in (
-            _to_text(_as_object(question or {}).get("question_text")),
-            _to_text(_as_object(question or {}).get("text")),
-            _to_text(_as_object(chooser or {}).get("question_text")),
-            _to_text(_as_object(interaction_node or {}).get("title")),
-            _to_text(_as_object(interaction_node or {}).get("text")),
-        ):
-            if candidate:
-                question_text = candidate
-                break
-        if question_text:
-            field_key = (
-                _to_text(_as_object(question or {}).get("field_key"))
-                or _to_text(_as_object(chooser or {}).get("field_key"))
-                or _to_text(_as_object(interaction_node or {}).get("field_key"))
-                or _to_text(_as_object(interaction_node or {}).get("id"))
-                or (_to_text(missing_fields[0]) if missing_fields else "pending")
-            )
-            current_question = {
-                "field_key": field_key,
-                "field_label": _to_text(_as_object(question or {}).get("field_label")) or field_key,
-                "question_text": question_text,
-                "options": _as_list(_as_object(question or {}).get("options")) or _as_list(_as_object(chooser or {}).get("options")),
-            }
-
-    if not _has_interaction_node(
-        {
-            "question": question,
-            "chooser": chooser,
-            "interaction_node": interaction_node,
-            "current_question": current_question,
-            "missing_fields": missing_fields,
-        }
-    ):
-        return None
-
-    next_actions = _as_list(source.get("next_actions")) or _as_list(source.get("actions"))
-    if not next_actions:
-        next_actions = [{
-            "action_key": "continue_collection",
-            "label": "继续补充",
-            "status": "available",
-            "target_mode": mode or INTAKE_MODE_ALIAS,
-        }]
-
-    if not gate:
-        gate = {
-            "status": "blocked" if missing_fields else "collecting",
-            "reason": "missing_required_fields" if missing_fields else "continue_collection",
-        }
-
-    question_payload = question
-    if not question_payload and current_question:
-        question_payload = {
-            "field_key": current_question.get("field_key"),
-            "question_text": current_question.get("question_text"),
-            "options": current_question.get("options", []),
-        }
-
-    return {
-        "current_stage": current_stage,
-        "command_type": command_type,
-        "missing_fields": missing_fields,
-        "current_question": current_question or {},
-        "question": question_payload or {},
-        "chooser": chooser or {},
-        "interaction_node": interaction_node or {},
-        "next_actions": next_actions,
-        "gate": gate,
-        "summary_confirmed": summary_confirmed,
-        "candidate_fields": candidate_payload["candidate_fields"],
-        "rejected_candidates": candidate_payload["rejected_candidates"],
-        "intake_session_id": _to_text(source.get("intake_session_id")) or session_id,
-    }
-
-
-def _should_suppress_assistant_message(pending_contract: dict | None) -> bool:
-    if not pending_contract:
-        return False
-    if not _is_intake_mode(_to_text(pending_contract.get("mode_key"))):
-        return False
-    current_question = _as_object(pending_contract.get("current_question"))
-    missing_fields = _as_list(pending_contract.get("missing_fields"))
-    gate = _as_object(pending_contract.get("gate")) or {}
-    gate_status = _to_text(gate.get("status")).lower()
-    return bool(current_question or missing_fields or gate_status == "blocked")
-
-
-def _pending_question_text(pending_contract: dict | None) -> str:
-    pending_question = _as_object((pending_contract or {}).get("question"))
-    current_question = _as_object((pending_contract or {}).get("current_question"))
-    return _to_text((pending_question or {}).get("question_text")) or _to_text((current_question or {}).get("question_text"))
 
 
 def _ensure_response_cards(
@@ -484,21 +298,7 @@ async def chat_run(
             session_id=request.session_id,
             context=kernel_context,
         )
-        pending_contract = _build_pending_contract(
-            result if isinstance(result, dict) else {},
-            session_id=request.session_id,
-            mode=mode,
-        )
-        # FLARE owns user-visible assistant text; adapter-side pending/projection
-        # may only fill an otherwise empty response, never override kernel output.
         message = result.get("message") or result.get("reply", "")
-        has_kernel_message = _is_non_empty_text(message)
-        if not has_kernel_message and _should_suppress_assistant_message(pending_contract):
-            pending_question = _as_object((pending_contract or {}).get("question"))
-            current_question = _as_object((pending_contract or {}).get("current_question"))
-            message = _to_text((pending_question or {}).get("question_text"))
-            if not message:
-                message = _to_text((current_question or {}).get("question_text"))
         message = normalize_assistant_display_text(message)
         if not _is_non_empty_text(message):
             message = EMPTY_ASSISTANT_MESSAGE
@@ -514,7 +314,6 @@ async def chat_run(
             session_id=result.get("session_id", request.session_id),
             metadata={
                 **(result.get("metadata", {}) if isinstance(result.get("metadata"), dict) else {}),
-                **({"pending_contract": pending_contract} if pending_contract else {}),
                 **({"intake_session_id": request.session_id} if mode and _is_intake_mode(mode) else {}),
             },
         )
@@ -659,10 +458,7 @@ async def chat_stream(
                 text_accumulator = StreamTextAccumulator()
                 done_message: str | None = None
                 emitted_done_event = False
-                latest_pending_contract: dict | None = None
                 exchange_persisted = False
-                emitted_projection_keys: set[str] = set()
-                emitted_suppressed_question = False
                 event_iter = kernel_client.chat_stream(
                     user_id=claims.user_id,
                     message=request.message,
@@ -671,44 +467,8 @@ async def chat_stream(
                 )
                 async for event in event_iter:
                     event_type = event.get("type", "message")
-                    pending_contract = _build_pending_contract(
-                        event if isinstance(event, dict) else {},
-                        session_id=request.session_id,
-                        mode=mode,
-                    )
-                    native_pending_contract = pending_contract
-                    workbench_projection = {}
-                    if pending_contract:
-                        workbench_projection = build_intake_workbench_projection(
-                            pending_contract=pending_contract,
-                            mode=mode,
-                            session_id=request.session_id,
-                            user_message=request.message,
-                            candidate_context=kernel_context,
-                        )
-                    projection_events: list[tuple[str, dict]] = []
-                    if workbench_projection:
-                        projected_pending = _as_object(workbench_projection.get("pending_contract"))
-                        if projected_pending:
-                            pending_contract = projected_pending
-                        plan_payload = _as_object(workbench_projection.get("plan_payload"))
-                        canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
-                        if plan_payload:
-                            projection_events.append(("primary_flow_payload", plan_payload))
-                        if canvas_payload:
-                            projection_events.append(("canvas_state", canvas_payload))
-                    has_native_canvas_state = event_type == "canvas_state" and _has_usable_canvas_state_event(event)
-                    if has_native_canvas_state:
-                        projection_events = []
-                    if native_pending_contract:
-                        latest_pending_contract = native_pending_contract
-                    if pending_contract:
-                        event = {**event, **pending_contract}
-                    if event_type == "canvas_state" and workbench_projection and not has_native_canvas_state:
-                        canvas_payload = _as_object(workbench_projection.get("canvas_payload"))
-                        if canvas_payload:
-                            event = canvas_payload
-                            emitted_projection_keys.add(f"canvas_state:{projection_key(canvas_payload)}")
+                    if event_type == "instance_profile":
+                        event = project_instance_profile_event(event if isinstance(event, dict) else {})
                     chunk = _extract_event_chunk(event)
                     if chunk and _should_accumulate_stream_chunk(event_type, event):
                         event, chunk_delta, should_emit_event = text_accumulator.normalize_event(
@@ -738,23 +498,6 @@ async def chat_stream(
                             else:
                                 done_message = None
                                 event = replace_event_text(event, "")
-                        # Preserve FLARE text when it exists. Question fallback is
-                        # only for native pending events that did not emit text.
-                        suppress_contract = latest_pending_contract or native_pending_contract
-                        if not _is_non_empty_text(done_message) and _should_suppress_assistant_message(suppress_contract):
-                            question_text = _pending_question_text(suppress_contract)
-                            if question_text:
-                                done_message = question_text
-                                event = {**event, "message": question_text, "content": question_text}
-                                if not emitted_suppressed_question:
-                                    replacement_event = {
-                                        "type": "text.replace",
-                                        "content": question_text,
-                                        "session_id": request.session_id,
-                                    }
-                                    yield "event: text.replace\n"
-                                    yield f"data: {json.dumps(replacement_event, ensure_ascii=False)}\n\n"
-                                    emitted_suppressed_question = True
                         terminal_message_was_empty = done_message is None and not text_accumulator.chunks
                         if terminal_message_was_empty:
                             done_message = ""
@@ -762,35 +505,9 @@ async def chat_stream(
                         if terminal_message_was_empty and not _is_non_empty_text(done_message):
                             done_message = EMPTY_ASSISTANT_MESSAGE
                             event = replace_event_text(event, done_message)
-                    if event_type in ("done", "complete"):
-                        for projected_type, projected_payload in projection_events:
-                            event_key = f"{projected_type}:{projection_key(projected_payload)}"
-                            if event_key in emitted_projection_keys:
-                                continue
-                            emitted_projection_keys.add(event_key)
-                            yield f"event: {projected_type}\n"
-                            yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
-                        projection_events = []
                     yield f"event: {event_type}\n"
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                    if pending_contract and event_type not in ("next_actions", "early_patch", "final_patch"):
-                        yield "event: next_actions\n"
-                        yield f"data: {json.dumps(pending_contract, ensure_ascii=False)}\n\n"
-                    for projected_type, projected_payload in projection_events:
-                        event_key = f"{projected_type}:{projection_key(projected_payload)}"
-                        if event_key in emitted_projection_keys:
-                            continue
-                        emitted_projection_keys.add(event_key)
-                        yield f"event: {projected_type}\n"
-                        yield f"data: {json.dumps(projected_payload, ensure_ascii=False)}\n\n"
                 final_message = normalize_assistant_display_text(done_message or text_accumulator.final_message())
-                if not _is_non_empty_text(final_message) and _should_suppress_assistant_message(latest_pending_contract):
-                    pending_question = _as_object((latest_pending_contract or {}).get("question"))
-                    current_question = _as_object((latest_pending_contract or {}).get("current_question"))
-                    final_message = _to_text((pending_question or {}).get("question_text"))
-                    if not final_message:
-                        final_message = _to_text((current_question or {}).get("question_text"))
-                    final_message = normalize_assistant_display_text(final_message)
                 if not _is_non_empty_text(final_message):
                     final_message = EMPTY_ASSISTANT_MESSAGE
                 if not emitted_done_event:

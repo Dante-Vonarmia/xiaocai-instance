@@ -3,6 +3,16 @@ from __future__ import annotations
 
 INTAKE_MODE_ALIAS = "requirement_canvas"
 INTAKE_MODE_PREFIX = "requirement_intake"
+EXPLICIT_INTAKE_SYNC_TERMS = (
+    "同步到需求梳理",
+    "同步进需求梳理",
+    "同步至需求梳理",
+    "写入需求梳理",
+    "保存到需求梳理",
+    "进入需求梳理",
+    "开启需求梳理",
+    "打开需求梳理",
+)
 
 
 def is_intake_mode(mode: str | None) -> bool:
@@ -16,6 +26,11 @@ def _clean_mode(mode: str | None) -> str | None:
     return mode.strip() if isinstance(mode, str) and mode.strip() else None
 
 
+def _is_explicit_intake_sync_message(message: str) -> bool:
+    normalized = "".join(str(message or "").split())
+    return any(term in normalized for term in EXPLICIT_INTAKE_SYNC_TERMS)
+
+
 def resolve_effective_mode(
     *,
     request_mode: str | None,
@@ -24,14 +39,15 @@ def resolve_effective_mode(
 ) -> str | None:
     """Resolve xiaocai product mode before calling FLARE runtime.
 
-    Message text is intentionally ignored: product modes must be explicit.
+    Only explicit user activation/sync wording can enter intake from text.
     """
-    _ = message
     normalized_request_mode = _clean_mode(request_mode)
     normalized_session_mode = _clean_mode(session_mode)
 
     if normalized_request_mode and normalized_request_mode != "auto":
         return normalized_request_mode
+    if _is_explicit_intake_sync_message(message):
+        return INTAKE_MODE_PREFIX
     if normalized_request_mode == "auto":
         return "auto"
     if is_intake_mode(normalized_session_mode):

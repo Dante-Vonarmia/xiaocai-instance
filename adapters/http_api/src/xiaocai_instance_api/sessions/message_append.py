@@ -9,6 +9,10 @@ from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.sessions.title_compat import apply_auto_title_after_exchange
+from xiaocai_instance_api.sessions.writeback_projection import (
+    has_writeback_content,
+    normalize_writeback_projection,
+)
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 
 
@@ -35,6 +39,9 @@ class AppendExchangeRequest(BaseModel):
     provider_trace: dict[str, Any] | None = None
     context_authority: dict[str, Any] | None = None
     plan_payload: dict[str, Any] | None = None
+    workflow_projection: dict[str, Any] | None = None
+    track_result: dict[str, Any] | None = None
+    artifact_edit_request: dict[str, Any] | None = None
 
 
 class AppendExchangeResponse(BaseModel):
@@ -48,13 +55,17 @@ async def append_exchange(
 ) -> AppendExchangeResponse:
     authz = get_authorization_service()
     await authz.require_conversation_write(claims=claims, conversation_id=session_id)
+    artifact_payload = normalize_writeback_projection(request.model_dump())
+    if not has_writeback_content(artifact_payload):
+        return AppendExchangeResponse(success=True)
+
     store = get_conversation_store()
     success = await store.append_exchange(
         user_id=claims.user_id,
         session_id=session_id,
         user_message=request.user_message,
         assistant_message=request.assistant_message,
-        artifact_payload=request.model_dump(),
+        artifact_payload=artifact_payload,
     )
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")

@@ -8,6 +8,9 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field, model_validator
 
 
+FLARE_PAYLOAD_EXTRA_CONTEXT_KEY = "flare_payload_extra"
+
+
 class ChatMessage(BaseModel):
     """对话消息"""
     role: str = Field(..., description="角色: user/assistant/system")
@@ -47,6 +50,14 @@ class _ChatRequestCompatMixin(BaseModel):
             "current_mode",
             "target_mode",
             "action_key",
+            "action_status",
+            "action_reason",
+            "command",
+            "run_id",
+            "trace_id",
+            "question_id",
+            "field_key",
+            "field_value",
         ):
             if key in normalized and key not in context_dict:
                 context_dict[key] = normalized[key]
@@ -65,9 +76,26 @@ class _ChatRequestCompatMixin(BaseModel):
                 "current_mode",
                 "target_mode",
                 "action_key",
+                "action_status",
+                "action_reason",
+                "command",
+                "run_id",
+                "trace_id",
+                "question_id",
+                "field_key",
+                "field_value",
             ):
                 if key in payload_dict and key not in context_dict:
                     context_dict[key] = payload_dict[key]
+            payload_extra = {
+                key: item
+                for key, item in payload_dict.items()
+                if key != "message"
+            }
+            existing_extra = context_dict.get(FLARE_PAYLOAD_EXTRA_CONTEXT_KEY)
+            if isinstance(existing_extra, dict):
+                payload_extra = {**existing_extra, **payload_extra}
+            context_dict[FLARE_PAYLOAD_EXTRA_CONTEXT_KEY] = payload_extra
 
         normalized["context"] = context_dict
         return normalized
@@ -100,6 +128,14 @@ class ChatStreamRequest(_ChatRequestCompatMixin):
     """
     message: str = Field(..., description="用户消息")
     session_id: str = Field(..., description="会话 ID")
+    command: str | None = Field(default=None, description="FLARE chat-core 兼容命令")
+    context: Dict[str, Any] = Field(default_factory=dict, description="上下文信息")
+
+
+class ChatActionRequest(_ChatRequestCompatMixin):
+    """FLARE chat-core action compatibility request."""
+    message: str = Field(default="", description="动作消息")
+    session_id: str | None = Field(default=None, description="会话 ID")
     command: str | None = Field(default=None, description="FLARE chat-core 兼容命令")
     context: Dict[str, Any] = Field(default_factory=dict, description="上下文信息")
 

@@ -178,6 +178,42 @@ def test_chat_002_t3_auto_mode_should_not_fallback_to_blocking_question(monkeypa
     assert "pending_contract" not in body["metadata"]
 
 
+def test_chat_002_t3b_intake_mode_should_not_synthesize_question_text(monkeypatch, tmp_path):
+    client = _create_client(monkeypatch, tmp_path)
+    headers = _auth_headers(client)
+    project_id = "proj-chat-002-t3b"
+    session_id = "sess-chat-002-t3b"
+    _bind_project(client, headers, project_id)
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "",
+            "cards": [],
+            "session_id": session_id,
+            "metadata": {},
+            "command_type": "continue_collection",
+            "missing_fields": ["项目名称"],
+            "question": {"question_text": "请先补充项目名称"},
+            "gate": {"status": "blocked", "reason": "missing_required_fields"},
+        }
+
+        response = client.post(
+            "/chat/run",
+            headers=headers,
+            json={
+                "message": "请开始梳理需求",
+                "session_id": session_id,
+                "context": {"project_id": project_id, "mode": "requirement_canvas"},
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["message"] == EMPTY_ASSISTANT_MESSAGE
+    assert body["message"] != "请先补充项目名称"
+    assert "pending_contract" not in body["metadata"]
+
+
 def test_chat_002_t4_kernel_run_error_should_degrade_not_hard_fail(monkeypatch, tmp_path):
     client = _create_client(monkeypatch, tmp_path)
     headers = _auth_headers(client)

@@ -158,27 +158,11 @@ class KernelClient:
             if isinstance(result.get("state"), str):
                 metadata["state"] = result.get("state")
 
-            next_actions = result.get("next_actions")
-            if not isinstance(next_actions, list):
-                next_actions = result_payload.get("next_actions")
-            if isinstance(next_actions, list) and next_actions:
-                metadata["next_actions"] = next_actions
-
             cards = result.get("cards")
             if not isinstance(cards, list):
                 cards = result_payload.get("cards", [])
             if not isinstance(cards, list):
                 cards = []
-
-            if not cards and isinstance(next_actions, list) and next_actions:
-                cards = [
-                    {
-                        "type": "next_actions",
-                        "actions": next_actions,
-                        "next_actions": next_actions,
-                        "render_hint": "next_actions",
-                    }
-                ]
 
             normalized = dict(result)
             normalized["message"] = (
