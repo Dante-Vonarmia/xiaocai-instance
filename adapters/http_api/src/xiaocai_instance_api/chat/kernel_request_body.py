@@ -29,11 +29,14 @@ def _normalize_workflow_target(value: Any) -> str:
     return resolved
 
 
+def sanitize_kernel_context_for_kernel(context: dict[str, Any]) -> dict[str, Any]:
+    """Strip xiaocai-only app/session fields before calling FLARE."""
+    return {key: value for key, value in context.items() if key not in XIAOCAI_ONLY_KERNEL_CONTEXT_KEYS}
+
+
 def _normalize_payload_targets(payload: dict[str, Any]) -> dict[str, Any]:
     """Keep xiaocai session grouping fields out of FLARE capability admission."""
-    normalized = dict(payload)
-    for key in XIAOCAI_ONLY_KERNEL_CONTEXT_KEYS:
-        normalized.pop(key, None)
+    normalized = sanitize_kernel_context_for_kernel(dict(payload))
     for key in ("target_mode", "mode_key"):
         if key not in normalized:
             continue
@@ -72,12 +75,11 @@ def build_kernel_request_body(
     context_dict = canonicalize_kernel_context(context)
     payload_extra = context_dict.get(FLARE_PAYLOAD_EXTRA_CONTEXT_KEY)
     payload_extra_dict = dict(payload_extra) if isinstance(payload_extra, dict) else {}
-    kernel_context = {
+    kernel_context = sanitize_kernel_context_for_kernel({
         key: value
         for key, value in context_dict.items()
         if key != FLARE_PAYLOAD_EXTRA_CONTEXT_KEY
-        and key not in XIAOCAI_ONLY_KERNEL_CONTEXT_KEYS
-    }
+    })
     instance_id = _default_text(context_dict.get("instance_id"), _default_text(default_instance_id, "xiaocai"))
     domain_pack_version = _default_text(
         context_dict.get("domain_pack_version"),
@@ -134,4 +136,4 @@ def build_kernel_request_body(
     return request_body
 
 
-__all__ = ["build_kernel_request_body"]
+__all__ = ["build_kernel_request_body", "sanitize_kernel_context_for_kernel"]

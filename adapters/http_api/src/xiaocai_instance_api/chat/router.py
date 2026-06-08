@@ -18,6 +18,7 @@ from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
 from xiaocai_instance_api.chat.kernel_client import KernelStreamConflictError, get_kernel_client
+from xiaocai_instance_api.chat.kernel_request_body import sanitize_kernel_context_for_kernel
 from xiaocai_instance_api.chat.context_policy import enrich_kernel_context_with_retrieval_policy
 from xiaocai_instance_api.chat.instance_profile_projection import project_instance_profile_event
 from xiaocai_instance_api.chat.orchestration.mode_resolution import (
@@ -289,8 +290,8 @@ async def chat_run(
             kernel_context=kernel_context,
             user_message=request.message,
         )
-        kernel_context.setdefault("function_type", session.function_type)
         kernel_context.setdefault("intake_session_id", request.session_id)
+        kernel_context = sanitize_kernel_context_for_kernel(kernel_context)
         kernel_client = get_kernel_client()
         result = await kernel_client.chat_run(
             user_id=claims.user_id,
@@ -452,8 +453,8 @@ async def chat_stream(
                     kernel_context=kernel_context,
                     user_message=request.message,
                 )
-                kernel_context.setdefault("function_type", session.function_type)
                 kernel_context.setdefault("intake_session_id", request.session_id)
+                kernel_context = sanitize_kernel_context_for_kernel(kernel_context)
                 kernel_client = get_kernel_client()
                 text_accumulator = StreamTextAccumulator()
                 done_message: str | None = None

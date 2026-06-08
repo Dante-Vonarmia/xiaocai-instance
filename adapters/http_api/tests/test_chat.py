@@ -283,7 +283,7 @@ def test_chat_run_intelligent_sourcing_keeps_empty_cards_when_kernel_returns_non
         assert len(data["cards"]) == 0
 
 
-def test_chat_run_injects_requirement_canvas_function_type(client, auth_token):
+def test_chat_run_does_not_forward_session_function_type_to_kernel_context(client, auth_token):
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -313,7 +313,7 @@ def test_chat_run_injects_requirement_canvas_function_type(client, auth_token):
             json={
                 "message": "测试",
                 "session_id": session_id,
-                "context": {"project_id": "proj-func-1"},
+                "context": {"project_id": "proj-func-1", "function_type": "auto", "enabled_capabilities": []},
             },
         )
 
@@ -321,10 +321,11 @@ def test_chat_run_injects_requirement_canvas_function_type(client, auth_token):
         mock_chat.assert_called_once()
         call_args = mock_chat.call_args[1]
         assert call_args["context"]["project_id"] == "proj-func-1"
-        assert call_args["context"]["function_type"] == "auto"
+        assert "function_type" not in call_args["context"]
+        assert "enabled_capabilities" not in call_args["context"]
 
 
-def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token):
+def test_chat_stream_does_not_forward_session_function_type_to_kernel_context(client, auth_token):
     bind_response = client.post(
         "/projects/bind",
         headers={"Authorization": f"Bearer {auth_token}"},
@@ -353,7 +354,7 @@ def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token
             json={
                 "message": "测试",
                 "session_id": session_id,
-                "context": {"project_id": "proj-func-2"},
+                "context": {"project_id": "proj-func-2", "function_type": "auto", "enabled_capabilities": []},
             },
         )
 
@@ -361,7 +362,8 @@ def test_chat_stream_injects_requirement_canvas_function_type(client, auth_token
         mock_stream.assert_called_once()
         call_args = mock_stream.call_args[1]
         assert call_args["context"]["project_id"] == "proj-func-2"
-        assert call_args["context"]["function_type"] == "auto"
+        assert "function_type" not in call_args["context"]
+        assert "enabled_capabilities" not in call_args["context"]
         assert "event: token" in response.text
 
 

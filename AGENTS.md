@@ -7,6 +7,12 @@
 - Preserve existing architecture boundaries.
 - Do not mix page entry, workflow logic, provider logic, and persistence logic in one file.
 - Before changing code, identify the files to be created or modified.
+- MUST run `scripts/check_flare_dependency_versions.py` before diagnosing FLARE/xiaocai runtime, admission, intent, mode, or capability behavior.
+- MUST sync the local environment with `.venv/bin/pip install -e adapters/http_api` when FLARE dependency drift is reported; do not draw conclusions or change logic before the drift is fixed.
+- xiaocai MUST NOT implement FLARE core capabilities locally. This includes runtime, admission, intent, mode, capability dispatch, workflow kernel, or canonical protocol behavior.
+- xiaocai MAY own only instance responsibilities such as configuration, login/auth, adapter boundaries, persistence, UI/product wiring, and non-core app integration.
+- If behavior, admission, intent, mode, or capability口径 diverges from FLARE, MUST audit xiaocai-side self-defined logic, config, payload pollution, stale dependencies, or UI fallback first.
+- MUST NOT add xiaocai-side rules, fallbacks, aliases, or heuristics to compensate for a FLARE口径 mismatch unless the user explicitly approves a temporary compatibility shim with rollback scope.
 
 ## React app / feature-page conventions
 
