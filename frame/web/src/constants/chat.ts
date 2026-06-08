@@ -73,8 +73,8 @@ export const DEFAULT_CANVAS_UI_LABELS: CanvasUiLabels = {
   scenario_title: '起步入口',
 }
 
-const DEFAULT_LOGO_URL = '/assets/logo-xiaocai.svg'
-const DEFAULT_SIDEBAR_LOGO_URL = '/assets/logo-xiaocai-wordmark.svg'
+const DEFAULT_LOGO_URL = '/assets/logo-yunhe.svg'
+const DEFAULT_SIDEBAR_LOGO_URL = '/assets/logo-yunhe-wordmark.svg'
 
 export const DEFAULT_INSTANCE_PROFILE: InstanceProfile = {
   product_name: DEFAULT_CANVAS_UI_LABELS.product_name,

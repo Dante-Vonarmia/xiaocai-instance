@@ -140,9 +140,9 @@ textarea {
 
 .settings-connector-icon {
   align-items: center;
-  background: #eef3ff;
+  background: var(--xiaocai-brand-primary-subtle-text);
   border-radius: 8px;
-  color: #2448f5;
+  color: var(--xiaocai-primary-hover);
   display: inline-flex;
   height: 28px;
   justify-content: center;
@@ -170,11 +170,11 @@ textarea {
 
 
 .xiaocai-chat-page .flare-chat-workspace {
-  --flare-seg-track-bg: #f3f6ff;
-  --flare-seg-track-border: #dbe5ff;
+  --flare-seg-track-bg: var(--xiaocai-primary-soft);
+  --flare-seg-track-border: var(--xiaocai-primary-border-soft);
   --flare-seg-item-color: #5c6b94;
-  --flare-seg-item-hover-color: #1e40d8;
-  --flare-seg-item-selected-color: #153197;
+  --flare-seg-item-hover-color: var(--xiaocai-primary-strong);
+  --flare-seg-item-selected-color: var(--xiaocai-primary-dark);
   --flare-seg-item-selected-bg: #ffffff;
 }
 
@@ -238,164 +238,164 @@ textarea {
 }
 
 .xiaocai-chat-page .flare-composer-quick-mode-toggle {
-  background: #f3f6ff;
-  border-color: #b7c7ff;
-  color: #1e40d8;
+  background: var(--xiaocai-primary-soft);
+  border-color: var(--xiaocai-primary-border);
+  color: var(--xiaocai-primary-strong);
 }
 
 .xiaocai-chat-page .flare-composer-quick-mode-toggle:hover {
-  background: #e8eeff;
-  border-color: #8fa6ff;
+  background: var(--xiaocai-primary-soft-hover);
+  border-color: var(--xiaocai-primary-border-strong);
   color: #1937b6;
 }
 
 .xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active {
-  background: #e8eeff;
-  border-color: #2f55ff;
-  color: #153197;
+  background: var(--xiaocai-primary-soft-hover);
+  border-color: var(--xiaocai-primary);
+  color: var(--xiaocai-primary-dark);
 }
 
 .xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active .flare-composer-quick-mode-state {
-  color: #2448f5;
+  color: var(--xiaocai-primary-hover);
 }
 
 .xiaocai-chat-page .flare-composer-menu-item.is-checked:not(:disabled) {
-  color: #2448f5;
+  color: var(--xiaocai-primary-hover);
 }
 
 .xiaocai-chat-page .flare-composer-menu-item-toggle.ant-switch.ant-switch-checked {
-  background: #2f55ff;
-  border-color: #2f55ff;
+  background: var(--xiaocai-primary);
+  border-color: var(--xiaocai-primary);
 }
 
 .xiaocai-chat-page .flare-workspace-action-zone-button,
 .xiaocai-chat-page .flare-workspace-mode-hint-apply {
-  background: #f3f6ff;
-  border-color: #b7c7ff;
-  color: #1e40d8;
+  background: var(--xiaocai-primary-soft);
+  border-color: var(--xiaocai-primary-border);
+  color: var(--xiaocai-primary-strong);
 }
 
 .xiaocai-chat-page .flare-workspace-action-zone-button:hover {
-  background: #e8eeff;
-  border-color: #8fa6ff;
+  background: var(--xiaocai-primary-soft-hover);
+  border-color: var(--xiaocai-primary-border-strong);
 }
 
 .xiaocai-chat-page .flare-workspace-workbench-trigger.is-active.ant-btn {
-  background: rgba(47, 85, 255, 0.14);
-  color: #1e40d8;
+  background: rgba(var(--xiaocai-primary-rgb), 0.14);
+  color: var(--xiaocai-primary-strong);
 }
 
 .xiaocai-chat-page .flare-workspace-context-gauge {
-  background: conic-gradient(#2f55ff var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0);
+  background: conic-gradient(var(--xiaocai-primary) var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0);
 }
 
 .xiaocai-chat-page .flare-workspace-context-popover-chart {
-  background: rgba(47, 85, 255, 0.16);
-  border-color: rgba(47, 85, 255, 0.26);
+  background: rgba(var(--xiaocai-primary-rgb), 0.16);
+  border-color: rgba(var(--xiaocai-primary-rgb), 0.26);
 }
 
 .xiaocai-chat-page .flare-workspace-context-popover-chart-fill {
-  background: #2f55ff;
+  background: var(--xiaocai-primary);
 }
 
 
 .xiaocai-settings-page .flare-chat-workspace,
 .xiaocai-chat-page .flare-chat-workspace {
-  --flare-seg-track-bg: #f3f6ff;
-  --flare-seg-track-border: #dbe5ff;
+  --flare-seg-track-bg: var(--xiaocai-primary-soft);
+  --flare-seg-track-border: var(--xiaocai-primary-border-soft);
   --flare-seg-item-color: #5c6b94;
-  --flare-seg-item-hover-color: #1e40d8;
-  --flare-seg-item-selected-color: #153197;
+  --flare-seg-item-hover-color: var(--xiaocai-primary-strong);
+  --flare-seg-item-selected-color: var(--xiaocai-primary-dark);
   --flare-seg-item-selected-bg: #ffffff;
 }
 
 .xiaocai-settings-page .flare-composer-quick-mode-toggle,
 .xiaocai-chat-page .flare-composer-quick-mode-toggle {
-  background: #f3f6ff;
-  border-color: #b7c7ff;
-  color: #1e40d8;
+  background: var(--xiaocai-primary-soft);
+  border-color: var(--xiaocai-primary-border);
+  color: var(--xiaocai-primary-strong);
 }
 
 .xiaocai-settings-page .flare-composer-quick-mode-toggle:hover,
 .xiaocai-chat-page .flare-composer-quick-mode-toggle:hover {
-  background: #e8eeff;
-  border-color: #8fa6ff;
+  background: var(--xiaocai-primary-soft-hover);
+  border-color: var(--xiaocai-primary-border-strong);
   color: #1937b6;
 }
 
 
 .xiaocai-settings-page .flare-composer-quick-mode-toggle.is-active,
 .xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active {
-  background: #e8eeff;
-  border-color: #2f55ff;
-  color: #153197;
+  background: var(--xiaocai-primary-soft-hover);
+  border-color: var(--xiaocai-primary);
+  color: var(--xiaocai-primary-dark);
 }
 
 .xiaocai-settings-page .flare-composer-quick-mode-toggle.is-active .flare-composer-quick-mode-state,
 .xiaocai-chat-page .flare-composer-quick-mode-toggle.is-active .flare-composer-quick-mode-state {
-  color: #2448f5;
+  color: var(--xiaocai-primary-hover);
 }
 
 .xiaocai-settings-page .flare-composer-menu-item.is-checked:not(:disabled),
 .xiaocai-chat-page .flare-composer-menu-item.is-checked:not(:disabled) {
-  color: #2448f5;
+  color: var(--xiaocai-primary-hover);
 }
 
 .xiaocai-settings-page .flare-composer-menu-item-toggle.ant-switch.ant-switch-checked,
 .xiaocai-chat-page .flare-composer-menu-item-toggle.ant-switch.ant-switch-checked {
-  background: #2f55ff;
-  border-color: #2f55ff;
+  background: var(--xiaocai-primary);
+  border-color: var(--xiaocai-primary);
 }
 
 .xiaocai-settings-page .flare-workspace-action-zone-button,
 .xiaocai-settings-page .flare-workspace-mode-hint-apply,
 .xiaocai-chat-page .flare-workspace-action-zone-button,
 .xiaocai-chat-page .flare-workspace-mode-hint-apply {
-  background: #f3f6ff;
-  border-color: #b7c7ff;
-  color: #1e40d8;
+  background: var(--xiaocai-primary-soft);
+  border-color: var(--xiaocai-primary-border);
+  color: var(--xiaocai-primary-strong);
 }
 
 .xiaocai-settings-page .flare-workspace-action-zone-button:hover,
 .xiaocai-chat-page .flare-workspace-action-zone-button:hover {
-  background: #e8eeff;
-  border-color: #8fa6ff;
+  background: var(--xiaocai-primary-soft-hover);
+  border-color: var(--xiaocai-primary-border-strong);
 }
 
 .xiaocai-settings-page .flare-workspace-workbench-trigger.is-active.ant-btn,
 .xiaocai-chat-page .flare-workspace-workbench-trigger.is-active.ant-btn {
-  background: rgba(47, 85, 255, 0.14);
-  color: #1e40d8;
+  background: rgba(var(--xiaocai-primary-rgb), 0.14);
+  color: var(--xiaocai-primary-strong);
 }
 
 .xiaocai-settings-page .flare-workspace-context-gauge,
 .xiaocai-chat-page .flare-workspace-context-gauge {
-  background: conic-gradient(#2f55ff var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0);
+  background: conic-gradient(var(--xiaocai-primary) var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0);
 }
 
 .xiaocai-settings-page .flare-workspace-context-popover-chart,
 .xiaocai-chat-page .flare-workspace-context-popover-chart {
-  background: rgba(47, 85, 255, 0.16);
-  border-color: rgba(47, 85, 255, 0.26);
+  background: rgba(var(--xiaocai-primary-rgb), 0.16);
+  border-color: rgba(var(--xiaocai-primary-rgb), 0.26);
 }
 
 .xiaocai-settings-page .flare-workspace-context-popover-chart-fill,
 .xiaocai-chat-page .flare-workspace-context-popover-chart-fill {
-  background: #2f55ff;
+  background: var(--xiaocai-primary);
 }
 
 /* Brand-blue interaction refinements: button text / hover / focus */
 .xiaocai-settings-page .flare-chat-workspace .ant-btn-primary,
 .xiaocai-chat-page .flare-chat-workspace .ant-btn-primary {
-  background: #2f55ff !important;
-  border-color: #2f55ff !important;
+  background: var(--xiaocai-primary) !important;
+  border-color: var(--xiaocai-primary) !important;
   color: #ffffff !important;
 }
 
 .xiaocai-settings-page .flare-chat-workspace .ant-btn-primary:hover,
 .xiaocai-chat-page .flare-chat-workspace .ant-btn-primary:hover {
-  background: #2448f5 !important;
-  border-color: #2448f5 !important;
+  background: var(--xiaocai-primary-hover) !important;
+  border-color: var(--xiaocai-primary-hover) !important;
   color: #ffffff !important;
 }
 
@@ -403,7 +403,7 @@ textarea {
 .xiaocai-settings-page .flare-chat-workspace .ant-btn-primary:focus,
 .xiaocai-chat-page .flare-chat-workspace .ant-btn-primary:focus-visible,
 .xiaocai-chat-page .flare-chat-workspace .ant-btn-primary:focus {
-  box-shadow: 0 0 0 3px rgba(47, 85, 255, 0.20) !important;
+  box-shadow: 0 0 0 3px rgba(var(--xiaocai-primary-rgb), 0.20) !important;
   outline: none !important;
 }
 
@@ -428,7 +428,7 @@ textarea {
 .xiaocai-chat-page .flare-chat-workspace .flare-attach-button.ant-btn,
 .xiaocai-chat-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn,
 .xiaocai-chat-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn {
-  color: #2448f5 !important;
+  color: var(--xiaocai-primary-hover) !important;
 }
 
 .xiaocai-settings-page .flare-chat-workspace .flare-attach-button.ant-btn:hover,
@@ -437,8 +437,8 @@ textarea {
 .xiaocai-chat-page .flare-chat-workspace .flare-attach-button.ant-btn:hover,
 .xiaocai-chat-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn:hover,
 .xiaocai-chat-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn:hover {
-  background: #eef3ff !important;
-  color: #1e40d8 !important;
+  background: var(--xiaocai-brand-primary-subtle-text) !important;
+  color: var(--xiaocai-primary-strong) !important;
 }
 
 .xiaocai-settings-page .flare-chat-workspace .flare-attach-button.ant-btn:focus-visible,
@@ -447,7 +447,7 @@ textarea {
 .xiaocai-chat-page .flare-chat-workspace .flare-attach-button.ant-btn:focus-visible,
 .xiaocai-chat-page .flare-chat-workspace .flare-workspace-icon-action.ant-btn:focus-visible,
 .xiaocai-chat-page .flare-chat-workspace .flare-workspace-footer-config-entry.ant-btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(47, 85, 255, 0.18) !important;
+  box-shadow: 0 0 0 3px rgba(var(--xiaocai-primary-rgb), 0.18) !important;
   outline: none !important;
 }
 
@@ -455,16 +455,16 @@ textarea {
 .xiaocai-settings-page .flare-chat-workspace .flare-composer-box.is-drag-over,
 .xiaocai-chat-page .flare-chat-workspace .flare-composer-box:focus-within,
 .xiaocai-chat-page .flare-chat-workspace .flare-composer-box.is-drag-over {
-  border-color: #2f55ff !important;
-  box-shadow: 0 0 0 3px rgba(47, 85, 255, 0.18) !important;
+  border-color: var(--xiaocai-primary) !important;
+  box-shadow: 0 0 0 3px rgba(var(--xiaocai-primary-rgb), 0.18) !important;
 }
 
 /* User message bubble override (chat-core currently locks default theme tokens) */
 .xiaocai-settings-page .flare-chat-workspace .flare-message-row.is-user .flare-message-bubble.ant-card,
 .xiaocai-chat-page .flare-chat-workspace .flare-message-row.is-user .flare-message-bubble.ant-card {
-  background: #2f55ff !important;
-  border-color: #2f55ff !important;
-  box-shadow: 0 8px 22px rgba(47, 85, 255, 0.30) !important;
+  background: var(--xiaocai-primary) !important;
+  border-color: var(--xiaocai-primary) !important;
+  box-shadow: 0 8px 22px rgba(var(--xiaocai-primary-rgb), 0.30) !important;
 }
 
 .xiaocai-settings-page .flare-chat-workspace .flare-message-row.is-user .flare-message-copy-button,

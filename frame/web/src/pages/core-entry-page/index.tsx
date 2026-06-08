@@ -1,7 +1,6 @@
 import { App as FlareChatCoreApp } from 'flare-chat-core'
 import { useBranding } from '@/hooks/chat/useBranding'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
-import { UpdateReminderButton } from './components/UpdateReminderButton'
 import './styles.css'
 
 const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'auto'
@@ -20,7 +19,6 @@ function CoreEntryPage() {
 
   return (
     <div className="core-entry-page">
-      <UpdateReminderButton />
       <main className="core-entry-main">
         <FlareChatCoreApp
           apiBaseUrl={API_BASE_URL}

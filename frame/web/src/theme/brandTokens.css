@@ -1,0 +1,30 @@
+:root {
+  --xiaocai-brand-primary: #8b5cf6;
+  --xiaocai-brand-primary-hover: #7c3aed;
+  --xiaocai-brand-primary-strong: #6d28d9;
+  --xiaocai-brand-primary-dark: #4c1d95;
+  --xiaocai-brand-primary-soft: #f5f3ff;
+  --xiaocai-brand-primary-soft-hover: #ede9fe;
+  --xiaocai-brand-primary-border: #d8b4fe;
+  --xiaocai-brand-primary-border-strong: #c084fc;
+  --xiaocai-brand-primary-border-soft: #ddd6fe;
+  --xiaocai-brand-primary-subtle-text: #f3e8ff;
+  --xiaocai-brand-sidebar-bg: #faf5ff;
+  --xiaocai-brand-text-muted: #7c6f9f;
+  --xiaocai-brand-icon-neutral: #6b5f85;
+  --xiaocai-brand-icon-muted: #8b80a8;
+  --xiaocai-brand-primary-rgb: 139, 92, 246;
+  --xiaocai-brand-primary-shadow-rgb: 76, 29, 149;
+  --xiaocai-primary: var(--xiaocai-brand-primary);
+  --xiaocai-primary-hover: var(--xiaocai-brand-primary-hover);
+  --xiaocai-primary-strong: var(--xiaocai-brand-primary-strong);
+  --xiaocai-primary-dark: var(--xiaocai-brand-primary-dark);
+  --xiaocai-primary-soft: var(--xiaocai-brand-primary-soft);
+  --xiaocai-primary-soft-hover: var(--xiaocai-brand-primary-soft-hover);
+  --xiaocai-primary-border: var(--xiaocai-brand-primary-border);
+  --xiaocai-primary-border-strong: var(--xiaocai-brand-primary-border-strong);
+  --xiaocai-primary-border-soft: var(--xiaocai-brand-primary-border-soft);
+  --xiaocai-primary-rgb: var(--xiaocai-brand-primary-rgb);
+  --xiaocai-primary-shadow-rgb: var(--xiaocai-brand-primary-shadow-rgb);
+  --xiaocai-focus-ring: 0 0 0 3px rgba(var(--xiaocai-primary-rgb), 0.18);
+}

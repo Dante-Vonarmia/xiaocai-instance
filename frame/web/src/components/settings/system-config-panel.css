@@ -39,7 +39,7 @@
 }
 
 .settings-system-section-label::before {
-  background: #2f55ff;
+  background: var(--xiaocai-primary);
   border-radius: 999px;
   content: '';
   height: 7px;

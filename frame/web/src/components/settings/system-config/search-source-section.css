@@ -28,8 +28,8 @@
 
 .settings-source-intro {
   align-items: center;
-  background: linear-gradient(135deg, #f7f9ff 0%, #f8fafc 100%);
-  border: 1px solid #e8eeff;
+  background: linear-gradient(135deg, var(--xiaocai-brand-sidebar-bg) 0%, #f8fafc 100%);
+  border: 1px solid var(--xiaocai-primary-soft-hover);
   border-radius: 16px;
   display: flex;
   gap: 16px;
@@ -51,8 +51,8 @@
 }
 
 .settings-source-badge.is-on {
-  background: #e8eeff;
-  color: #1e40d8;
+  background: var(--xiaocai-primary-soft-hover);
+  color: var(--xiaocai-primary-strong);
 }
 
 .settings-source-grid {
@@ -104,7 +104,7 @@
 
 .settings-source-step {
   align-items: center;
-  background: #2f55ff;
+  background: var(--xiaocai-primary);
   border-radius: 999px;
   color: #ffffff;
   display: inline-flex;
