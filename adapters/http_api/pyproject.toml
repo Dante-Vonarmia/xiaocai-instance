@@ -21,7 +21,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "sse-starlette>=2.1",
     "flare-engines==1.0.1",
-    "flare-kernel==1.0.2",
+    "flare-kernel==1.0.3",
     "flare-kernel-client-py==1.0.1",
     "flare-storage-adapters==1.0.0",
 ]

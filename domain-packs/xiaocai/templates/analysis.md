@@ -19,14 +19,14 @@
 - 预算信息：{{预算金额}} {{预算币种}}
 - 成功标准：{{success_criteria}}
 
-## 采购包策略与边界
+## 采购任务策略与边界
 
-| 采购包 / 方向 | 目标与范围 | 不包含事项 | 关键交付物 | 供应商类型 | 信息状态 |
+| 采购任务 / 方向 | 目标与范围 | 不包含事项 | 关键交付物 | 供应商类型 | 信息状态 |
 | --- | --- | --- | --- | --- | --- |
 | {{package_name}} | {{package_scope}} | {{package_exclusions}} | {{package_deliverables}} | {{vendor_profile}} | 已确认 / 候选 / 待验证 |
 
-- 拆包依据：{{package_reasoning}}
-- 包间依赖：{{package_dependencies}}
+- 拆分依据：{{package_reasoning}}
+- 任务间依赖：{{package_dependencies}}
 - 可能合并或拆分的条件：{{package_options}}
 
 ## 需求完整性与待确认
