@@ -1,0 +1,137 @@
+name: FLARE Update Monitor
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "check only or apply latest FLARE packages into a PR"
+        required: true
+        default: "check"
+        type: choice
+        options:
+          - check
+          - apply
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frame/web/package-lock.json
+
+      - name: Detect FLARE updates
+        id: detect
+        shell: bash
+        run: |
+          python scripts/resolve_flare_updates.py --json > /tmp/flare-updates.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          updates = json.loads(open("/tmp/flare-updates.json", encoding="utf-8").read())
+          available = [item for item in updates if item.get("update_available")]
+          print(f"update_count={len(available)}")
+          print("summary<<EOF")
+          if available:
+              for item in available:
+                  print(f"- {item['registry']}:{item['package']} {item['current']} -> {item['latest']}")
+          else:
+              print("- no FLARE package updates")
+          print("EOF")
+          PY
+
+      - name: Write detection summary
+        shell: bash
+        run: |
+          {
+            echo "## FLARE update detection"
+            echo
+            echo "${{ steps.detect.outputs.summary }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply latest FLARE pins
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        shell: bash
+        run: |
+          python scripts/apply_flare_updates.py --from-json /tmp/flare-updates.json
+          cd frame/web
+          npm install --package-lock-only
+
+      - name: Install Python consumer
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e adapters/http_api
+
+      - name: Validate dependency versions
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        shell: bash
+        run: |
+          python scripts/check_flare_dependency_versions.py
+
+      - name: Validate domain packs
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        shell: bash
+        run: |
+          python scripts/validate_domain_packs.py --root domain-packs
+
+      - name: Validate FLARE runtime gate
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        shell: bash
+        run: |
+          python scripts/verify_flare_consumer_runtime.py
+
+      - name: Validate web build
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        shell: bash
+        run: |
+          cd frame/web
+          npm ci
+          npm run build
+
+      - name: Create update PR
+        if: steps.detect.outputs.update_count != '0' && github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/flare-align-latest
+          title: chore(deps): align FLARE packages to latest
+          commit-message: chore(deps): align FLARE packages to latest
+          body: |
+            Automated FLARE consumer alignment.
+
+            Updates:
+            ${{ steps.detect.outputs.summary }}
+
+            Validation:
+            - dependency version gate
+            - domain pack schema validation
+            - FLARE runtime sidecar/chooser gate
+            - web npm lock/build
+
+      - name: No apply requested
+        if: steps.detect.outputs.update_count != '0' && (github.event_name != 'workflow_dispatch' || inputs.action != 'apply')
+        run: |
+          echo "Updates detected. Re-run this workflow manually with action=apply to create an alignment PR."
+
+      - name: No updates
+        if: steps.detect.outputs.update_count == '0'
+        run: |
+          echo "No FLARE package updates detected."

@@ -24,6 +24,27 @@ bash scripts/check-xiaocai-pack-sync.sh
 .venv/bin/python scripts/verify_flare_consumer_runtime.py --require-flare-root
 ```
 
+## Scheduled update monitor
+
+The GitHub workflow `.github/workflows/flare-update-monitor.yml` runs daily and
+can also be run manually.
+
+- `action=check`: detect newer FLARE packages and write the result to the
+  workflow summary.
+- `action=apply`: align xiaocai pins to the latest published FLARE packages,
+  refresh npm lockfile, run gates/build, and open a PR.
+
+Local equivalent:
+
+```bash
+.venv/bin/python scripts/resolve_flare_updates.py
+.venv/bin/python scripts/resolve_flare_updates.py --json > /tmp/flare-updates.json
+.venv/bin/python scripts/apply_flare_updates.py --from-json /tmp/flare-updates.json
+```
+
+`apply_flare_updates.py` only changes dependency pins. It does not modify
+xiaocai frontend behavior, procurement workflow logic, or FLARE kernel code.
+
 The runtime verifier must pass:
 
 - `domain_pack_sync`

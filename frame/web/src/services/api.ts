@@ -105,6 +105,34 @@ export type AppendExchangePayload = JsonRecord & {
   assistant_message?: unknown
 }
 
+export type FlareRegistry = 'npm' | 'pypi'
+
+export type FlarePackageStatus = {
+  registry: FlareRegistry
+  package: string
+  current: string | null
+  latest: string | null
+  source: string
+  update_available: boolean
+}
+
+export type FlareRuntimeGateStatus = {
+  passed: boolean
+  reason: string | null
+  current_question_projected: boolean
+  question_decision_projected: boolean
+  composer_chooser_projected: boolean
+  open_canvas_panel: boolean | null
+  error?: string | null
+}
+
+export type FlareUpdateStatusResponse = {
+  status: 'aligned' | 'updates_available' | 'attention_required' | 'unknown'
+  update_count: number
+  packages: FlarePackageStatus[]
+  runtime_gate: FlareRuntimeGateStatus
+}
+
 const ACCESS_TOKEN_KEY = 'access_token'
 const CURRENT_USER_ID_KEY = 'current_user_id'
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
@@ -885,6 +913,13 @@ export const projectApi = {
       daily_project_message_used: number | null
       daily_project_message_remaining: number | null
     }
+  },
+}
+
+export const flareUpdatesApi = {
+  status: async () => {
+    const response = await apiClient.get('/flare-updates/status')
+    return response.data as FlareUpdateStatusResponse
   },
 }
 

@@ -39,6 +39,7 @@ from xiaocai_instance_api.recommendation_policy.router import router as recommen
 from xiaocai_instance_api.integrations.router import router as integrations_router
 from xiaocai_instance_api.config_center.router import router as config_center_router
 from xiaocai_instance_api.domains.router import router as domains_router
+from xiaocai_instance_api.flare_updates.router import router as flare_updates_router
 from xiaocai_instance_api.chat.replay.router import router as chat_replay_router
 from xiaocai_instance_api.storage.migrations import run_storage_migrations
 
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(integrations_router)
     app.include_router(config_center_router)
     app.include_router(domains_router)
+    app.include_router(flare_updates_router)
     if settings.chat_replay_enabled:
         app.include_router(chat_replay_router)
 

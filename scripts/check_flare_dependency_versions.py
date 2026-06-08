@@ -7,7 +7,9 @@ import argparse
 import json
 import os
 import re
+import site
 import sys
+import sysconfig
 import tomllib
 from dataclasses import asdict, dataclass
 from importlib import metadata
@@ -16,6 +18,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 HTTP_API_PYPROJECT = PROJECT_ROOT / "adapters/http_api/pyproject.toml"
 PINNED_FLARE_DEP_RE = re.compile(r"^(flare-[A-Za-z0-9_.-]+)==([^;\s]+)")
+NORMALIZED_NAME_RE = re.compile(r"[-_.]+")
 
 
 @dataclass(frozen=True)
@@ -54,11 +57,27 @@ def pinned_flare_dependencies(pyproject_path: Path = HTTP_API_PYPROJECT) -> dict
     return pinned
 
 
-def installed_version(package: str) -> str | None:
+def _normalized_package_name(package: str) -> str:
+    return NORMALIZED_NAME_RE.sub("-", package).lower()
+
+
+def _venv_distribution_paths() -> list[str]:
+    paths = [sysconfig.get_paths().get("purelib")]
     try:
-        return metadata.version(package)
-    except metadata.PackageNotFoundError:
-        return None
+        paths.extend(site.getsitepackages())
+    except AttributeError:
+        pass
+    return [path for path in dict.fromkeys(paths) if path]
+
+
+def installed_version(package: str) -> str | None:
+    expected_name = _normalized_package_name(package)
+    for path in _venv_distribution_paths():
+        for distribution in metadata.distributions(path=[path]):
+            name = distribution.metadata.get("Name")
+            if name and _normalized_package_name(name) == expected_name:
+                return distribution.version
+    return None
 
 
 def check_flare_dependency_versions() -> list[FlareDependencyVersion]:
