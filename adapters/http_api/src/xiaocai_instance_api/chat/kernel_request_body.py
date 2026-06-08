@@ -8,6 +8,9 @@ from xiaocai_instance_api.chat.mode_contract import canonicalize_kernel_context
 from xiaocai_instance_api.contracts.chat_contract import FLARE_PAYLOAD_EXTRA_CONTEXT_KEY
 
 
+XIAOCAI_ONLY_KERNEL_CONTEXT_KEYS = {"function_type", "enabled_capabilities"}
+
+
 def _clean_text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -15,6 +18,43 @@ def _clean_text(value: Any) -> str:
 def _default_text(value: Any, fallback: str) -> str:
     resolved = _clean_text(value)
     return resolved or fallback
+
+
+def _normalize_workflow_target(value: Any) -> str:
+    resolved = _clean_text(value)
+    if resolved == "requirement_canvas":
+        return "requirement_intake"
+    if resolved.lower() in {"", "auto", "default"}:
+        return ""
+    return resolved
+
+
+def _normalize_payload_targets(payload: dict[str, Any]) -> dict[str, Any]:
+    """Keep xiaocai session grouping fields out of FLARE capability admission."""
+    normalized = dict(payload)
+    for key in XIAOCAI_ONLY_KERNEL_CONTEXT_KEYS:
+        normalized.pop(key, None)
+    for key in ("target_mode", "mode_key"):
+        if key not in normalized:
+            continue
+        target = _normalize_workflow_target(normalized.get(key))
+        if target:
+            normalized[key] = target
+        else:
+            normalized.pop(key, None)
+    return normalized
+
+
+def _should_omit_request_field(field: str, value: Any) -> bool:
+    if field in {"intent", "target_mode"}:
+        return _normalize_workflow_target(value) == ""
+    return False
+
+
+def _normalize_request_field_value(field: str, value: Any) -> Any:
+    if field in {"intent", "target_mode"}:
+        return _normalize_workflow_target(value)
+    return value
 
 
 def build_kernel_request_body(
@@ -36,6 +76,7 @@ def build_kernel_request_body(
         key: value
         for key, value in context_dict.items()
         if key != FLARE_PAYLOAD_EXTRA_CONTEXT_KEY
+        and key not in XIAOCAI_ONLY_KERNEL_CONTEXT_KEYS
     }
     instance_id = _default_text(context_dict.get("instance_id"), _default_text(default_instance_id, "xiaocai"))
     domain_pack_version = _default_text(
@@ -47,7 +88,7 @@ def build_kernel_request_body(
         _default_text(default_domain_pack_domain, "xiaocai"),
     )
 
-    payload = {**kernel_context, **payload_extra_dict}
+    payload = _normalize_payload_targets({**kernel_context, **payload_extra_dict})
     payload.setdefault("instance_id", instance_id)
     payload.setdefault("domain_pack_version", domain_pack_version)
     payload.setdefault("domain_pack_domain", domain_pack_domain)
@@ -84,14 +125,11 @@ def build_kernel_request_body(
         "field_value",
     ):
         value = payload.get(field, kernel_context.get(field))
-        if value is not None:
-            request_body[field] = value
+        if value is not None and not _should_omit_request_field(field, value):
+            request_body[field] = _normalize_request_field_value(field, value)
 
     request_body.setdefault("instance_id", instance_id)
     request_body.setdefault("domain_pack_version", domain_pack_version)
-
-    if "intent" not in request_body and isinstance(kernel_context.get("function_type"), str):
-        request_body["intent"] = kernel_context.get("function_type")
 
     return request_body
 
