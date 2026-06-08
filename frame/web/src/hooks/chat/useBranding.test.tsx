@@ -52,6 +52,24 @@ describe('useBranding', () => {
     expect(result.current.starterPrompts).toEqual([prompt])
   })
 
+  it('保留显式配置的 composerModeOptions', async () => {
+    const composerModeOptions = [
+      { value: 'requirement_intake', label: '梳理模式' },
+      { value: 'analysis_mode', label: '分析模式' },
+    ]
+    mockBrandingFetch({
+      instance: { displayName: '测试品牌' },
+      ui: { chat: { uiLabels: {}, composerModeOptions } },
+    })
+
+    const { result } = renderHook(() => useBranding())
+
+    await waitFor(() => {
+      expect(result.current.uiLabels.product_name).toBe('测试品牌')
+    })
+    expect(result.current.composerModeOptions).toEqual(composerModeOptions)
+  })
+
   it('将品牌 logo 与名称投影到 FLARE instanceProfile', async () => {
     mockBrandingFetch({
       instance: { displayName: '测试品牌', subtitle: '测试助手' },

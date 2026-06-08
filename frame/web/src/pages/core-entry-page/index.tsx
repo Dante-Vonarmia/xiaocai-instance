@@ -16,6 +16,7 @@ function CoreEntryPage() {
   const currentUserId = getCurrentUserId() || 'anonymous-user'
   const projectSlot = branding.projectSlot
   const uiLabels = branding.uiLabels
+  const composerModeOptions = branding.composerModeOptions
 
   return (
     <div className="core-entry-page">
@@ -31,6 +32,7 @@ function CoreEntryPage() {
           functionType={FUNCTION_TYPE}
           instanceId={INSTANCE_ID}
           instanceProfile={branding.instanceProfile}
+          composerModeOptions={composerModeOptions}
           projectId=""
           productName={uiLabels.product_name}
           productTag={uiLabels.brand_tag}

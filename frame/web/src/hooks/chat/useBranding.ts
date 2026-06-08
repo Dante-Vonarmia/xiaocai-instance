@@ -2,18 +2,26 @@ import { useEffect, useState } from 'react'
 
 import {
   DEFAULT_CANVAS_UI_LABELS,
+  DEFAULT_COMPOSER_MODE_OPTIONS,
   DEFAULT_FUNCTION_TYPE,
   DEFAULT_INTERACTION_MODE,
   DEFAULT_INSTANCE_PROFILE,
   DEFAULT_PROJECT_SLOT,
   DEFAULT_STARTER_PROMPTS,
   type CanvasUiLabels,
+  type ComposerModeOption,
   type InstanceProfile,
   type InteractionMode,
   type ProjectSlot,
   type StarterPrompt,
 } from '@/constants/chat'
-import { isObject, toCanvasUiLabels, toStarterPrompts, toText } from '@/hooks/chat/normalizers'
+import {
+  isObject,
+  toCanvasUiLabels,
+  toComposerModeOptions,
+  toStarterPrompts,
+  toText,
+} from '@/hooks/chat/normalizers'
 
 type BrandingState = {
   functionType: string
@@ -22,6 +30,7 @@ type BrandingState = {
   uiLabels: CanvasUiLabels
   instanceProfile: InstanceProfile
   starterPrompts: StarterPrompt[]
+  composerModeOptions: ComposerModeOption[]
 }
 
 type BrandingPayload = {
@@ -45,6 +54,7 @@ type BrandingPayload = {
       projectSlot?: unknown
       uiLabels?: unknown
       starterPrompts?: unknown[]
+      composerModeOptions?: unknown[]
       welcomeMessage?: unknown
     }
   }
@@ -57,6 +67,7 @@ const DEFAULT_BRANDING_STATE: BrandingState = {
   uiLabels: DEFAULT_CANVAS_UI_LABELS,
   instanceProfile: DEFAULT_INSTANCE_PROFILE,
   starterPrompts: DEFAULT_STARTER_PROMPTS,
+  composerModeOptions: DEFAULT_COMPOSER_MODE_OPTIONS,
 }
 
 function toInstanceProfile(
@@ -104,6 +115,7 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     || toText(payload?.instance?.subtitle)
     || DEFAULT_CANVAS_UI_LABELS.brand_tag
   const starterPrompts = toStarterPrompts(chatConfig.starterPrompts)
+  const composerModeOptions = toComposerModeOptions(chatConfig.composerModeOptions)
   const uiLabels = {
     ...normalizedUiLabels,
     product_name: productName,
@@ -121,6 +133,9 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     uiLabels,
     instanceProfile: toInstanceProfile(payload, uiLabels),
     starterPrompts,
+    composerModeOptions: composerModeOptions.length > 0
+      ? composerModeOptions
+      : DEFAULT_COMPOSER_MODE_OPTIONS,
   }
 }
 

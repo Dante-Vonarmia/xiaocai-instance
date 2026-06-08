@@ -1,6 +1,7 @@
 import {
   DEFAULT_CANVAS_UI_LABELS,
   type CanvasUiLabels,
+  type ComposerModeOption,
   type StarterPrompt,
 } from '@/constants/chat'
 
@@ -25,6 +26,17 @@ export function toStarterPrompts(value: unknown): StarterPrompt[] {
     && typeof item.label === 'string'
     && typeof item.description === 'string'
     && typeof item.prompt === 'string'
+  ))
+}
+
+export function toComposerModeOptions(value: unknown): ComposerModeOption[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((item): item is ComposerModeOption => (
+    isObject(item)
+    && typeof item.value === 'string'
+    && typeof item.label === 'string'
   ))
 }
 
