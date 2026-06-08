@@ -28,8 +28,8 @@
 
 .settings-source-intro {
   align-items: center;
-  background: linear-gradient(135deg, #faf5ff 0%, #f8fafc 100%);
-  border: 1px solid #ede9fe;
+  background: linear-gradient(135deg, #f7f9ff 0%, #f8fafc 100%);
+  border: 1px solid #e8eeff;
   border-radius: 16px;
   display: flex;
   gap: 16px;
@@ -51,8 +51,8 @@
 }
 
 .settings-source-badge.is-on {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: #e8eeff;
+  color: #1e40d8;
 }
 
 .settings-source-grid {
@@ -104,7 +104,7 @@
 
 .settings-source-step {
   align-items: center;
-  background: #8b5cf6;
+  background: #2f55ff;
   border-radius: 999px;
   color: #ffffff;
   display: inline-flex;

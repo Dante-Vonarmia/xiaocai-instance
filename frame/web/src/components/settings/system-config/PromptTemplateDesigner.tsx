@@ -100,7 +100,7 @@ function PromptTemplateDesigner({ templates, editable, onChange }: PromptTemplat
         <Space direction="vertical" size={14} style={{ width: '100%' }}>
           <div className="settings-prompt-title-row">
             <div>
-              <Tag color="purple">{active.stage}</Tag>
+              <Tag color="blue">{active.stage}</Tag>
               {active.dataContractColumns.map((item) => <Tag key={item}>{item}</Tag>)}
             </div>
             <Typography.Text type="secondary">阶段模板</Typography.Text>

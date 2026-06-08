@@ -18,7 +18,7 @@
 }
 
 .auth-card__eyebrow {
-  color: #8b5cf6;
+  color: #2f55ff;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -59,12 +59,12 @@
 }
 
 .auth-form__input:focus {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+  border-color: #2f55ff;
+  box-shadow: 0 0 0 3px rgba(47, 85, 255, 0.18);
 }
 
 .auth-form__button {
-  background: #8b5cf6;
+  background: #2f55ff;
   border: 0;
   border-radius: 10px;
   color: #ffffff;
@@ -74,7 +74,7 @@
 }
 
 .auth-form__button:hover {
-  background: #7c3aed;
+  background: #2448f5;
 }
 
 .auth-form__button:disabled {

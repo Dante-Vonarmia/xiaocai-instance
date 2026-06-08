@@ -239,8 +239,8 @@
 }
 
 .settings-prompt-card.is-active {
-  border-color: #8b5cf6;
-  box-shadow: 0 8px 22px rgba(139, 92, 246, 0.14);
+  border-color: #2f55ff;
+  box-shadow: 0 8px 22px rgba(47, 85, 255, 0.14);
 }
 
 .settings-prompt-card span,
