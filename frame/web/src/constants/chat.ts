@@ -7,11 +7,6 @@ export type StarterPrompt = {
   prompt: string
 }
 
-export type ComposerModeOption = {
-  value: string
-  label: string
-}
-
 export type ProjectSlot = {
   key: string
   project_id: string
@@ -77,11 +72,6 @@ export const DEFAULT_CANVAS_UI_LABELS: CanvasUiLabels = {
   canvas_status_title: '文档进度',
   scenario_title: '起步入口',
 }
-
-export const DEFAULT_COMPOSER_MODE_OPTIONS: ComposerModeOption[] = [
-  { value: 'requirement_intake', label: '梳理模式' },
-  { value: 'analysis_mode', label: '分析模式' },
-]
 
 const DEFAULT_LOGO_URL = '/assets/logo-xiaocai.svg'
 const DEFAULT_SIDEBAR_LOGO_URL = '/assets/logo-xiaocai-wordmark.svg'

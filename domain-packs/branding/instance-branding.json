@@ -49,16 +49,6 @@
       },
       "placeholder": "请告诉我您的采购需求...",
       "welcomeMessage": "小采在手，采购不愁。",
-      "composerModeOptions": [
-        {
-          "value": "requirement_intake",
-          "label": "梳理模式"
-        },
-        {
-          "value": "analysis_mode",
-          "label": "分析模式"
-        }
-      ],
       "uiLabels": {
         "product_name": "小采",
         "brand_tag": "AI智能采购助手",
