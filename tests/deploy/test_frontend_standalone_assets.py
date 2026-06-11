@@ -16,6 +16,13 @@ def test_remote_standalone_frontend_installs_domain_packs() -> None:
     assert 'cp -a "$DOMAIN_PACKS_DIR" "$REMOTE_WEB_ROOT/domain-packs"' in text
 
 
+def test_remote_standalone_frontend_does_not_start_new_nginx_on_reload_failure() -> None:
+    text = REMOTE_BUILD_SCRIPT.read_text()
+
+    assert "nginx -s reload || nginx" not in text
+    assert "no new nginx process was started" in text
+
+
 def test_local_standalone_upload_syncs_domain_packs() -> None:
     text = LOCAL_UPLOAD_SCRIPT.read_text()
 

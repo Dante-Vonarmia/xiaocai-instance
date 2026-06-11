@@ -59,6 +59,8 @@ sed "s|__SERVER_NAME__|$SERVER_NAME|g; s|__API_UPSTREAM__|$API_UPSTREAM_URL|g" "
 
 cp "$TMP_CONF" "$NGINX_CONF"
 nginx -t
-nginx -s reload || nginx
+if ! nginx -s reload; then
+  echo "[frontend] warning: nginx reload failed; static assets were installed, and no new nginx process was started"
+fi
 
 echo "[frontend] deployed"
