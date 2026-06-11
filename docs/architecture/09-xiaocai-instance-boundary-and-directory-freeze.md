@@ -2,6 +2,8 @@
 
 > 当前肃清原则：xiaocai 是采购 instance，不是 FLARE kernel/runtime 的替代实现。  
 > xiaocai 只承接使用层、配置层、业务资产层和必要 adapter；缺 runtime 能力时回到 FLARE，不在本仓库补一套底层机制。
+>
+> 最新执行口径：FLARE 对 xiaocai 基本是黑盒，只开放 contracts。domain packs 当前由 FLARE 侧开发、测试和验证；xiaocai 可以同步、装配、调配置和维护自有数据治理，但不得新增未经 FLARE 测试的规则、fallback、shim、alias 或 heuristic。
 
 ## 1. 分层边界冻结
 
@@ -9,7 +11,7 @@
 |---|---|---|
 | transport/router | auth/session/sse/contract 出口，调用 FLARE / adapter | 业务决策、字段选择、问题生成、workflow 推进 |
 | instance API facade | 用户、项目、会话、资料、权限、source/MCP 配置与 kernel 调用 | 替代 FLARE kernel、mode runtime、stream runtime |
-| domain pack / config | 采购字段、品类、模板、术语、场景规则、MCP/source 映射 | 主流程控制、mode 自动切换、canvas 真状态、readiness runtime |
+| domain pack / config | 同步和消费 FLARE 已验证 domain pack / contract；维护 instance 自有数据治理配置、MCP/source 映射 | 主流程控制、mode 自动切换、canvas 真状态、readiness runtime、未经 FLARE 测试的执行规则 |
 | adapters/connectors | 调用外部 MCP、资料库、供应商库、搜索或 LLM provider，并 normalize 输出 | 采购业务真状态、workflow 阶段推进 |
 | repositories | project/session/source/knowledge 持久化 | 业务编排、readiness、下一步动作 |
 | projection mapping | 将 FLARE / xiaocai contract 映射给前端展示 | 发明 authoritative state、反向驱动后端 workflow |
@@ -82,12 +84,20 @@ docs/
 | mode / workflow / readiness / question planning / canvas canonical / stream / patch | 不在 xiaocai 开发，转 FLARE 缺口 |
 | UI 展示 | 消费后端投影，不发明真状态 |
 
+当前 domain pack 处理方式：
+
+1. domain pack 开发、测试、contract 验证先在 FLARE 侧完成。
+2. xiaocai 只同步 FLARE 已验证发布态，不把本地 pack 改动当作执行口径来源。
+3. xiaocai 可以维护自有数据治理资产，但不得借数据治理新增 workflow/readiness/mode/capability 规则。
+4. xiaocai 运行表现和 FLARE 不一致时，先查依赖、props、部署产物、缓存、历史 payload 和本地污染，不加本地补偿逻辑。
+
 当前允许的短期兼容代码必须满足：
 
 1. 只做输入输出映射或兼容桥接。
 2. 不新增业务规则。
 3. 不改变主 workflow。
 4. 有明确删除或上收到 FLARE 的方向。
+5. 必须有用户明确批准的临时兼容范围和回滚点。
 
 ## 6. CLEAN-002 本地 runtime-like 逻辑审计
 
@@ -137,10 +147,11 @@ docs/
 
 1. auth、membership、project、session、source、upload、permission。
 2. kernel 调用 facade 与 SSE 转发。
-3. domain-pack / contract 资产维护。
+3. FLARE 已验证 domain-pack / contract 资产同步、装配与消费。
 4. 外部 DB、MCP、供应商库、资料库 adapter 与配置。
 5. provider / MCP / LLM 输出 normalization。
 6. 将 FLARE 输出映射为 xiaocai 前端可消费的展示 payload。
+7. xiaocai 自有数据治理、部署治理、用户环境治理。
 
 ### 6.4 后续任务入口
 

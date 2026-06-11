@@ -142,13 +142,18 @@
   border-left-color: rgba(var(--xiaocai-primary-rgb), 0.40) !important;
 }
 
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workspace-context-popover-chart-fill {
+  background: var(--xiaocai-primary) !important;
+}
+
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) :is(
   .flare-workflow-task-dot.status-running,
   .flare-workflow-task-dot.status-waiting_user,
-  .flare-workflow-task-dot.status-partial,
-  .flare-workspace-context-popover-chart-fill
+  .flare-workflow-task-dot.status-partial
 ) {
-  background: var(--xiaocai-primary) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--xiaocai-primary-strong) !important;
 }
 
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) :is(

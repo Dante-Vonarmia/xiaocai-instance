@@ -1,51 +1,118 @@
 version: "v0"
-owner: "xiaocai"
+owner: "flare"
 status: "draft"
-description: "Xiaocai instance analysis template registry for kernel runtime."
+anchor: "docs/contracts/core/semantics.md"
+description: "Default analysis templates (instance can override via DomainPack overlay)."
 
 defaults:
-  requirement_template_id: "xiaocai.requirement.procurement.v1"
-  sourcing_template_id: "xiaocai.sourcing.default.v1"
+  requirement_template_id: "flare.requirement.rfx.v1"
+  sourcing_template_id: "flare.sourcing.default.v1"
+  block_generation_policy:
+    visible_style: "answer_first_not_tutorial"
+    fill_strategy: "answer_or_recommend_before_gap"
+    confirmation_strategy: "only_user_binding_or_private_facts"
+    assembly_strategy: "selected_blocks_only"
+    empty_placeholder_policy: "forbidden"
+  optional_modules:
+    - key: "rfi_module"
+      title: "RFI 供应商调研模块"
+      activation: "user_selected"
+    - key: "rfp_module"
+      title: "RFP 方案征集模块"
+      activation: "user_selected"
+    - key: "rfq_module"
+      title: "RFQ 报价询价模块"
+      activation: "user_selected"
+    - key: "supplier_scorecard"
+      title: "供应商评分表"
+      activation: "user_selected"
 
 templates:
-  - template_id: "xiaocai.requirement.procurement.v1"
+  - template_id: "flare.requirement.rfx.v1"
     analysis_type: "requirement"
     locale: "zh-CN"
     sections:
       - key: "project_understanding"
         title: "项目理解与核心需求"
+        intent: "概括用户输入和当前上下文，给出项目理解、核心目标、采购对象和需求边界。"
         required_slots: ["goal_summary", "scope", "target_object"]
+      - key: "readiness"
+        title: "需求完整性与待确认"
+        intent: "评估当前需求完整性、已确认信息、关键缺口和可推进假设。"
+        required_slots: ["missing_information"]
       - key: "market_status"
-        title: "市场现状和分析"
+        title: "市场现状和供给分析"
+        intent: "分析项目对应供给市场、可获得服务或产品类型、供给成熟度和方案质量差异。"
         required_slots: ["market_snapshot", "supply_status"]
       - key: "cost_structure"
         title: "成本结构分析"
+        intent: "说明主要成本构成、成本驱动因素、降本方向和报价拆分重点。"
         required_slots: ["cost_drivers", "budget_hint"]
       - key: "risk"
         title: "项目风险分析"
+        intent: "识别项目风险、影响和控制建议；能基于行业经验判断的风险必须输出。"
         required_slots: ["risk_list", "mitigations"]
       - key: "strategy"
         title: "采购策略分析"
+        intent: "给出目标优先级、采购模式、约束条件和策略建议；不要只解释方法。"
         required_slots: ["priority_weights", "constraints"]
       - key: "supplier_suggestion"
         title: "供应商选择建议"
+        intent: "给出供应商画像、能力要求、准入门槛、优选指标和评估维度。"
         required_slots:
           - "vendor_capability_requirements"
           - "admission_rules"
           - "preference_rules"
-      - key: "execution"
+      - key: "rfx_path"
+        title: "RFX 路径与执行计划"
+        intent: "给出 RFI/RFP/RFQ/RFX 路径选择、执行计划、关键节点和下一步动作。"
+        required_slots: ["rfx_type_options", "rfx_documents", "rfx_next_steps"]
+
+  - template_id: "flare.requirement.default.v1"
+    analysis_type: "requirement"
+    locale: "zh-CN"
+    sections:
+      - key: "project_understanding"
+        title: "项目理解与核心需求"
+        intent: "概括用户输入和当前上下文，给出项目理解、核心目标、采购对象和需求边界。"
+        required_slots: ["goal_summary", "scope", "target_object"]
+      - key: "market_status"
+        title: "市场现状和分析"
+        intent: "分析项目对应供给市场、可获得服务或产品类型、供给成熟度和方案质量差异。"
+        required_slots: ["market_snapshot", "supply_status"]
+      - key: "cost_structure"
+        title: "成本结构分析"
+        intent: "说明主要成本构成、成本驱动因素、降本方向和报价拆分重点。"
+        required_slots: ["cost_drivers", "budget_hint"]
+      - key: "risk"
+        title: "项目风险分析"
+        intent: "识别项目风险、影响和控制建议；能基于行业经验判断的风险必须输出。"
+        required_slots: ["risk_list", "mitigations"]
+      - key: "strategy"
+        title: "采购策略分析"
+        intent: "给出目标优先级、采购模式、约束条件和策略建议；不要只解释方法。"
+        required_slots: ["priority_weights", "constraints"]
+      - key: "supplier_suggestion"
+        title: "供应商选择建议"
+        intent: "给出供应商画像、能力要求、准入门槛、优选指标和评估维度。"
+        required_slots:
+          - "vendor_capability_requirements"
+          - "admission_rules"
+          - "preference_rules"
+      - key: "execution_plan"
         title: "项目实施计划与执行建议"
+        intent: "给出可执行推进步骤、关键决策点、局部待确认项和后续可选模块。"
         required_slots: ["next_steps", "decision_points"]
 
-  - template_id: "xiaocai.sourcing.default.v1"
+  - template_id: "flare.sourcing.default.v1"
     analysis_type: "sourcing"
     locale: "zh-CN"
     sections:
       - key: "sourcing_goal"
         title: "寻源需求分析"
-        required_slots: ["goal_summary", "sourcing_scope"]
+        required_slots: ["goal_summary", "sourcing_scope", "target_object"]
       - key: "market_status"
-        title: "市场现状和分析"
+        title: "市场现状和供给分析"
         required_slots: ["market_snapshot", "supply_status"]
       - key: "cost_structure"
         title: "成本结构分析"
@@ -57,5 +124,8 @@ templates:
         title: "寻源策略分析"
         required_slots: ["priority_weights", "sourcing_constraints"]
       - key: "supplier_profile"
-        title: "供应商画像"
+        title: "供应商画像与准入/优选"
         required_slots: ["vendor_profile", "admission_rules", "preference_rules"]
+      - key: "candidate_validation"
+        title: "候选池与下一步验证"
+        required_slots: ["candidate_pool", "evidence_summary", "missing_information"]

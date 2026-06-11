@@ -10,7 +10,7 @@ DEV_COMPOSE := $(COMPOSE) -p $(INSTANCE_PROJECT) -f $(INSTANCE_COMPOSE_FILE) -f 
 
 .PHONY: help init env-check \
 	start stop restart \
-	up-instance up-instance-backend down-instance build-instance rebuild-web ps-instance logs-instance \
+	up-instance up-instance-backend down-instance build-instance rebuild-web flare-refresh-local ps-instance logs-instance \
 	up-dev down-dev build-dev ps-dev logs-dev logs-devlib \
 	config-instance config-dev db-migrate backup-db restore-db domain-packs-check domain-acceptance health api-smoke \
 	data-visibility-smoke acceptance clean-logs
@@ -28,6 +28,7 @@ help:
 	@echo "  make down-instance  # stop instance baseline stack"
 	@echo "  make build-instance # build instance images"
 	@echo "  make rebuild-web    # rebuild and restart only inst-xiaocai-web"
+	@echo "  make flare-refresh-local # clean local FLARE caches, no-cache rebuild, recreate containers"
 	@echo "  make ps-instance    # instance stack status"
 	@echo "  make logs-instance  # instance stack logs"
 	@echo "  make config-instance# validate instance compose"
@@ -86,6 +87,17 @@ build-instance: env-check
 rebuild-web: env-check
 	$(INSTANCE_COMPOSE) build inst-xiaocai-web
 	$(INSTANCE_COMPOSE) up -d inst-xiaocai-web
+
+flare-refresh-local: env-check
+	cd .. && .venv/bin/python scripts/check_flare_dependency_versions.py
+	cd ../frame/web && rm -rf node_modules dist
+	cd ../frame/web && npm cache clean --force
+	cd ../frame/web && npm ci
+	$(INSTANCE_COMPOSE) build --no-cache inst-xiaocai-kernel inst-xiaocai-api inst-xiaocai-web
+	$(INSTANCE_COMPOSE) up -d --force-recreate inst-xiaocai-kernel inst-xiaocai-api inst-xiaocai-web inst-xiaocai-nginx
+	./scripts/health-check.sh
+	$(INSTANCE_COMPOSE) exec -T inst-xiaocai-kernel python -c "from importlib import metadata; print('inst-xiaocai-kernel flare-kernel=' + metadata.version('flare-kernel'))"
+	$(INSTANCE_COMPOSE) exec -T inst-xiaocai-api python -c "from importlib import metadata; print('inst-xiaocai-api flare-kernel=' + metadata.version('flare-kernel'))"
 
 ps-instance:
 	$(INSTANCE_COMPOSE) ps

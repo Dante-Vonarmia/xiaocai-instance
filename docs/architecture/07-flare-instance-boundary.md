@@ -7,6 +7,8 @@
 - `FLARE`：平台能力层（像组件库）
 - `xiaocai instance`：采购实例层（使用、配置、连接和沉淀业务资产，不重写内核）
 
+当前执行口径：对 xiaocai 来说，FLARE 基本按黑盒消费，只开放稳定 contracts。domain packs 当前在 FLARE 侧完成开发、测试和 contract 验证；xiaocai 只同步和消费 FLARE 已验证状态，不在本仓库新增未经 FLARE 测试的规则、fallback、shim、alias 或 heuristic。
+
 ## 分层职责
 
 ### 1. FLARE（平台能力层）
@@ -19,19 +21,21 @@
 - 通用 mode / workflow / intake / readiness / canvas canonical projection
 - 通用 stream / patch / event / provider normalization
 - 通用 MCP / tool / connector runtime 能力（若产品需要）
+- 当前 domain pack 开发、测试、contract 验证与发布态输出
 
 ### 2. xiaocai instance（采购实例层）
 
-负责将 FLARE 能力实例化到采购场景，不改 FLARE 内核行为：
+负责将 FLARE 已验证能力实例化到采购场景，不改 FLARE 内核行为：
 
 - 品牌和文案（`product_name`、`brand_tag`、`uiLabels`）
 - 推荐模板内容（`starterPrompts`）
 - 模式入口配置（`modeQuickEntries`）
 - 项目/身份上下文、API 绑定、权限范围
-- 采购 domain pack、字段、品类、模板、术语、数据契约
+- FLARE 已验证 domain pack / contract 的同步、装配和消费
 - 采购场景的外部数据源、MCP、供应商库、资料库连接配置
 - 用户、项目、会话、资料、上传、权限等 instance 使用层能力
 - 将采购上下文映射为 FLARE 已定义的输入合同，并消费 FLARE 输出投影
+- xiaocai 自有数据治理、部署治理、用户环境治理
 
 ## 强制约束（MUST / MUST NOT）
 
@@ -40,9 +44,11 @@
 - 业务模板、业务文案、品牌信息必须放在 instance 配置层。
 - 仅通过 FLARE 暴露的 props/协议接入能力。
 - 当需求是“改模板内容/文案/模式项”时，只改 instance。
-- 采购字段、品类、模板、术语、外部数据源配置必须留在 xiaocai instance / domain pack。
+- xiaocai 自有数据治理、外部数据源配置必须留在 instance 使用层；domain pack 执行口径以 FLARE 已验证发布态为准。
 - FLARE 已有能力必须优先复用；如果现有接口不能承接，先向 FLARE 提能力缺口。
 - provider / LLM / MCP 返回必须先 normalize 到 xiaocai 或 FLARE 合同，再进入业务状态或投影。
+- FLARE 行为异常时，先检查依赖版本、运行时 props、部署产物、缓存、历史 payload 和 xiaocai 侧污染。
+- domain pack 变更必须来自 FLARE 已验证发布态，或作为明确的数据治理资产同步，不得在 xiaocai 侧直接新增执行规则。
 
 ### MUST NOT
 
@@ -53,6 +59,8 @@
 - 不用关键词、fallback、UI 投影或 domain pack 直接改变主流程状态。
 - 不把 domain pack 当作 runtime controller；domain pack 只能提供业务知识、字段、模板、策略配置。
 - 不把 UI projection 当作 authoritative backend state。
+- 不用 xiaocai 本地规则、fallback、shim、alias 或 heuristic 补偿 FLARE 口径不一致。
+- 不在 xiaocai 侧开发未经 FLARE 测试的 domain pack 执行规则。
 
 ## 变更决策规则
 
@@ -63,9 +71,11 @@
 - 内容调整（模板文本、文案、品牌、模式项）：
   - 只改 instance 配置，不改 FLARE 内核。
 - 采购资产调整（字段、品类、模板、MCP/source 配置）：
-  - 只改 xiaocai domain pack / instance config，不新增运行时机制。
+  - 当前先回 FLARE 开发、测试、验证；xiaocai 只同步 FLARE 已验证发布态或维护明确的数据治理资产，不新增运行时机制。
 - 运行机制调整（mode、workflow、canvas、readiness、stream、patch、MCP runtime）：
   - 不在 xiaocai 本地开发，必须回到 FLARE。
+- 运行表现不一致（FLARE 正常、xiaocai 异常）：
+  - 只排查 xiaocai 运行时 props、依赖漂移、部署产物、缓存、历史 payload 或污染；不得新增 fallback/shim。
 
 ## 本仓库落点
 
@@ -77,6 +87,7 @@
   - `/Users/dantevonalcatraz/Development/procurement-agents/adapters/http_api/src/xiaocai_instance_api`
 - 采购业务资产：
   - `/Users/dantevonalcatraz/Development/procurement-agents/domain-packs`
+  - 当前作为 FLARE 已验证 domain pack 的同步/消费落点，不作为未经 FLARE 测试的规则开发入口。
 - FLARE 包来源（外部仓库依赖）：
   - `@flare/chat-ui`
   - `@flare/chat-core`

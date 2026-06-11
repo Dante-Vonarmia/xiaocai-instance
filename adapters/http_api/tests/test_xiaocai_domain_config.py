@@ -183,3 +183,66 @@ def test_requirement_intake_stage_actions_match_flare_pack_shape():
         "reason_with_gaps": "可进入智能寻源，但会携带待补充字段与假设。",
         "description": "切换到候选匹配与风险摘要，缺口会作为假设或待确认项保留。",
     }
+
+
+def test_xiaocai_pack_does_not_reenable_composer_chooser():
+    fields = _read_json("fields.yaml")
+    workflow = _read_json("workflow.yaml")
+    strategy = workflow["intake_strategy"]
+    model_policy = strategy["model_question_policy"]
+
+    assert strategy["question_surface"] == "hidden"
+    assert model_policy["allow_model_options"] is False
+    assert model_policy["option_source_priority"] == []
+    assert model_policy["interruption"] == {
+        "enabled": False,
+        "only_when_blocking": False,
+        "require_options_for_model_interrupt": False,
+        "allow_question_kinds": [],
+    }
+
+    scenario_field = next(
+        item
+        for item in fields["field_definitions"]
+        if isinstance(item, dict) and item.get("key") == "使用场景"
+    )
+    assert "extraction_patterns" not in scenario_field
+
+    workflow_text = json.dumps(workflow, ensure_ascii=False)
+    for stale_text in (
+        "客户交流或品牌传播",
+        "员工活动或内部凝聚",
+        "新品发布或市场推广",
+        "培训会议",
+        "周年庆或大型活动执行",
+        "sidecar_question_instruction",
+    ):
+        assert stale_text not in workflow_text
+
+
+def test_xiaocai_analysis_report_uses_dynamic_markdown_sections():
+    workflow = _read_json("workflow.yaml")
+    analysis_template = workflow["artifact_templates"]["analysis_report"]
+
+    assert analysis_template.get("template") is None
+    assert analysis_template.get("sections") == []
+    assert analysis_template.get("variants") == []
+    assert analysis_template.get("render_unmatched_generated_sections") is True
+
+    registry = {
+        item["module_key"]: item
+        for item in workflow.get("module_prompt_registry", [])
+        if isinstance(item, dict) and item.get("module_key")
+    }
+    prompt_text = json.dumps(registry["analysis_mode"], ensure_ascii=False)
+    assert "必须按模板章节" not in prompt_text
+    assert "按需求分析报告模板输出" not in prompt_text
+    assert "不强制固定" in prompt_text
+    assert "Markdown 标题层级" in prompt_text
+
+    template_text = (DOMAIN_ROOT / "templates" / "analysis.md").read_text(
+        encoding="utf-8"
+    )
+    assert "本文件只定义分析输出的展示原则，不固定报告章节模板。" in template_text
+    assert "\n## " not in template_text
+    assert "{{项目名称}}" not in template_text

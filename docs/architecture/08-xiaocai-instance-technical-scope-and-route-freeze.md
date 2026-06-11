@@ -4,6 +4,8 @@
 
 小采 instance 是采购领域 canonical-state 驱动的任务系统，不是关键词路由聊天壳；核心抽象固定为 `CanonicalState + FieldPolicy + WorkItem + Artifact + ContractMapper`，扩展固定走规则/模板/知识/评分配置，不改 `service/router/UI` 主流程代码。当前 domain-pack capability 按显式 opt-in 生效，只启用 `requirement_intake` 与 `analysis_mode`。
 
+当前执行口径：上述规则/模板/知识/评分配置不在 xiaocai 本地直接开发执行逻辑。domain packs 先在 FLARE 侧完成开发、测试和 contract 验证；xiaocai 只同步、装配和消费 FLARE 已验证发布态。
+
 ## 2. 技术范围冻结（本期）
 
 ### 2.1 当前启用能力
@@ -44,6 +46,6 @@
 
 ## 5. 变更控制
 
-1. 新增采购场景必须优先走 `domain-pack/policy/template/knowledge/scoring` 扩展。
+1. 新增采购场景必须先回 FLARE 侧完成 `domain-pack/policy/template/knowledge/scoring` 开发、测试和 contract 验证，再由 xiaocai 同步消费。
 2. 任何改动若要求修改 `service/router/UI` 主流程判断，默认判定为不合格方案。
 3. 上述规则作为后续 Codex 实施评审门槛。

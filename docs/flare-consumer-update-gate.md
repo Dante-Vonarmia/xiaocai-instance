@@ -8,11 +8,33 @@ kernel behavior inside xiaocai.
 ## Principle
 
 - xiaocai consumes released FLARE packages and the FLARE `domain-packs/xiaocai`.
+- For xiaocai, FLARE is treated as a black box except for published contracts.
+- Domain packs are currently developed, tested, and contract-verified on the
+  FLARE side before xiaocai syncs or consumes them.
 - xiaocai must not hide FLARE chooser/canvas behavior in the frontend as a
   workaround.
+- xiaocai must not add local rules, fallbacks, shims, aliases, or heuristics to
+  compensate for a FLARE behavior mismatch.
 - Runtime behavior is verified by probes, not by version strings alone.
 - Historical stored payloads are handled by migration/cleanup, not by frontend
   guessing.
+
+## User-facing update baseline
+
+xiaocai should present FLARE capability changes as an update of the deployed
+instance shell:
+
+1. detect available FLARE/package/domain-pack release state;
+2. show the user that an update is available;
+3. apply dependency/domain-pack sync without changing xiaocai behavior rules;
+4. rebuild/redeploy the instance;
+5. run runtime probes on the deployed target;
+6. mark success only after probes pass, otherwise roll back dependency pins and
+   rebuild from the previous known-good state.
+
+The update path may preserve xiaocai-owned auth, persistence, connectors,
+tenant/user configuration, and data governance assets. It must not introduce
+new local domain/runtime/capability logic.
 
 ## Required checks after each FLARE update
 
@@ -23,6 +45,23 @@ Run these from the xiaocai repo root:
 bash scripts/check-xiaocai-pack-sync.sh
 .venv/bin/python scripts/verify_flare_consumer_runtime.py --require-flare-root
 ```
+
+## Fixed local refresh flow
+
+After changing FLARE dependency pins, refresh local xiaocai from `deploy/`:
+
+```bash
+make flare-refresh-local
+```
+
+This target removes frontend install/build artifacts, clears npm cache, runs
+`npm ci`, rebuilds kernel/api/web images with Docker `--no-cache`, force
+recreates the xiaocai runtime containers, runs health checks, and prints the
+container-side `flare-kernel` version.
+
+It intentionally preserves Postgres/Redis/Qdrant volumes. Do not use `down -v`
+for normal FLARE package updates unless a separate data reset is explicitly
+approved.
 
 ## Scheduled update monitor
 
@@ -93,6 +132,8 @@ A FLARE update is accepted by xiaocai only when:
 3. Runtime probe passes locally.
 4. Runtime probe passes on the deployed target.
 5. Any historical payload cleanup is explicitly recorded.
+6. No xiaocai-side rule, fallback, shim, alias, or heuristic was added to make
+   the update pass.
 
 Rollback is dependency-pin rollback plus container rebuild; do not patch xiaocai
 frontend to compensate for FLARE runtime behavior.

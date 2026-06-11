@@ -8,12 +8,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REMOTE_HOST=${REMOTE_HOST:-aliyun-xiaocai}
-REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/var/www/xiaocai-web}
+REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/opt/1panel/apps/openresty/openresty/root}
 SERVER_NAME=${SERVER_NAME:-_}
 API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:28001}
 export COPYFILE_DISABLE=1
 
 DIST_DIR="$ROOT_DIR/frame/web/dist"
+DOMAIN_PACKS_DIR="$ROOT_DIR/domain-packs"
 TEMPLATE_FILE="$ROOT_DIR/deploy/nginx/frontend-standalone-http.conf.template"
 
 if [ ! -d "$DIST_DIR" ]; then
@@ -24,6 +25,10 @@ fi
 
 if [ ! -f "$TEMPLATE_FILE" ]; then
   echo "template not found: $TEMPLATE_FILE"
+  exit 1
+fi
+if [ ! -f "$DOMAIN_PACKS_DIR/xiaocai/app-profile.json" ]; then
+  echo "domain pack profile not found: $DOMAIN_PACKS_DIR/xiaocai/app-profile.json"
   exit 1
 fi
 
@@ -49,6 +54,14 @@ if [ "$LOCAL_RSYNC" = true ] && [ "$REMOTE_RSYNC" = true ]; then
 else
   ssh "$REMOTE_HOST" "find '$REMOTE_WEB_ROOT' -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
   tar -C "$DIST_DIR" -cf - . | ssh "$REMOTE_HOST" "tar -C '$REMOTE_WEB_ROOT' -xf -"
+fi
+
+echo "[frontend] upload domain-packs -> ${REMOTE_HOST}:${REMOTE_WEB_ROOT}/domain-packs"
+if [ "$LOCAL_RSYNC" = true ] && [ "$REMOTE_RSYNC" = true ]; then
+  rsync -az --delete "$DOMAIN_PACKS_DIR/" "$REMOTE_HOST:$REMOTE_WEB_ROOT/domain-packs/"
+else
+  ssh "$REMOTE_HOST" "mkdir -p '$REMOTE_WEB_ROOT/domain-packs' && find '$REMOTE_WEB_ROOT/domain-packs' -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
+  tar -C "$DOMAIN_PACKS_DIR" -cf - . | ssh "$REMOTE_HOST" "tar -C '$REMOTE_WEB_ROOT/domain-packs' -xf -"
 fi
 
 echo "[frontend] install nginx site config"
