@@ -1,6 +1,9 @@
 import {
   DEFAULT_CANVAS_UI_LABELS,
+  type AppBranding,
+  type CapabilityCatalogItem,
   type CanvasUiLabels,
+  type ComposerModeOption,
   type StarterPrompt,
 } from '@/constants/chat'
 
@@ -15,6 +18,27 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
+export function toStringRecord(value: unknown): Record<string, string> {
+  if (!isObject(value)) {
+    return {}
+  }
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].trim().length > 0),
+  )
+}
+
+export function toAppBranding(value: unknown): AppBranding {
+  if (!isObject(value)) {
+    return {}
+  }
+  return {
+    logo: toStringRecord(value.logo),
+    colors: toStringRecord(value.colors),
+    themeTokens: toStringRecord(value.themeTokens),
+  }
+}
+
 export function toStarterPrompts(value: unknown): StarterPrompt[] {
   if (!Array.isArray(value)) {
     return []
@@ -25,6 +49,29 @@ export function toStarterPrompts(value: unknown): StarterPrompt[] {
     && typeof item.label === 'string'
     && typeof item.description === 'string'
     && typeof item.prompt === 'string'
+  ))
+}
+
+export function toComposerModeOptions(value: unknown): ComposerModeOption[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((item): item is ComposerModeOption => (
+    isObject(item)
+    && typeof item.value === 'string'
+    && typeof item.label === 'string'
+  ))
+}
+
+export function toCapabilityCatalog(value: unknown): CapabilityCatalogItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((item): item is CapabilityCatalogItem => (
+    isObject(item)
+    && typeof item.key === 'string'
+    && typeof item.label === 'string'
+    && typeof item.summary === 'string'
   ))
 }
 

@@ -1,0 +1,132 @@
+{
+  "instanceId": "xiaocai",
+  "domainPackDomain": "xiaocai",
+  "domainPackVersion": "default",
+  "userId": "demo_user",
+  "displayPolicy": {
+    "showUserFooter": true,
+    "showStarterScenarios": true
+  },
+  "branding": {
+    "logo": {
+      "light": "/assets/logo-yunhe.svg",
+      "sidebar": "/assets/logo-yunhe-wordmark.svg",
+      "favicon": "/assets/logo-yunhe.svg"
+    },
+    "colors": {
+      "primary": "#8b5cf6",
+      "accent": "#7c3aed",
+      "surface": "#ffffff",
+      "background": "#ffffff",
+      "sidebar": "#faf5ff"
+    },
+    "themeTokens": {
+      "appBg": "#ffffff",
+      "appBorder": "#ddd6fe",
+      "appShadow": "0 16px 40px rgba(76, 29, 149, 0.10)",
+      "sidebarBg": "#faf5ff",
+      "divider": "#ddd6fe",
+      "surfaceBgActive": "#f5f3ff",
+      "surfaceBorder": "#ddd6fe",
+      "surfaceBorderActive": "#8b5cf6",
+      "textMuted": "#7c6f9f",
+      "iconNeutral": "#6b5f85",
+      "iconMuted": "#8b80a8",
+      "bubbleUserBg": "#8b5cf6",
+      "bubbleUserSubtleText": "#f3e8ff",
+      "composerBg": "#ffffff",
+      "fileTagBg": "rgba(139, 92, 246, 0.12)",
+      "fileTagBorder": "rgba(139, 92, 246, 0.28)",
+      "fileTagText": "#6d28d9",
+      "scenarioCardBgActive": "#f5f3ff",
+      "scenarioCardBorder": "#ddd6fe",
+      "scenarioCardBorderActive": "#8b5cf6",
+      "focusOutline": "0 0 0 3px rgba(139, 92, 246, 0.18)"
+    }
+  },
+  "instanceProfile": {
+    "product_name": "小采",
+    "brand_tag": "企业采购工作台",
+    "logo_text": "小采",
+    "logo_url": "/assets/logo-yunhe.svg",
+    "ui_labels": {
+      "scenario_panel_title": "起步入口",
+      "empty_state_logo_alt": "小采",
+      "empty_state_logo_url": "/assets/logo-yunhe.svg",
+      "product_logo_alt": "小采",
+      "product_logo_url": "/assets/logo-yunhe.svg",
+      "sidebar_logo_alt": "小采",
+      "sidebar_logo_url": "/assets/logo-yunhe-wordmark.svg",
+      "user_footer_label": "用户",
+      "empty_state_title": "欢迎来到小采",
+      "empty_state_description": "小采在手，采购不愁。"
+    }
+  },
+  "composerModeOptions": [
+    {
+      "value": "auto",
+      "label": "自动"
+    },
+    {
+      "value": "expert",
+      "label": "深度执行"
+    },
+    {
+      "value": "requirement_intake",
+      "label": "需求梳理"
+    },
+    {
+      "value": "analysis_mode",
+      "label": "需求分析"
+    }
+  ],
+  "starterScenarios": [
+    {
+      "key": "xiaocai_random_office_furniture",
+      "label": "办公室家具采购",
+      "description": "80人/一个月",
+      "prompt": "公司新办公室要采购办公家具，约 80 人使用，包括工位桌椅、会议桌椅和储物柜，预算未定，期望一个月内交付，请先帮我梳理采购需求。"
+    },
+    {
+      "key": "xiaocai_random_team_event",
+      "label": "员工团建服务",
+      "description": "120人/半天",
+      "prompt": "公司计划为 120 名员工采购半天团建活动服务，需要场地、餐饮、活动执行和安全保障，预算还没定，请先帮我整理采购需求。"
+    },
+    {
+      "key": "xiaocai_random_training_room",
+      "label": "培训室设备采购",
+      "description": "屏幕/音频",
+      "prompt": "公司要改造两间培训室，需要采购会议屏、麦克风、音响和远程会议设备，兼顾内部培训和客户演示，请先帮我梳理采购需求。"
+    },
+    {
+      "key": "xiaocai_random_annual_gift",
+      "label": "年会礼品采购",
+      "description": "300份/两周",
+      "prompt": "公司年会需要采购 300 份员工礼品，偏实用型，单份预算待定，希望两周内到货，请先帮我整理采购需求和待确认点。"
+    },
+    {
+      "key": "xiaocai_random_test_server",
+      "label": "测试服务器采购",
+      "description": "研发/压测",
+      "prompt": "研发部门要采购一批测试服务器，用于自动化测试和压测环境，数量和配置还在评估，请先帮我梳理采购需求。"
+    }
+  ],
+  "capabilityCatalog": [
+    {
+      "key": "requirement_intake",
+      "label": "需求梳理",
+      "summary": "把模糊采购目标整理成结构化需求和缺口问题。"
+    },
+    {
+      "key": "analysis",
+      "label": "需求分析",
+      "summary": "基于资料、需求和过程结果生成分析结论。"
+    },
+    {
+      "key": "sourcing",
+      "label": "智能寻源",
+      "summary": "根据明确需求查找和比较候选供应商/方案。"
+    }
+  ]
+}

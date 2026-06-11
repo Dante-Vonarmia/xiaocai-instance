@@ -153,14 +153,6 @@
 }
 
 /*
- * xiaocai keeps user identity inside auth/session contracts only.
- * Do not expose FLARE's raw footer user-id label in the product shell.
- */
-.core-entry-page .flare-workspace-footer-left > .ant-typography-secondary:first-child {
-  display: none;
-}
-
-/*
  * FLARE 内层根容器会内联 height: 100vh。
  * 在 iOS Safari 下会把底部 composer 放到可视区外。
  * 这里强制改为继承外层可视高度，避免被工具栏遮挡。

@@ -17,8 +17,8 @@
     "@tanstack/react-query": "^5.17.0",
     "antd": "^6.2.2",
     "axios": "^1.16.0",
-    "flare-chat-core": "1.0.4",
-    "flare-chat-ui": "1.0.3",
+    "flare-chat-core": "1.0.5",
+    "flare-chat-ui": "1.0.4",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-router-dom": "^6.20.0"
@@ -41,11 +41,13 @@
     "vitest": "^4.1.5"
   },
   "overrides": {
-    "dompurify": "3.4.2"
+    "dompurify": "3.4.2",
+    "flare-canvas-ui": "1.0.5"
   },
   "pnpm": {
     "overrides": {
-      "dompurify": "3.4.2"
+      "dompurify": "3.4.2",
+      "flare-canvas-ui": "1.0.5"
     }
   }
 }

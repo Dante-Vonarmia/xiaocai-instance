@@ -5,10 +5,6 @@ import { DEFAULT_FUNCTION_TYPE, DEFAULT_PROJECT_SLOT, DEFAULT_SESSION_TITLE } fr
 import { Shell } from '@/components/chat/Shell'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
 
-type ChatPageProps = {
-  onLogout?: () => void
-}
-
 function ChatPageView() {
   const accessToken = getAccessToken()
   const currentUserId = getCurrentUserId() || 'anonymous-user'
@@ -28,7 +24,7 @@ function ChatPageView() {
   return <Shell workspace={workspace} />
 }
 
-function ChatPage(_props: ChatPageProps) {
+function ChatPage() {
   return <ChatPageView />
 }
 

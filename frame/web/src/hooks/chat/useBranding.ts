@@ -1,19 +1,36 @@
 import { useEffect, useState } from 'react'
 
 import {
+  DEFAULT_APP_BRANDING,
+  DEFAULT_CAPABILITY_CATALOG,
   DEFAULT_CANVAS_UI_LABELS,
+  DEFAULT_COMPOSER_MODE_OPTIONS,
+  DEFAULT_DISPLAY_POLICY,
   DEFAULT_FUNCTION_TYPE,
   DEFAULT_INTERACTION_MODE,
   DEFAULT_INSTANCE_PROFILE,
   DEFAULT_PROJECT_SLOT,
   DEFAULT_STARTER_PROMPTS,
+  type AppBranding,
+  type CapabilityCatalogItem,
   type CanvasUiLabels,
+  type ComposerModeOption,
+  type DisplayPolicy,
   type InstanceProfile,
   type InteractionMode,
   type ProjectSlot,
   type StarterPrompt,
 } from '@/constants/chat'
-import { isObject, toCanvasUiLabels, toStarterPrompts, toText } from '@/hooks/chat/normalizers'
+import {
+  isObject,
+  toAppBranding,
+  toCapabilityCatalog,
+  toCanvasUiLabels,
+  toComposerModeOptions,
+  toStarterPrompts,
+  toStringRecord,
+  toText,
+} from '@/hooks/chat/normalizers'
 
 type BrandingState = {
   functionType: string
@@ -22,6 +39,10 @@ type BrandingState = {
   uiLabels: CanvasUiLabels
   instanceProfile: InstanceProfile
   starterPrompts: StarterPrompt[]
+  branding: AppBranding
+  displayPolicy: DisplayPolicy
+  composerModeOptions: ComposerModeOption[]
+  capabilityCatalog: CapabilityCatalogItem[]
 }
 
 type BrandingPayload = {
@@ -50,6 +71,21 @@ type BrandingPayload = {
   }
 }
 
+type AppProfilePayload = {
+  branding?: unknown
+  capabilityCatalog?: unknown
+  composerModeOptions?: unknown
+  displayPolicy?: unknown
+  instanceProfile?: {
+    brand_tag?: unknown
+    logo_text?: unknown
+    logo_url?: unknown
+    product_name?: unknown
+    ui_labels?: unknown
+  }
+  starterScenarios?: unknown
+}
+
 const DEFAULT_BRANDING_STATE: BrandingState = {
   functionType: DEFAULT_FUNCTION_TYPE,
   interactionMode: DEFAULT_INTERACTION_MODE,
@@ -57,6 +93,26 @@ const DEFAULT_BRANDING_STATE: BrandingState = {
   uiLabels: DEFAULT_CANVAS_UI_LABELS,
   instanceProfile: DEFAULT_INSTANCE_PROFILE,
   starterPrompts: DEFAULT_STARTER_PROMPTS,
+  branding: DEFAULT_APP_BRANDING,
+  displayPolicy: DEFAULT_DISPLAY_POLICY,
+  composerModeOptions: DEFAULT_COMPOSER_MODE_OPTIONS,
+  capabilityCatalog: DEFAULT_CAPABILITY_CATALOG,
+}
+
+const APP_PROFILE_PATH = '/domain-packs/xiaocai/app-profile.json'
+const LEGACY_BRANDING_PATH = '/domain-packs/branding/instance-branding.json'
+
+function toDisplayPolicy(value: unknown): DisplayPolicy {
+  if (!isObject(value)) {
+    return DEFAULT_DISPLAY_POLICY
+  }
+  return {
+    showAllStarterScenarios: typeof value.showAllStarterScenarios === 'boolean'
+      ? value.showAllStarterScenarios
+      : undefined,
+    showStarterScenarios: typeof value.showStarterScenarios === 'boolean' ? value.showStarterScenarios : undefined,
+    showUserFooter: typeof value.showUserFooter === 'boolean' ? value.showUserFooter : undefined,
+  }
 }
 
 function toInstanceProfile(
@@ -89,6 +145,70 @@ function toInstanceProfile(
   }
 }
 
+function toAppProfileInstanceProfile(
+  payload: AppProfilePayload,
+  uiLabels: CanvasUiLabels & Record<string, string>,
+): InstanceProfile {
+  const profile = payload.instanceProfile || {}
+  const logoUrl = toText(profile.logo_url) || DEFAULT_INSTANCE_PROFILE.logo_url
+  const logoText = toText(profile.logo_text) || uiLabels.product_name
+  return {
+    product_name: uiLabels.product_name,
+    brand_tag: uiLabels.brand_tag,
+    logo_text: logoText,
+    logo_url: logoUrl,
+    ui_labels: {
+      ...uiLabels,
+      logo_alt: uiLabels.logo_alt || logoText,
+      logo_url: uiLabels.logo_url || logoUrl,
+    },
+  }
+}
+
+function normalizeUiLabels(
+  rawLabels: unknown,
+  productName: string,
+  brandTag: string,
+  fallbackDescription: string,
+): CanvasUiLabels & Record<string, string> {
+  const normalized = toCanvasUiLabels(rawLabels)
+  const stringLabels = toStringRecord(rawLabels)
+  return {
+    ...normalized,
+    ...stringLabels,
+    product_name: productName,
+    brand_tag: brandTag,
+    empty_state_title: toText(stringLabels.empty_state_title) || `欢迎来到${productName}`,
+    empty_state_description: toText(stringLabels.empty_state_description) || fallbackDescription,
+  }
+}
+
+function normalizeAppProfileState(payload: AppProfilePayload | null | undefined): BrandingState | null {
+  if (!isObject(payload) || !isObject(payload.instanceProfile)) {
+    return null
+  }
+  const productName = toText(payload.instanceProfile.product_name) || DEFAULT_CANVAS_UI_LABELS.product_name
+  const brandTag = toText(payload.instanceProfile.brand_tag) || DEFAULT_CANVAS_UI_LABELS.brand_tag
+  const uiLabels = normalizeUiLabels(
+    payload.instanceProfile.ui_labels,
+    productName,
+    brandTag,
+    DEFAULT_CANVAS_UI_LABELS.empty_state_description,
+  )
+  return {
+    functionType: DEFAULT_FUNCTION_TYPE,
+    interactionMode: DEFAULT_INTERACTION_MODE,
+    projectSlot: DEFAULT_PROJECT_SLOT,
+    uiLabels,
+    instanceProfile: toAppProfileInstanceProfile(payload, uiLabels),
+    starterPrompts: toStarterPrompts(payload.starterScenarios),
+    branding: toAppBranding(payload.branding),
+    displayPolicy: toDisplayPolicy(payload.displayPolicy),
+    composerModeOptions: toComposerModeOptions(payload.composerModeOptions),
+    capabilityCatalog: toCapabilityCatalog(payload.capabilityCatalog),
+  }
+}
+
 function normalizeBrandingState(payload: BrandingPayload | null | undefined): BrandingState {
   const chatConfig = payload?.ui?.chat
   if (!chatConfig) {
@@ -96,7 +216,6 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
   }
 
   const rawUiLabels = isObject(chatConfig.uiLabels) ? chatConfig.uiLabels : {}
-  const normalizedUiLabels = toCanvasUiLabels(rawUiLabels)
   const productName = toText(rawUiLabels.product_name)
     || toText(payload?.instance?.displayName)
     || DEFAULT_CANVAS_UI_LABELS.product_name
@@ -104,15 +223,12 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     || toText(payload?.instance?.subtitle)
     || DEFAULT_CANVAS_UI_LABELS.brand_tag
   const starterPrompts = toStarterPrompts(chatConfig.starterPrompts)
-  const uiLabels = {
-    ...normalizedUiLabels,
-    product_name: productName,
-    brand_tag: brandTag,
-    empty_state_title: toText(rawUiLabels.empty_state_title) || `欢迎来到${productName}`,
-    empty_state_description: toText(rawUiLabels.empty_state_description)
-      || toText(chatConfig.welcomeMessage)
-      || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
-  }
+  const uiLabels = normalizeUiLabels(
+    rawUiLabels,
+    productName,
+    brandTag,
+    toText(chatConfig.welcomeMessage) || DEFAULT_CANVAS_UI_LABELS.empty_state_description,
+  )
 
   return {
     functionType: DEFAULT_FUNCTION_TYPE,
@@ -121,7 +237,19 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     uiLabels,
     instanceProfile: toInstanceProfile(payload, uiLabels),
     starterPrompts,
+    branding: toAppBranding(payload.branding),
+    displayPolicy: DEFAULT_DISPLAY_POLICY,
+    composerModeOptions: DEFAULT_COMPOSER_MODE_OPTIONS,
+    capabilityCatalog: DEFAULT_CAPABILITY_CATALOG,
   }
+}
+
+async function loadJson(path: string) {
+  const response = await fetch(path, { cache: 'no-store' })
+  if (!response.ok) {
+    return null
+  }
+  return response.json()
 }
 
 export function useBranding() {
@@ -132,11 +260,12 @@ export function useBranding() {
 
     const loadBranding = async () => {
       try {
-        const response = await fetch('/domain-packs/branding/instance-branding.json', { cache: 'no-store' })
-        if (!response.ok || cancelled) {
+        const appProfile = normalizeAppProfileState(await loadJson(APP_PROFILE_PATH) as AppProfilePayload | null)
+        if (appProfile && !cancelled) {
+          setBranding(appProfile)
           return
         }
-        const payload = await response.json() as BrandingPayload
+        const payload = await loadJson(LEGACY_BRANDING_PATH) as BrandingPayload | null
         if (!cancelled) {
           setBranding(normalizeBrandingState(payload))
         }

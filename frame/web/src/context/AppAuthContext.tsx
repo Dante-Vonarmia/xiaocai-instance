@@ -47,6 +47,7 @@ const MOCK_USERS: MockUser[] = [
   { user_id: 'wx_user_bob', label: 'Bob（微信号 B）', identity: '手机号 139****2222', bearer_token: 'mock-bearer-bob' },
   { user_id: 'wx_user_cathy', label: 'Cathy（微信号 C）', identity: '手机号 137****3333', bearer_token: 'mock-bearer-cathy' },
 ]
+const DEFAULT_MOCK_USER = MOCK_USERS[0]
 
 const AppAuthContext = createContext<AppAuthContextValue | null>(null)
 
@@ -75,11 +76,11 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessTokenState] = useState('')
   const [authStage, setAuthStage] = useState<AuthStage>('idle')
   const [authError, setAuthError] = useState('')
-  const [selectedMockUserId, setSelectedMockUserId] = useState(MOCK_USERS[0].user_id)
+  const [selectedMockUserId, setSelectedMockUserId] = useState(DEFAULT_MOCK_USER.user_id)
   const authParams = useMemo(resolveAuthParams, [])
 
   const selectedMockUser = useMemo(
-    () => MOCK_USERS.find((item) => item.user_id === selectedMockUserId) || MOCK_USERS[0],
+    () => MOCK_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
     [selectedMockUserId],
   )
 
@@ -88,7 +89,8 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       return
     }
     const mode: AuthMode = manualMode || (authParams.mode === 'select' ? 'mock' : authParams.mode)
-    const value = (manualValue || authParams.value || '').trim()
+    const defaultValue = mode === 'mock' ? DEFAULT_MOCK_USER.user_id : ''
+    const value = (manualValue || authParams.value || defaultValue).trim()
 
     setAuthStage('loading')
     setAuthError('')
@@ -174,6 +176,12 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!accessToken.trim() && authStage !== 'loading' && authParams.mode !== 'select') {
       void authenticate()
+    }
+  }, [accessToken, authStage, authParams.mode, authenticate])
+
+  useEffect(() => {
+    if (!accessToken.trim() && authStage === 'idle' && authParams.mode === 'select') {
+      void authenticate('mock', DEFAULT_MOCK_USER.user_id)
     }
   }, [accessToken, authStage, authParams.mode, authenticate])
 

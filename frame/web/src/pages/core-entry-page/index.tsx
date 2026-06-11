@@ -24,8 +24,12 @@ function CoreEntryPage() {
           apiBaseUrl={API_BASE_URL}
           apiToken={accessToken}
           backendMode="real"
+          branding={branding.branding}
+          capabilityCatalog={branding.capabilityCatalog}
+          composerModeOptions={branding.composerModeOptions}
           defaultProjectName={projectSlot.name}
           defaultSessionTitle={DEFAULT_SESSION_TITLE}
+          displayPolicy={branding.displayPolicy}
           domainPackDomain={DOMAIN_PACK_DOMAIN}
           domainPackVersion={DOMAIN_PACK_VERSION}
           functionType={FUNCTION_TYPE}

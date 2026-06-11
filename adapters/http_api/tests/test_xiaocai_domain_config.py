@@ -118,6 +118,7 @@ def test_xiaocai_taxonomy_matches_category_field_options():
 
 
 def test_xiaocai_domain_pack_keeps_flare_pack_contract_markers():
+    app_profile = _read_json("app-profile.json")
     fields = _read_json("fields.yaml")
     workflow = _read_json("workflow.yaml")
     taxonomy = _read_json("taxonomy.yaml")
@@ -133,6 +134,12 @@ def test_xiaocai_domain_pack_keeps_flare_pack_contract_markers():
     assert len(fields["field_definitions"]) == 81
     assert "寻源" not in taxonomy["intent_aliases"]
     assert "供应商" not in taxonomy["intent_aliases"]
+    assert app_profile["displayPolicy"]["showUserFooter"] is True
+    assert app_profile["displayPolicy"]["showStarterScenarios"] is True
+    assert app_profile["branding"]["themeTokens"]["appBg"] == "#ffffff"
+    assert app_profile["branding"]["themeTokens"]["sidebarBg"] == "#faf5ff"
+    assert app_profile["instanceProfile"]["ui_labels"]["empty_state_title"] == "欢迎来到小采"
+    assert app_profile["instanceProfile"]["ui_labels"]["empty_state_description"] == "小采在手，采购不愁。"
     assert set(registry) == {"requirement_intake", "analysis_mode"}
     assert registry["analysis_mode"]["action_commands"] == [
         "generate_analysis",
@@ -150,7 +157,11 @@ def test_requirement_intake_stage_actions_match_flare_pack_shape():
         if isinstance(item, dict) and item.get("action_key")
     }
 
-    assert set(actions) == {"continue_collection", "generate_analysis"}
+    assert set(actions) == {
+        "continue_collection",
+        "generate_analysis",
+        "handoff_to_sourcing",
+    }
     assert actions["continue_collection"] == {
         "action_key": "continue_collection",
         "label": "继续补充",
@@ -160,4 +171,15 @@ def test_requirement_intake_stage_actions_match_flare_pack_shape():
         "action_key": "generate_analysis",
         "label": "生成需求分析",
         "priority": 2,
+    }
+    assert actions["handoff_to_sourcing"] == {
+        "action_key": "handoff_to_sourcing",
+        "label": "进入智能寻源",
+        "target_mode": "intelligent_sourcing",
+        "priority": 3,
+        "status": "available",
+        "reason": "可基于当前需求进入智能寻源，并显式保留待补充项。",
+        "reason_ready": "当前需求清晰度已可支持智能寻源。",
+        "reason_with_gaps": "可进入智能寻源，但会携带待补充字段与假设。",
+        "description": "切换到候选匹配与风险摘要，缺口会作为假设或待确认项保留。",
     }

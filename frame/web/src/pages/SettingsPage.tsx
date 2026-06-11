@@ -2,11 +2,7 @@ import SystemConfigPanel from '@/components/settings/SystemConfigPanel'
 import { SettingsProvider } from '@/context/SettingsContext'
 import './settings-page.css'
 
-type SettingsPageProps = {
-  onLogout?: () => void
-}
-
-function SettingsPage(_props: SettingsPageProps) {
+function SettingsPage() {
   return (
     <div className="xiaocai-settings-page settings-page settings-page--frameless">
       <main className="settings-page-main">

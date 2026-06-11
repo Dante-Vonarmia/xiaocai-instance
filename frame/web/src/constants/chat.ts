@@ -7,6 +7,29 @@ export type StarterPrompt = {
   prompt: string
 }
 
+export type ComposerModeOption = {
+  value: string
+  label: string
+}
+
+export type CapabilityCatalogItem = {
+  key: string
+  label: string
+  summary: string
+}
+
+export type DisplayPolicy = {
+  showUserFooter?: boolean
+  showStarterScenarios?: boolean
+  showAllStarterScenarios?: boolean
+}
+
+export type AppBranding = {
+  logo?: Record<string, string>
+  colors?: Record<string, string>
+  themeTokens?: Record<string, string>
+}
+
 export type ProjectSlot = {
   key: string
   project_id: string
@@ -95,3 +118,7 @@ export const DEFAULT_INSTANCE_PROFILE: InstanceProfile = {
 }
 
 export const DEFAULT_STARTER_PROMPTS: StarterPrompt[] = []
+export const DEFAULT_COMPOSER_MODE_OPTIONS: ComposerModeOption[] = []
+export const DEFAULT_CAPABILITY_CATALOG: CapabilityCatalogItem[] = []
+export const DEFAULT_DISPLAY_POLICY: DisplayPolicy = {}
+export const DEFAULT_APP_BRANDING: AppBranding = {}
