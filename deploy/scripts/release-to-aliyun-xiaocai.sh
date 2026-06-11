@@ -21,6 +21,7 @@ REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/opt/1panel/apps/openresty/openresty/root}
 FRONTEND_DEPLOY_MODE=${FRONTEND_DEPLOY_MODE:-standalone}
 FORCE_REBUILD=${FORCE_REBUILD:-true}
 FORCE_RECREATE=${FORCE_RECREATE:-true}
+INSTANCE_PROJECT=${INSTANCE_PROJECT:-inst-xiaocai-prod}
 
 cd "$ROOT_DIR"
 
@@ -53,7 +54,7 @@ echo "[release] 2/5 server git pull"
 ssh "$REMOTE_HOST" "cd '$REMOTE_DIR' && if [ '$REMOTE_FORCE_RESET' = 'true' ]; then git reset --hard HEAD; fi && git pull --ff-only '$REMOTE_NAME' '$BRANCH'"
 
 echo "[release] 3/5 remote backend deploy"
-ssh "$REMOTE_HOST" "REPO_DIR='$REMOTE_DIR' FRONTEND_DEPLOY_MODE='$FRONTEND_DEPLOY_MODE' FORCE_REBUILD='$FORCE_REBUILD' FORCE_RECREATE='$FORCE_RECREATE' bash '$REMOTE_DIR/deploy/scripts/remote-deploy-instance.sh'"
+ssh "$REMOTE_HOST" "INSTANCE_PROJECT='$INSTANCE_PROJECT' REPO_DIR='$REMOTE_DIR' FRONTEND_DEPLOY_MODE='$FRONTEND_DEPLOY_MODE' FORCE_REBUILD='$FORCE_REBUILD' FORCE_RECREATE='$FORCE_RECREATE' bash '$REMOTE_DIR/deploy/scripts/remote-deploy-instance.sh'"
 
 echo "[release] 4/5 remote standalone frontend deploy"
 ssh "$REMOTE_HOST" "REPO_DIR='$REMOTE_DIR' REMOTE_WEB_ROOT='$REMOTE_WEB_ROOT' FRONTEND_API_BASE_URL='$FRONTEND_API_BASE_URL' API_UPSTREAM_URL='$API_UPSTREAM_URL' SERVER_NAME='$SERVER_NAME' bash '$REMOTE_DIR/deploy/scripts/remote-deploy-frontend-standalone.sh'"
