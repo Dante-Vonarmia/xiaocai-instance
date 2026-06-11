@@ -12,6 +12,10 @@ import json
 import uuid
 
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.sessions.context_patch import (
+    merge_session_context_patch,
+    normalize_session_context,
+)
 from xiaocai_instance_api.storage.db_runtime import SQLRuntime, resolve_db_config
 
 
@@ -153,6 +157,7 @@ class SessionRecord:
     preview: str
     created_at: str
     updated_at: str
+    context: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -216,6 +221,7 @@ class ConversationStore:
                 title TEXT NOT NULL,
                 status TEXT NOT NULL,
                 preview TEXT NOT NULL,
+                context TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -283,6 +289,8 @@ class ConversationStore:
                 self._runtime.execute("ALTER TABLE sessions ADD COLUMN owner_user_id TEXT NULL")
             if "visibility" not in session_names:
                 self._runtime.execute("ALTER TABLE sessions ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'")
+            if "context" not in session_names:
+                self._runtime.execute("ALTER TABLE sessions ADD COLUMN context TEXT NOT NULL DEFAULT '{}'")
             self._runtime.execute(
                 """
                 UPDATE sessions
@@ -319,6 +327,8 @@ class ConversationStore:
             self._runtime.execute("ALTER TABLE sessions ADD COLUMN owner_user_id TEXT NULL")
         if "visibility" not in session_names:
             self._runtime.execute("ALTER TABLE sessions ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'")
+        if "context" not in session_names:
+            self._runtime.execute("ALTER TABLE sessions ADD COLUMN context TEXT NOT NULL DEFAULT '{}'")
         self._runtime.execute(
             """
             UPDATE sessions
@@ -362,6 +372,7 @@ class ConversationStore:
             preview=str(row["preview"]),
             created_at=str(row["created_at"]),
             updated_at=str(row["updated_at"]),
+            context=normalize_session_context(row.get("context")),
         )
 
     @staticmethod
@@ -792,7 +803,7 @@ class ConversationStore:
         async with self._lock:
             session = self._runtime.fetchone(
                 f"""
-                SELECT 1 FROM sessions s
+                SELECT s.context FROM sessions s
                 WHERE s.session_id = ?
                   AND {_session_write_clause("s")}
                 LIMIT 1
@@ -803,6 +814,7 @@ class ConversationStore:
                 return False
 
             artifacts = artifact_payload if isinstance(artifact_payload, dict) else {}
+            patched_context = merge_session_context_patch(session.get("context"), artifacts.get("context_patch"))
             user_text = str(user_message or "")
             assistant_text = str(assistant_message or "")
             if user_text.strip():
@@ -846,6 +858,15 @@ class ConversationStore:
                     ),
                 )
             updated_at = _now_iso()
+            if patched_context is not None:
+                self._runtime.execute(
+                    """
+                    UPDATE sessions
+                    SET context = ?
+                    WHERE session_id = ?
+                    """,
+                    (_json_dumps(patched_context), session_id),
+                )
             preview = assistant_text.strip() or user_text.strip()
             if preview:
                 self._runtime.execute(

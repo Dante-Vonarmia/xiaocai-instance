@@ -38,6 +38,7 @@ class AppendExchangeRequest(BaseModel):
     context_usage: dict[str, Any] | None = None
     provider_trace: dict[str, Any] | None = None
     context_authority: dict[str, Any] | None = None
+    context_patch: dict[str, Any] | None = None
     plan_payload: dict[str, Any] | None = None
     workflow_projection: dict[str, Any] | None = None
     track_result: dict[str, Any] | None = None

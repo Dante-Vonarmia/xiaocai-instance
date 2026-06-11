@@ -268,6 +268,7 @@ async def get_session(
         "function_type": session.function_type,
         "title": session.title,
         "status": session.status,
+        "context": session.context,
     }
 
 

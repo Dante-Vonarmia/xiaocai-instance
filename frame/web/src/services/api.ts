@@ -75,6 +75,7 @@ export type SessionDetail = {
   function_type: string
   title: string
   status: 'active'
+  context?: JsonRecord
 }
 
 export type MessageRecord = {

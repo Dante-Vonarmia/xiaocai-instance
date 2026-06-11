@@ -17,7 +17,7 @@
     "@tanstack/react-query": "^5.17.0",
     "antd": "^6.2.2",
     "axios": "^1.16.0",
-    "flare-chat-core": "1.0.7",
+    "flare-chat-core": "file:vendor/flare-chat-core-1.0.8.tgz",
     "flare-chat-ui": "1.0.5",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

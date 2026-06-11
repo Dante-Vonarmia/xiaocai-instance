@@ -20,6 +20,7 @@ _ARTIFACT_WRITEBACK_FIELDS = (
     "context_usage",
     "provider_trace",
     "context_authority",
+    "context_patch",
     "plan_payload",
     "workflow_projection",
     "track_result",
