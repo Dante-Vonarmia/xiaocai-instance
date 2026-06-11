@@ -16,13 +16,42 @@ if [ ! -d node_modules ]; then
   npm ci --no-audit --no-fund
 fi
 
+resolve_package_version() {
+  node - "$1" <<'NODE'
+const fs = require('node:fs');
+
+const packageName = process.argv[2];
+const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const packageLock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+const packages = packageLock.packages || {};
+const packageNode = packages[`node_modules/${packageName}`] || {};
+const version = (
+  packageJson.overrides?.[packageName]
+  || packageJson.pnpm?.overrides?.[packageName]
+  || packageNode.version
+  || packageJson.dependencies?.[packageName]
+  || packageJson.devDependencies?.[packageName]
+);
+
+if (!version) {
+  console.error(`Cannot resolve ${packageName} from package.json/package-lock.json`);
+  process.exit(1);
+}
+
+console.log(String(version).replace(/^[~^=]/, ''));
+NODE
+}
+
 LOCAL_FLARE_ROOT="${LOCAL_FLARE_ROOT:-$ROOT_DIR/../../../F.L.A.R.E}"
 if [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-core/package.json" ] && [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-ui/package.json" ]; then
+  FLARE_CANVAS_UI_VERSION="$(resolve_package_version flare-canvas-ui)"
+  FLARE_GENERATIVE_UI_VERSION="$(resolve_package_version flare-generative-ui)"
+  echo "using local FLARE packages with flare-canvas-ui@$FLARE_CANVAS_UI_VERSION flare-generative-ui@$FLARE_GENERATIVE_UI_VERSION"
   npm install --no-save \
     flare-chat-core@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-core" \
     flare-chat-ui@file:"$LOCAL_FLARE_ROOT/packages/flare-chat-ui" \
-    flare-canvas-ui@1.0.2 \
-    flare-generative-ui@1.0.1
+    flare-canvas-ui@"$FLARE_CANVAS_UI_VERSION" \
+    flare-generative-ui@"$FLARE_GENERATIVE_UI_VERSION"
 fi
 
 VITE_API_BASE_URL="$API_BASE_URL" VITE_FLARE_CORE_ENTRY_URL="$CORE_ENTRY_URL" npm run build
