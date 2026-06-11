@@ -11,6 +11,7 @@
   --xiaocai-primary-rgb: var(--xiaocai-brand-primary-rgb);
   --xiaocai-primary-shadow-rgb: var(--xiaocai-brand-primary-shadow-rgb);
   --xiaocai-focus-ring: 0 0 0 3px rgba(var(--xiaocai-primary-rgb), 0.18);
+  --xiaocai-workspace-bg: #f6f8fc;
 }
 
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) :is(.flare-chat-standalone-surface, .flare-chat-workspace) {
@@ -28,6 +29,19 @@
   --flare-seg-item-selected-color: var(--xiaocai-primary-dark) !important;
   --flare-seg-item-selected-bg: #ffffff !important;
   background: #ffffff !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) :is(
+  .flare-chat-conversation-layout,
+  .flare-chat-conversation-main,
+  .flare-workspace-recommendation-shell,
+  .flare-workspace-composer-section
+) {
+  background: var(--xiaocai-workspace-bg) !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-chat-conversation-main > div {
+  background: var(--xiaocai-workspace-bg) !important;
 }
 
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) :is(
