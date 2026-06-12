@@ -3,9 +3,36 @@
 from __future__ import annotations
 
 
+def _compact_workflow_projection(value: object) -> dict | None:
+    """Keep workflow state in message history without inlining bulky event logs."""
+    if not isinstance(value, dict):
+        return None
+    run_events = value.get("run_events")
+    compact = {
+        key: item
+        for key, item in value.items()
+        if key not in {"run_events", "runEvents"}
+    }
+    if isinstance(run_events, list) and run_events:
+        compact["run_events_count"] = len(run_events)
+        compact["run_events_lazy"] = True
+    return compact
+
+
+def _compact_plan_payload(value: object) -> dict | None:
+    """Project plan payload for history reload while keeping event details lazy."""
+    if not isinstance(value, dict):
+        return None
+    compact = dict(value)
+    workflow_projection = _compact_workflow_projection(compact.get("workflow_projection"))
+    if workflow_projection is not None:
+        compact["workflow_projection"] = workflow_projection
+    return compact
+
+
 def message_response(item) -> dict:
     """Preserve FLARE message artifacts so history reload keeps workbench state."""
-    plan_payload = item.plan_payload if isinstance(item.plan_payload, dict) else None
+    plan_payload = _compact_plan_payload(item.plan_payload)
     canvas_state = item.canvas_state if isinstance(item.canvas_state, dict) else None
     response = {
         "message_id": item.message_id,
