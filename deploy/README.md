@@ -229,11 +229,24 @@ FORCE_RECREATE=true \
 1. 确认本地工作区干净，且本地 HEAD 已 push 到 `origin/main`
 2. 服务器进入 `/root/mnt/xiaocai-instance` 后执行 `git pull --ff-only`
 3. 远端重建 `inst-xiaocai-kernel` 与 `inst-xiaocai-api` 镜像
-4. 强制重建 backend 容器并执行迁移/health/smoke
+4. 默认保持 postgres/redis/qdrant 运行，仅 recreate kernel/api，并执行迁移/health/smoke
 5. 远端执行 `npm ci`、构建前端，并安装到 `/var/www/xiaocai-web`
 6. 重新生成并 reload 宿主机 Nginx 配置
 
-注意：该链路不复制、不覆盖服务器 `deploy/.env`。
+注意：该链路不复制、不覆盖服务器 `deploy/.env`。如必须回到旧的整栈停启策略，可显式设置 `DEPLOY_DOWNTIME_MODE=true`。
+
+发布前在服务器记录 rollback 点：
+
+```bash
+ssh aliyun-xiaocai "cd /root/mnt/xiaocai-instance && git rev-parse HEAD"
+```
+
+如 health/smoke 失败，回滚到发布前 commit：
+
+```bash
+ssh aliyun-xiaocai "cd /root/mnt/xiaocai-instance && git reset --hard <rollback_commit> && INSTANCE_PROJECT=inst-xiaocai-prod REPO_DIR=/root/mnt/xiaocai-instance FRONTEND_DEPLOY_MODE=standalone FORCE_REBUILD=true FORCE_RECREATE=true bash deploy/scripts/remote-deploy-instance.sh"
+ssh aliyun-xiaocai "REPO_DIR=/root/mnt/xiaocai-instance FRONTEND_API_BASE_URL=/api API_UPSTREAM_URL=http://127.0.0.1:28001 SERVER_NAME=_ bash deploy/scripts/remote-deploy-frontend-standalone.sh"
+```
 
 ### 8.3 手动拆步发布
 

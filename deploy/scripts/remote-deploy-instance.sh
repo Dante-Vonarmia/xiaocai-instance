@@ -12,6 +12,7 @@ SKIP_DATA_VISIBILITY_SMOKE=${SKIP_DATA_VISIBILITY_SMOKE:-false}
 FRONTEND_DEPLOY_MODE=${FRONTEND_DEPLOY_MODE:-standalone}
 FORCE_REBUILD=${FORCE_REBUILD:-true}
 FORCE_RECREATE=${FORCE_RECREATE:-true}
+DEPLOY_DOWNTIME_MODE=${DEPLOY_DOWNTIME_MODE:-false}
 
 if [ ! -d "$DEPLOY_DIR" ]; then
   echo "deploy dir not found: $DEPLOY_DIR"
@@ -85,21 +86,35 @@ if ! make backup-db; then
   echo "[deploy] backup skipped (no running stack or first deployment)"
 fi
 
-echo "[deploy] stop old instance stack"
-make down-instance || true
-
 UP_FLAGS="-d"
 if [ "$FORCE_RECREATE" = "true" ]; then
   UP_FLAGS="${UP_FLAGS} --force-recreate"
 fi
 
-if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
-  echo "[deploy] start backend-only instance stack (frontend via host nginx)"
-  docker compose -p "${INSTANCE_PROJECT:-inst-xiaocai-dev}" -f compose.instance.yml up $UP_FLAGS \
-    inst-xiaocai-kernel inst-xiaocai-postgres inst-xiaocai-redis inst-xiaocai-qdrant inst-xiaocai-api
+COMPOSE_PROJECT="${INSTANCE_PROJECT:-inst-xiaocai-dev}"
+
+if [ "$DEPLOY_DOWNTIME_MODE" = "true" ]; then
+  echo "[deploy] downtime mode enabled: stop old instance stack"
+  make down-instance || true
+  if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
+    echo "[deploy] start backend-only instance stack (frontend via host nginx)"
+    docker compose -p "$COMPOSE_PROJECT" -f compose.instance.yml up $UP_FLAGS \
+      inst-xiaocai-kernel inst-xiaocai-postgres inst-xiaocai-redis inst-xiaocai-qdrant inst-xiaocai-api
+  else
+    echo "[deploy] start full instance stack"
+    docker compose -p "$COMPOSE_PROJECT" -f compose.instance.yml up $UP_FLAGS
+  fi
 else
-  echo "[deploy] start full instance stack"
-  docker compose -p "${INSTANCE_PROJECT:-inst-xiaocai-dev}" -f compose.instance.yml up $UP_FLAGS
+  echo "[deploy] low-downtime mode: keep infra up and recreate app services only"
+  docker compose -p "$COMPOSE_PROJECT" -f compose.instance.yml up -d \
+    inst-xiaocai-postgres inst-xiaocai-redis inst-xiaocai-qdrant
+  if [ "$FRONTEND_DEPLOY_MODE" = "standalone" ]; then
+    docker compose -p "$COMPOSE_PROJECT" -f compose.instance.yml up $UP_FLAGS --no-deps \
+      inst-xiaocai-kernel inst-xiaocai-api
+  else
+    docker compose -p "$COMPOSE_PROJECT" -f compose.instance.yml up $UP_FLAGS --no-deps \
+      inst-xiaocai-kernel inst-xiaocai-api inst-xiaocai-web inst-xiaocai-nginx
+  fi
 fi
 
 echo "[deploy] run migrations"
