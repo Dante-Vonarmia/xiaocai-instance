@@ -13,7 +13,7 @@ Requires-Dist: psycopg[binary]>=3.2
 Requires-Dist: python-multipart>=0.0.9
 Requires-Dist: sse-starlette>=2.1
 Requires-Dist: flare-engines==1.0.2
-Requires-Dist: flare-kernel==1.0.7
+Requires-Dist: flare-kernel==1.0.8
 Requires-Dist: flare-kernel-client-py==1.0.1
 Requires-Dist: flare-storage-adapters==1.0.0
 Provides-Extra: dev

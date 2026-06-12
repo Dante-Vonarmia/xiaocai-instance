@@ -17,7 +17,9 @@ from datetime import datetime, timedelta, timezone
 from xiaocai_instance_api.security.auth_claims import AuthClaims
 from xiaocai_instance_api.security.dependencies import get_current_auth_claims
 from xiaocai_instance_api.security.authorization import get_authorization_service
+from xiaocai_instance_api.sessions.message_response import message_response
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
+from xiaocai_instance_api.storage.message_window_store import get_message_window_store
 
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -58,6 +60,7 @@ class SessionUpdateResponse(BaseModel):
 
 class MessageListResponse(BaseModel):
     messages: list[dict]
+    window: dict | None = None
 
 
 class SessionDeleteResponse(BaseModel):
@@ -70,41 +73,6 @@ def _session_list_function_type_filter(function_type: str | None) -> str | None:
     if value == "auto":
         return None
     return value
-
-
-def _message_response(item) -> dict:
-    """Preserve FLARE message artifacts so history reload keeps workbench state."""
-    plan_payload = item.plan_payload if isinstance(item.plan_payload, dict) else None
-    canvas_state = item.canvas_state if isinstance(item.canvas_state, dict) else None
-    response = {
-        "message_id": item.message_id,
-        "role": item.role,
-        "content": item.content,
-        "created_at": item.created_at,
-        "run_id": item.run_id,
-        "attachments": item.attachments,
-        "context_refs": item.context_refs,
-        "knowledge_refs": item.knowledge_refs,
-        "agent_status": item.agent_status,
-        "thinking_trace": item.thinking_trace,
-        "execution_trace": item.execution_trace,
-        "knowledge_search": item.knowledge_search,
-        "sourcing_candidates": item.sourcing_candidates,
-        "knowledge_citation": item.knowledge_citation,
-        "canvas_state": canvas_state,
-        "analysis_payload": item.analysis_payload,
-        "context_usage": item.context_usage,
-        "provider_trace": item.provider_trace,
-        "context_authority": item.context_authority,
-        "plan_payload": plan_payload,
-    }
-    if plan_payload and isinstance(plan_payload.get("workflow_projection"), dict):
-        response["workflow_projection"] = plan_payload["workflow_projection"]
-    if plan_payload and isinstance(plan_payload.get("track_result"), dict):
-        response["track_result"] = plan_payload["track_result"]
-    if canvas_state and isinstance(canvas_state.get("artifact_edit_request"), dict):
-        response["artifact_edit_request"] = canvas_state["artifact_edit_request"]
-    return response
 
 
 @router.get("", response_model=SessionListResponse)
@@ -233,9 +201,18 @@ async def update_chat_session(
 @chat_compat_router.get("/sessions/{session_id}/messages", response_model=MessageListResponse)
 async def list_chat_messages(
     session_id: str,
+    limit: int = 0,
+    before: str = "",
+    cursor: str = "",
     claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> MessageListResponse:
-    return await list_messages(session_id=session_id, claims=claims)
+    return await list_messages(
+        session_id=session_id,
+        limit=limit,
+        before=before,
+        cursor=cursor,
+        claims=claims,
+    )
 
 
 @chat_compat_router.delete("/sessions/{session_id}", response_model=SessionDeleteResponse)
@@ -331,13 +308,26 @@ async def update_session(
 @router.get("/{session_id}/messages", response_model=MessageListResponse)
 async def list_messages(
     session_id: str,
+    limit: int = 0,
+    before: str = "",
+    cursor: str = "",
     claims: AuthClaims = Depends(get_current_auth_claims),
 ) -> MessageListResponse:
     authz = get_authorization_service()
     await authz.require_conversation_access(claims=claims, conversation_id=session_id)
-    store = get_conversation_store()
-    messages = await store.list_messages(user_id=claims.user_id, session_id=session_id)
-    return MessageListResponse(messages=[_message_response(item) for item in messages])
+    store = get_message_window_store()
+    try:
+        result = await store.list_message_window(
+            session_id=session_id,
+            limit=limit,
+            before=before or cursor,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid message cursor") from exc
+    return MessageListResponse(
+        messages=[message_response(item) for item in result.messages],
+        window=result.window,
+    )
 
 
 @router.delete("/{session_id}", response_model=SessionDeleteResponse)

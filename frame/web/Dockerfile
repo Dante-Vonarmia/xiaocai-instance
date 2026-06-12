@@ -6,7 +6,6 @@ ARG NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 
 # 复制 package 清单并安装依赖
 COPY frame/web/package*.json ./
-COPY frame/web/vendor ./vendor
 RUN npm config set registry "$NPM_CONFIG_REGISTRY"
 RUN npm ci --no-audit --no-fund
 
