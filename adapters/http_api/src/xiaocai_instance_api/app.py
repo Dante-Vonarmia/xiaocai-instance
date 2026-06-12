@@ -10,6 +10,7 @@ FastAPI 应用工厂
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.auth.router import router as auth_router
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=settings.gzip_minimum_size)
 
     # 注册路由
     app.include_router(auth_router)

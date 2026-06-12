@@ -44,8 +44,9 @@ def _full_window(messages: list[MessageRecord]) -> MessageWindowResult:
 
 
 class MessageWindowStore:
-    def __init__(self, db_path: str, db_url: str = ""):
+    def __init__(self, db_path: str, db_url: str = "", initial_limit: int = 6):
         self._lock = asyncio.Lock()
+        self._initial_limit = max(1, clamp_message_window_limit(initial_limit))
         config = resolve_db_config(storage_db_url=db_url, storage_db_path=db_path)
         self._runtime = SQLRuntime(config)
 
@@ -100,8 +101,9 @@ class MessageWindowStore:
             if not limit and not resolved_before:
                 return _full_window(self._list_all_messages(resolved_session_id))
 
-            bounded_limit = clamp_message_window_limit(limit)
+            requested_limit = clamp_message_window_limit(limit)
             cursor = decode_message_cursor(resolved_before)
+            bounded_limit = requested_limit if cursor else min(requested_limit, self._initial_limit)
             rows_descending = self._list_descending_window(
                 resolved_session_id,
                 before_created_at=cursor.get("created_at", ""),
@@ -122,14 +124,18 @@ class MessageWindowStore:
 
 
 _store: MessageWindowStore | None = None
-_store_db_key: tuple[str, str] | None = None
+_store_db_key: tuple[str, str, int] | None = None
 
 
 def get_message_window_store() -> MessageWindowStore:
     global _store, _store_db_key
     settings = get_settings()
-    key = (settings.storage_db_path, settings.storage_db_url)
+    key = (settings.storage_db_path, settings.storage_db_url, settings.message_window_initial_limit)
     if _store is None or _store_db_key != key:
-        _store = MessageWindowStore(db_path=settings.storage_db_path, db_url=settings.storage_db_url)
+        _store = MessageWindowStore(
+            db_path=settings.storage_db_path,
+            db_url=settings.storage_db_url,
+            initial_limit=settings.message_window_initial_limit,
+        )
         _store_db_key = key
     return _store

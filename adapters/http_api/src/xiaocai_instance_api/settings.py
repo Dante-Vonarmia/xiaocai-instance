@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # API 配置
     api_host: str = Field(default="0.0.0.0", description="API 监听地址")
     api_port: int = Field(default=8001, description="API 监听端口")
+    gzip_minimum_size: int = Field(default=1024, description="启用 gzip 的最小响应字节数")
+    message_window_initial_limit: int = Field(default=6, description="会话初始消息窗口条数")
 
     # CORS 配置
     cors_origins: List[str] = Field(
