@@ -42,12 +42,12 @@
   },
   "overrides": {
     "dompurify": "3.4.2",
-    "flare-canvas-ui": "1.0.7"
+    "flare-canvas-ui": "1.0.8"
   },
   "pnpm": {
     "overrides": {
       "dompurify": "3.4.2",
-      "flare-canvas-ui": "1.0.7"
+      "flare-canvas-ui": "1.0.8"
     }
   }
 }
