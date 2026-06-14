@@ -120,8 +120,8 @@
   .flare-workflow-status.status-waiting_user,
   .flare-workflow-status.status-partial
 ) {
-  background: rgba(var(--xiaocai-primary-rgb), 0.14) !important;
-  box-shadow: 0 0 0 1px rgba(var(--xiaocai-primary-rgb), 0.12) !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--xiaocai-primary-strong) !important;
 }
 
@@ -133,9 +133,15 @@
 }
 
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workflow-checkpoint.is-active {
-  background: linear-gradient(120deg, rgba(var(--xiaocai-primary-rgb), 0.14), rgba(var(--xiaocai-primary-rgb), 0.10)) !important;
+  background: transparent !important;
   border-color: rgba(var(--xiaocai-primary-rgb), 0.34) !important;
-  box-shadow: 0 0 0 1px rgba(var(--xiaocai-primary-rgb), 0.12), 0 6px 18px rgba(var(--xiaocai-primary-rgb), 0.16) !important;
+  box-shadow: none !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-message-row.is-assistant .flare-message-bubble.ant-card:has(.flare-streaming-pending) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workflow-question {
