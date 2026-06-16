@@ -83,8 +83,33 @@ def test_public_test_auth_exchange_success(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_public_test_auth_rejects_mock_login(monkeypatch):
-    """测试生产公开测试入口不放开 mock 登录"""
+def test_public_test_auth_accepts_legacy_mock_button(monkeypatch):
+    """测试旧前端公开测试按钮仍可换取固定公开测试用户"""
+    monkeypatch.setenv("MOCK_AUTH", "false")
+    monkeypatch.setenv("PUBLIC_TEST_AUTH_ENABLED", "true")
+    monkeypatch.setenv("PUBLIC_TEST_CREDENTIAL", "public-test-credential")
+    monkeypatch.setenv("PUBLIC_TEST_USER_ID", "public-test-user")
+    get_settings.cache_clear()
+
+    app = create_app()
+    client = TestClient(app)
+    response = client.post(
+        "/auth/exchange",
+        json={
+            "mock": True,
+            "mock_user_id": "public-test-user",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["user_id"] == "public-test-user"
+    assert data["source"] == "public_test"
+    get_settings.cache_clear()
+
+
+def test_public_test_auth_rejects_arbitrary_legacy_mock_user(monkeypatch):
+    """测试旧前端兼容不放开任意 mock 用户"""
     monkeypatch.setenv("MOCK_AUTH", "false")
     monkeypatch.setenv("PUBLIC_TEST_AUTH_ENABLED", "true")
     monkeypatch.setenv("PUBLIC_TEST_CREDENTIAL", "public-test-credential")
