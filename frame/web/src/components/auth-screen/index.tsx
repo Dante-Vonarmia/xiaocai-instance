@@ -32,15 +32,18 @@ export function AuthScreen({
   onRetry,
 }: AuthScreenProps) {
   const helperText = useMemo(() => (
-    authMode === 'select' && mockAuthEnabled
-      ? '本地开发可选择测试账号进入会话。'
-      : authMode === 'select'
-        ? '请从采购中国小程序进入云鹤AI服务。'
-      : '正在完成成员身份接入并自动进入会话。'
-  ), [authMode, mockAuthEnabled])
+    authStage === 'error' && authMode === 'caigou_china'
+      ? '请回到采购中国小程序重新进入云鹤AI服务。'
+      : authMode === 'select' && mockAuthEnabled
+        ? '本地开发可选择测试账号进入会话。'
+        : authMode === 'select'
+          ? '请从采购中国小程序进入云鹤AI服务。'
+          : '正在完成成员身份接入并自动进入会话。'
+  ), [authMode, authStage, mockAuthEnabled])
   const loadingHint = useMemo(() => (authStage === 'loading' ? <p>认证中...</p> : null), [authStage])
   const showMockForm = authMode === 'select' && mockAuthEnabled
-  const showRetryForm = authStage === 'error' && authMode !== 'select'
+  const showCredentialError = authStage === 'error' && authMode === 'caigou_china'
+  const showRetryForm = authStage === 'error' && authMode !== 'select' && authMode !== 'caigou_china'
   const showMockError = authStage === 'error'
   const showEntryHint = authMode === 'select' && !mockAuthEnabled
   const handleMockUserChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
@@ -88,6 +91,11 @@ export function AuthScreen({
         {showEntryHint ? (
           <div className="auth-form">
             <p>请回到采购中国小程序，点击云鹤AI入口重新进入。</p>
+          </div>
+        ) : null}
+        {showCredentialError ? (
+          <div className="auth-form">
+            <p>登录凭证无效或已过期，请回到采购中国小程序重新进入。</p>
           </div>
         ) : null}
         {showRetryForm ? (
