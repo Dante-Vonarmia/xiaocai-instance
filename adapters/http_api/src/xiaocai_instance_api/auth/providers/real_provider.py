@@ -24,6 +24,7 @@ class RealAuthProvider(AuthProvider):
         self,
         host_token: str | None = None,
         wechat_code: str | None = None,
+        credential: str | None = None,
         login_ticket: str | None = None,
         root_token: str | None = None,
     ) -> AuthIdentity:

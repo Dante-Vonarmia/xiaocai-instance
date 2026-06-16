@@ -2,10 +2,10 @@ import apiClient from '@/services/api'
 
 type JsonRecord = Record<string, unknown>
 
-export async function exchangeCaigouChinaTicket(loginTicket: string) {
+export async function exchangeCaigouChinaCredential(credential: string) {
   const response = await apiClient.post('/auth/exchange', {
     mock: false,
-    login_ticket: loginTicket,
+    credential,
   })
   return response.data as JsonRecord
 }

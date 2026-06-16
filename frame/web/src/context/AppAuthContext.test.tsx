@@ -7,7 +7,7 @@ const apiMocks = vi.hoisted(() => ({
   bindProject: vi.fn(),
   clearAccessToken: vi.fn(),
   clearCurrentUserId: vi.fn(),
-  exchangeCaigouChinaTicket: vi.fn(),
+  exchangeCaigouChinaCredential: vi.fn(),
   exchangeTokenHost: vi.fn(),
   exchangeTokenMock: vi.fn(),
   exchangeTokenWechat: vi.fn(),
@@ -35,7 +35,7 @@ vi.mock('@/services/api', () => ({
 }))
 
 vi.mock('@/services/caigouChinaAuthApi', () => ({
-  exchangeCaigouChinaTicket: apiMocks.exchangeCaigouChinaTicket,
+  exchangeCaigouChinaCredential: apiMocks.exchangeCaigouChinaCredential,
 }))
 
 function AuthProbe() {
@@ -71,13 +71,13 @@ describe('AppAuthProvider caigou china login', () => {
     window.history.replaceState({}, '', '/')
   })
 
-  it('exchanges login_ticket and clears credential query from URL', async () => {
-    apiMocks.exchangeCaigouChinaTicket.mockResolvedValue({
+  it('exchanges credential and clears credential query from URL', async () => {
+    apiMocks.exchangeCaigouChinaCredential.mockResolvedValue({
       access_token: 'xiaocai-token',
       user_id: '316',
       display_name: '韩经伟',
     })
-    window.history.replaceState({}, '', '/?login_ticket=ticket-123')
+    window.history.replaceState({}, '', '/?credential=credential-123')
 
     render(
       <AppAuthProvider>
@@ -85,7 +85,7 @@ describe('AppAuthProvider caigou china login', () => {
       </AppAuthProvider>,
     )
 
-    await waitFor(() => expect(apiMocks.exchangeCaigouChinaTicket).toHaveBeenCalledWith('ticket-123'))
+    await waitFor(() => expect(apiMocks.exchangeCaigouChinaCredential).toHaveBeenCalledWith('credential-123'))
     await waitFor(() => expect(screen.getByText('authed')).toBeInTheDocument())
     expect(apiMocks.setAccessToken).toHaveBeenCalledWith('xiaocai-token')
     expect(apiMocks.setCurrentUserId).toHaveBeenCalledWith('316')
@@ -94,7 +94,7 @@ describe('AppAuthProvider caigou china login', () => {
   })
 
   it('exchanges ticket alias and clears all credential aliases from URL', async () => {
-    apiMocks.exchangeCaigouChinaTicket.mockResolvedValue({
+    apiMocks.exchangeCaigouChinaCredential.mockResolvedValue({
       access_token: 'xiaocai-token',
       user_id: '316',
       display_name: '采购会员',
@@ -107,20 +107,20 @@ describe('AppAuthProvider caigou china login', () => {
       </AppAuthProvider>,
     )
 
-    await waitFor(() => expect(apiMocks.exchangeCaigouChinaTicket).toHaveBeenCalledWith('ticket-alias'))
+    await waitFor(() => expect(apiMocks.exchangeCaigouChinaCredential).toHaveBeenCalledWith('ticket-alias'))
     await waitFor(() => expect(screen.getByText('authed')).toBeInTheDocument())
     expect(window.localStorage.getItem('current_user_display_name')).toBe('采购会员')
     expect(window.location.search).toBe('')
   })
 
-  it('exchanges login_ticket even when a previous token exists', async () => {
+  it('exchanges credential even when a previous token exists', async () => {
     storedToken = 'old-token'
     storedUserId = 'old-user'
-    apiMocks.exchangeCaigouChinaTicket.mockResolvedValue({
+    apiMocks.exchangeCaigouChinaCredential.mockResolvedValue({
       access_token: 'new-token',
       user_id: '316',
     })
-    window.history.replaceState({}, '', '/?login_ticket=ticket-456')
+    window.history.replaceState({}, '', '/?credential=credential-456')
 
     render(
       <AppAuthProvider>
@@ -128,7 +128,7 @@ describe('AppAuthProvider caigou china login', () => {
       </AppAuthProvider>,
     )
 
-    await waitFor(() => expect(apiMocks.exchangeCaigouChinaTicket).toHaveBeenCalledWith('ticket-456'))
+    await waitFor(() => expect(apiMocks.exchangeCaigouChinaCredential).toHaveBeenCalledWith('credential-456'))
     expect(apiMocks.clearAccessToken).toHaveBeenCalled()
     expect(apiMocks.setAccessToken).toHaveBeenCalledWith('new-token')
     expect(apiMocks.setCurrentUserId).toHaveBeenCalledWith('316')

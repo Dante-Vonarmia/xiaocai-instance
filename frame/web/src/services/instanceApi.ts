@@ -1,5 +1,5 @@
 import { apiClient, authApi, sourceApi } from '@/services/api'
-import { exchangeCaigouChinaTicket } from '@/services/caigouChinaAuthApi'
+import { exchangeCaigouChinaCredential } from '@/services/caigouChinaAuthApi'
 
 type DomainFieldsResponse = Record<string, unknown>
 
@@ -54,7 +54,7 @@ async function authExchange(
     return authApi.exchangeTokenWechat(value)
   }
   if (mode === 'caigou_china') {
-    return exchangeCaigouChinaTicket(value)
+    return exchangeCaigouChinaCredential(value)
   }
   return authApi.exchangeTokenMock(value)
 }

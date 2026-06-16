@@ -47,7 +47,7 @@ class _FakeCaigouChinaAsyncClient:
 
 
 def test_caigou_china_auth_exchange_success(monkeypatch):
-    """测试采购中国登录凭证换取"""
+    """测试采购中国 credential 换取"""
     monkeypatch.setenv("MOCK_AUTH", "false")
     monkeypatch.setenv("CAIGOU_CHINA_AUTH_VERIFY_URL", "https://caigou.example.com/api/auth/verify-credential")
     monkeypatch.setenv("CAIGOU_CHINA_APP_ID", "yunhe_ai")
@@ -72,7 +72,7 @@ def test_caigou_china_auth_exchange_success(monkeypatch):
     response = client.post(
         "/auth/exchange",
         json={
-            "login_ticket": "ticket-123",
+            "credential": "credential-123",
         },
     )
 
@@ -89,14 +89,14 @@ def test_caigou_china_auth_exchange_success(monkeypatch):
     assert claims["source"] == "caigou_china"
     request = _FakeCaigouChinaAsyncClient.requests[0]
     payload = request["json"]
-    message = f"yunhe_aiticket-123{payload['timestamp']}{payload['nonce']}"
+    message = f"yunhe_aicredential-123{payload['timestamp']}{payload['nonce']}"
     expected_signature = hmac.new(
         b"secret-123",
         message.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
     assert request["url"] == "https://caigou.example.com/api/auth/verify-credential"
-    assert payload["credential"] == "ticket-123"
+    assert payload["credential"] == "credential-123"
     assert payload["signature"] == expected_signature
     get_settings.cache_clear()
 
@@ -134,14 +134,14 @@ def test_caigou_china_auth_exchange_ticket_alias(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_caigou_china_local_test_ticket(monkeypatch):
-    """测试本地假凭证 ticket=test"""
+def test_caigou_china_local_test_credential(monkeypatch):
+    """测试本地假 credential=test"""
     monkeypatch.setenv("MOCK_AUTH", "true")
     get_settings.cache_clear()
 
     app = create_app()
     client = TestClient(app)
-    response = client.post("/auth/exchange", json={"ticket": "test"})
+    response = client.post("/auth/exchange", json={"credential": "test"})
 
     assert response.status_code == 200
     data = response.json()
@@ -216,7 +216,7 @@ def test_caigou_china_auth_exchange_expired_credential(monkeypatch):
 
     app = create_app()
     client = TestClient(app)
-    response = client.post("/auth/exchange", json={"ticket": "expired-ticket"})
+    response = client.post("/auth/exchange", json={"credential": "expired-credential"})
 
     assert response.status_code == 401
     assert response.json()["detail"] == {
@@ -248,7 +248,7 @@ def test_caigou_china_auth_exchange_disabled_user(monkeypatch):
 
     app = create_app()
     client = TestClient(app)
-    response = client.post("/auth/exchange", json={"ticket": "disabled-user-ticket"})
+    response = client.post("/auth/exchange", json={"credential": "disabled-user-credential"})
 
     assert response.status_code == 403
     assert response.json()["detail"] == {
@@ -268,7 +268,7 @@ def test_caigou_china_auth_exchange_config_missing_does_not_leak(monkeypatch):
 
     app = create_app()
     client = TestClient(app)
-    response = client.post("/auth/exchange", json={"ticket": "ticket-123"})
+    response = client.post("/auth/exchange", json={"credential": "credential-123"})
 
     assert response.status_code == 500
     assert response.json()["detail"] == {
@@ -279,14 +279,14 @@ def test_caigou_china_auth_exchange_config_missing_does_not_leak(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_caigou_china_local_bad_ticket_uses_product_error(monkeypatch):
-    """测试本地假凭证失败不透传技术异常"""
+def test_caigou_china_local_bad_credential_uses_product_error(monkeypatch):
+    """测试本地假 credential 失败不透传技术异常"""
     monkeypatch.setenv("MOCK_AUTH", "true")
     get_settings.cache_clear()
 
     app = create_app()
     client = TestClient(app)
-    response = client.post("/auth/exchange", json={"ticket": "bad"})
+    response = client.post("/auth/exchange", json={"credential": "bad"})
 
     assert response.status_code == 401
     assert response.json()["detail"] == {

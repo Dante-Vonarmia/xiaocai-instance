@@ -17,6 +17,7 @@ class AuthProvider(ABC):
         self,
         host_token: str | None = None,
         wechat_code: str | None = None,
+        credential: str | None = None,
         login_ticket: str | None = None,
         root_token: str | None = None,
     ) -> AuthIdentity:
@@ -26,7 +27,8 @@ class AuthProvider(ABC):
         Args:
             host_token: 宿主应用 token
             wechat_code: 微信小程序 code
-            login_ticket: 采购中国小程序登录凭证
+            credential: 采购中国小程序 credential
+            login_ticket: 采购中国 credential 兼容字段
             root_token: root 登录 token
 
         Returns:

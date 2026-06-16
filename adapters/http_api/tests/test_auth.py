@@ -56,9 +56,10 @@ def test_mock_auth_exchange(client):
 
 
 def test_public_test_auth_exchange_success(monkeypatch):
-    """测试生产关闭任意 mock 后，仅允许固定公开测试用户换取 token"""
+    """测试生产公开测试只通过固定 credential 换取 token"""
     monkeypatch.setenv("MOCK_AUTH", "false")
     monkeypatch.setenv("PUBLIC_TEST_AUTH_ENABLED", "true")
+    monkeypatch.setenv("PUBLIC_TEST_CREDENTIAL", "public-test-credential")
     monkeypatch.setenv("PUBLIC_TEST_USER_ID", "public-test-user")
     monkeypatch.setenv("PUBLIC_TEST_DISPLAY_NAME", "云鹤AI公开测试用户")
     get_settings.cache_clear()
@@ -68,8 +69,7 @@ def test_public_test_auth_exchange_success(monkeypatch):
     response = client.post(
         "/auth/exchange",
         json={
-            "mock": True,
-            "mock_user_id": "public-test-user",
+            "credential": "public-test-credential",
         },
     )
 
@@ -83,10 +83,11 @@ def test_public_test_auth_exchange_success(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_public_test_auth_rejects_arbitrary_mock_user(monkeypatch):
-    """测试生产公开测试入口不放开任意 mock 用户"""
+def test_public_test_auth_rejects_mock_login(monkeypatch):
+    """测试生产公开测试入口不放开 mock 登录"""
     monkeypatch.setenv("MOCK_AUTH", "false")
     monkeypatch.setenv("PUBLIC_TEST_AUTH_ENABLED", "true")
+    monkeypatch.setenv("PUBLIC_TEST_CREDENTIAL", "public-test-credential")
     monkeypatch.setenv("PUBLIC_TEST_USER_ID", "public-test-user")
     get_settings.cache_clear()
 

@@ -17,7 +17,7 @@ from xiaocai_instance_api.auth.providers.real_provider import RealAuthProvider
 from xiaocai_instance_api.auth.providers.root_provider import RootAuthProvider
 from xiaocai_instance_api.security.token_codec import create_access_token
 
-CAIGOU_CHINA_LOCAL_TEST_TICKET = "test"
+CAIGOU_CHINA_LOCAL_TEST_CREDENTIAL = "test"
 
 
 class AuthService:
@@ -80,32 +80,36 @@ class AuthService:
             mock_user_id: Mock 用户 ID
             host_token: 宿主应用 token
             wechat_code: 微信小程序 code
-            login_ticket: 采购中国登录凭证
-            ticket: 采购中国登录凭证兼容字段
+            credential: 采购中国小程序 credential
+            login_ticket: 采购中国 credential 兼容字段
+            ticket: 采购中国 credential 兼容字段
 
         Returns:
             dict: 包含 access_token, user_id 等信息
         """
-        caigou_login_ticket = self._first_present(
+        caigou_credential = self._first_present(
+            credential,
             login_ticket,
             ticket,
             token,
-            credential,
             sso_ticket,
             auth_code,
         )
-        if caigou_login_ticket and self.settings.mock_auth:
-            identity = self._verify_local_caigou_china_ticket(caigou_login_ticket)
+        public_test_identity = self._verify_public_test_credential(caigou_credential)
+        if public_test_identity:
+            return self._build_exchange_response(public_test_identity)
+
+        if caigou_credential and self.settings.mock_auth:
+            identity = self._verify_local_caigou_china_credential(caigou_credential)
             return self._build_exchange_response(identity)
 
-        if mock and not self.settings.mock_auth and not caigou_login_ticket and not root_token:
-            identity = self._verify_public_test_user(mock_user_id)
-            return self._build_exchange_response(identity)
+        if mock and not self.settings.mock_auth and not root_token:
+            raise AuthError("CREDENTIAL_INVALID", log_message="production mock auth disabled")
 
         provider = self._get_provider(
             use_mock=mock,
             use_root=bool(root_token),
-            use_caigou_china=bool(caigou_login_ticket),
+            use_caigou_china=bool(caigou_credential),
         )
 
         if isinstance(provider, MockAuthProvider):
@@ -113,7 +117,7 @@ class AuthService:
         elif isinstance(provider, RootAuthProvider):
             identity = await provider.verify(root_token=root_token)
         elif isinstance(provider, CaigouChinaAuthProvider):
-            identity = await provider.verify(login_ticket=caigou_login_ticket)
+            identity = await provider.verify(credential=caigou_credential)
         else:
             identity = await provider.verify(host_token=host_token, wechat_code=wechat_code)
 
@@ -140,9 +144,9 @@ class AuthService:
             "external_user_id": external_user_id,
         }
 
-    def _verify_local_caigou_china_ticket(self, ticket: str) -> AuthIdentity:
-        if ticket != CAIGOU_CHINA_LOCAL_TEST_TICKET:
-            raise AuthError("CREDENTIAL_INVALID", log_message="local caigou china test ticket invalid")
+    def _verify_local_caigou_china_credential(self, credential: str) -> AuthIdentity:
+        if credential != CAIGOU_CHINA_LOCAL_TEST_CREDENTIAL:
+            raise AuthError("CREDENTIAL_INVALID", log_message="local caigou china test credential invalid")
         return AuthIdentity(
             user_id="caigou-china-test-user",
             source="caigou_china",
@@ -151,22 +155,23 @@ class AuthService:
             external_user_id="test",
         )
 
-    def _verify_public_test_user(self, mock_user_id: str | None) -> AuthIdentity:
-        expected_user_id = self.settings.public_test_user_id.strip()
-        requested_user_id = (mock_user_id or "").strip()
+    def _verify_public_test_credential(self, credential: str | None) -> AuthIdentity | None:
+        expected_credential = self.settings.public_test_credential.strip()
+        requested_credential = (credential or "").strip()
         if (
             not self.settings.public_test_auth_enabled
-            or not expected_user_id
-            or requested_user_id != expected_user_id
+            or not expected_credential
+            or requested_credential != expected_credential
         ):
-            raise AuthError("CREDENTIAL_INVALID", log_message="public test auth user not allowed")
-        display_name = self.settings.public_test_display_name.strip() or expected_user_id
+            return None
+        user_id = self.settings.public_test_user_id.strip() or "public-test-user"
+        display_name = self.settings.public_test_display_name.strip() or user_id
         return AuthIdentity(
-            user_id=expected_user_id,
+            user_id=user_id,
             source="public_test",
             display_name=display_name,
             member_status="active",
-            external_user_id=expected_user_id,
+            external_user_id=user_id,
         )
 
     def _first_present(self, *values: str | None) -> str | None:

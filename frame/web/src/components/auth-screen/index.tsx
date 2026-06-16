@@ -33,7 +33,7 @@ export function AuthScreen({
 }: AuthScreenProps) {
   const helperText = useMemo(() => (
     authMode === 'select' && mockAuthEnabled
-      ? '使用测试账号进入会话，用于内部和外部联调验证。'
+      ? '本地开发可选择测试账号进入会话。'
       : authMode === 'select'
         ? '请从采购中国小程序进入云鹤AI服务。'
       : '正在完成成员身份接入并自动进入会话。'

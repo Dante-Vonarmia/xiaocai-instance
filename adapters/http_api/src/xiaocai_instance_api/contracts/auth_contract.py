@@ -21,12 +21,12 @@ class AuthExchangeRequest(BaseModel):
     # 真实模式参数
     host_token: str | None = Field(default=None, description="宿主应用的 token")
     wechat_code: str | None = Field(default=None, description="微信小程序 code")
-    login_ticket: str | None = Field(default=None, description="采购中国小程序登录凭证")
-    ticket: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
-    token: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
-    credential: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
-    sso_ticket: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
-    auth_code: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
+    credential: str | None = Field(default=None, description="采购中国小程序 credential")
+    login_ticket: str | None = Field(default=None, description="采购中国 credential 兼容字段")
+    ticket: str | None = Field(default=None, description="采购中国 credential 兼容字段")
+    token: str | None = Field(default=None, description="采购中国 credential 兼容字段")
+    sso_ticket: str | None = Field(default=None, description="采购中国 credential 兼容字段")
+    auth_code: str | None = Field(default=None, description="采购中国 credential 兼容字段")
     root_token: str | None = Field(default=None, description="root 登录 token")
 
 

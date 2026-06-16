@@ -10,15 +10,12 @@ import {
   setCurrentUserId,
 } from '@/services/api'
 import { clearCurrentUserDisplayName, setCurrentUserDisplayName } from '@/services/authSession'
-import { exchangeCaigouChinaTicket } from '@/services/caigouChinaAuthApi'
+import { exchangeCaigouChinaCredential } from '@/services/caigouChinaAuthApi'
 
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
 const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
-const PUBLIC_TEST_AUTH_ENABLED = import.meta.env.VITE_ENABLE_PUBLIC_TEST_AUTH === 'true'
-const PUBLIC_TEST_USER_ID = import.meta.env.VITE_PUBLIC_TEST_USER_ID || 'public-test-user'
-const PUBLIC_TEST_DISPLAY_NAME = import.meta.env.VITE_PUBLIC_TEST_DISPLAY_NAME || '云鹤AI公开测试用户'
-const MOCK_AUTH_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK_AUTH === 'true' || PUBLIC_TEST_AUTH_ENABLED
-const CAIGOU_CHINA_TICKET_PARAMS = ['login_ticket', 'ticket', 'token', 'credential', 'sso_ticket', 'auth_code'] as const
+const MOCK_AUTH_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK_AUTH === 'true'
+const CAIGOU_CHINA_CREDENTIAL_PARAMS = ['credential', 'login_ticket', 'ticket', 'token', 'sso_ticket', 'auth_code'] as const
 
 type AuthStage = 'idle' | 'loading' | 'error'
 type AuthMode = 'host_token' | 'wechat_code' | 'caigou_china' | 'mock'
@@ -55,14 +52,7 @@ const MOCK_USERS: MockUser[] = [
   { user_id: 'wx_user_bob', label: 'Bob（微信号 B）', identity: '手机号 139****2222', bearer_token: 'mock-bearer-bob' },
   { user_id: 'wx_user_cathy', label: 'Cathy（微信号 C）', identity: '手机号 137****3333', bearer_token: 'mock-bearer-cathy' },
 ]
-const PUBLIC_TEST_USER: MockUser = {
-  user_id: PUBLIC_TEST_USER_ID,
-  label: PUBLIC_TEST_DISPLAY_NAME,
-  identity: '公开测试账号',
-  bearer_token: '',
-}
-const AUTH_TEST_USERS = PUBLIC_TEST_AUTH_ENABLED ? [PUBLIC_TEST_USER] : MOCK_USERS
-const DEFAULT_MOCK_USER = AUTH_TEST_USERS[0]
+const DEFAULT_MOCK_USER = MOCK_USERS[0]
 
 const AppAuthContext = createContext<AppAuthContextValue | null>(null)
 
@@ -70,7 +60,7 @@ function resolveAuthParams(): AuthParams {
   const searchParams = new URLSearchParams(window.location.search)
   const hostToken = (searchParams.get('host_token') || '').trim()
   const wechatCode = (searchParams.get('wechat_code') || '').trim()
-  const loginTicket = CAIGOU_CHINA_TICKET_PARAMS
+  const credential = CAIGOU_CHINA_CREDENTIAL_PARAMS
     .map((paramName) => (searchParams.get(paramName) || '').trim())
     .find(Boolean) || ''
   if (hostToken) {
@@ -79,15 +69,15 @@ function resolveAuthParams(): AuthParams {
   if (wechatCode) {
     return { mode: 'wechat_code', value: wechatCode }
   }
-  if (loginTicket) {
-    return { mode: 'caigou_china', value: loginTicket }
+  if (credential) {
+    return { mode: 'caigou_china', value: credential }
   }
   return { mode: 'select', value: '' }
 }
 
-function clearLoginTicketFromUrl() {
+function clearCredentialFromUrl() {
   const url = new URL(window.location.href)
-  CAIGOU_CHINA_TICKET_PARAMS.forEach((paramName) => {
+  CAIGOU_CHINA_CREDENTIAL_PARAMS.forEach((paramName) => {
     url.searchParams.delete(paramName)
   })
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
@@ -112,7 +102,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   const authParamAttemptRef = useRef('')
 
   const selectedMockUser = useMemo(
-    () => AUTH_TEST_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
+    () => MOCK_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
     [selectedMockUserId],
   )
 
@@ -133,7 +123,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       } else if (mode === 'wechat_code') {
         result = await authApi.exchangeTokenWechat(value)
       } else if (mode === 'caigou_china') {
-        result = await exchangeCaigouChinaTicket(value)
+        result = await exchangeCaigouChinaCredential(value)
       } else {
         if (!MOCK_AUTH_ENABLED) {
           throw new Error('请从采购中国小程序进入云鹤AI服务')
@@ -157,7 +147,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(token)
       await projectApi.bindProject(DEFAULT_PROJECT_ID)
       if (mode === 'caigou_china') {
-        clearLoginTicketFromUrl()
+        clearCredentialFromUrl()
       }
       setAccessTokenState(token)
       setAuthStage('idle')
@@ -181,7 +171,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       return
     }
     const currentUserId = getCurrentUserId().trim()
-    const isKnownMockUser = AUTH_TEST_USERS.some((item) => item.user_id === currentUserId)
+    const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
     if (!currentUserId || isKnownMockUser) {
       return
     }
@@ -190,9 +180,17 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const syncToken = () => {
+      // Production entry must carry a credential; root refresh should not reuse an old browser token.
+      if (!MOCK_AUTH_ENABLED && authParams.mode === 'select') {
+        clearCurrentUserId()
+        clearCurrentUserDisplayName()
+        clearAccessToken()
+        setAccessTokenState('')
+        return
+      }
       if (MOCK_AUTH_ENABLED && authParams.mode === 'select' && authStage !== 'loading') {
         const currentUserId = getCurrentUserId().trim()
-        const isKnownMockUser = AUTH_TEST_USERS.some((item) => item.user_id === currentUserId)
+        const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
         if (currentUserId && !isKnownMockUser) {
           clearCurrentUserId()
           clearCurrentUserDisplayName()
@@ -266,7 +264,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
     authParams,
     hasAccessToken: accessToken.trim().length > 0,
     mockAuthEnabled: MOCK_AUTH_ENABLED,
-    mockUsers: AUTH_TEST_USERS,
+    mockUsers: MOCK_USERS,
     selectedMockUser,
     setSelectedMockUserId,
     authenticate,

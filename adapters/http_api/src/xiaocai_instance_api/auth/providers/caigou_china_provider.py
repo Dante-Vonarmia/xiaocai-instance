@@ -1,7 +1,7 @@
 """
 采购中国认证提供者
 
-用途: 使用采购中国小程序传入的登录凭证换取 xiaocai 本地登录身份。
+用途: 使用采购中国小程序传入的 credential 换取 xiaocai 本地登录身份。
 """
 
 import hashlib
@@ -40,7 +40,7 @@ class CaigouChinaVerifiedUser:
 
 
 class CaigouChinaAuthProvider(AuthProvider):
-    """采购中国登录凭证认证提供者"""
+    """采购中国 credential 认证提供者"""
 
     def __init__(self, verify_url: str, app_id: str, app_secret: str):
         self.verify_url = verify_url
@@ -51,21 +51,22 @@ class CaigouChinaAuthProvider(AuthProvider):
         self,
         host_token: str | None = None,
         wechat_code: str | None = None,
+        credential: str | None = None,
         login_ticket: str | None = None,
         root_token: str | None = None,
     ) -> AuthIdentity:
-        """调用采购中国服务端接口校验登录凭证并返回 xiaocai 用户 ID。"""
-        credential = (login_ticket or "").strip()
+        """调用采购中国服务端接口校验 credential 并返回 xiaocai 用户 ID。"""
+        credential_value = (credential or login_ticket or "").strip()
         if not self.verify_url:
             raise AuthError("CONFIG_MISSING", log_message="caigou china verify url missing")
         if not self.app_secret:
             raise AuthError("CONFIG_MISSING", log_message="caigou china app secret missing")
-        if not credential:
-            raise AuthError("CREDENTIAL_MISSING", log_message="caigou china login ticket missing")
+        if not credential_value:
+            raise AuthError("CREDENTIAL_MISSING", log_message="caigou china credential missing")
 
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.post(self.verify_url, json=self._build_payload(credential))
+                response = await client.post(self.verify_url, json=self._build_payload(credential_value))
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 raise AuthError(
