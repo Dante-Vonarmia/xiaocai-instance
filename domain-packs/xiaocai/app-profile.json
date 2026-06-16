@@ -4,7 +4,7 @@
   "domainPackVersion": "default",
   "userId": "demo_user",
   "displayPolicy": {
-    "showUserFooter": false,
+    "showUserFooter": true,
     "showStarterScenarios": true
   },
   "branding": {
