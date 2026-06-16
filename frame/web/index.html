@@ -7,6 +7,71 @@
     <title>小采 - 采购助手</title>
   </head>
   <body>
+    <script>
+      (() => {
+        const searchParams = new URLSearchParams(window.location.search)
+        const authParamNames = ['credential', 'login_ticket', 'ticket', 'token', 'sso_ticket', 'auth_code', 'host_token', 'wechat_code']
+        const hasEntryCredential = authParamNames.some((name) => (searchParams.get(name) || '').trim().length > 0)
+        if (hasEntryCredential) {
+          return
+        }
+        document.documentElement.dataset.xiaocaiEntryBlocked = 'true'
+        window.addEventListener('DOMContentLoaded', () => {
+          const blocker = document.createElement('main')
+          blocker.className = 'xiaocai-entry-blocker'
+          blocker.innerHTML = '<section><div>XIAOCAI FRAME WEB</div><h1>进入采购助手</h1><p>请从采购中国小程序进入云鹤AI服务。</p></section>'
+          document.body.appendChild(blocker)
+        })
+      })()
+    </script>
+    <style>
+      html[data-xiaocai-entry-blocked='true'],
+      html[data-xiaocai-entry-blocked='true'] body {
+        margin: 0;
+        min-height: 100%;
+        background: #f3f6fb;
+      }
+      .xiaocai-entry-blocker {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: 24px;
+        background: #f3f6fb;
+        color: #111827;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      .xiaocai-entry-blocker section {
+        width: min(560px, 100%);
+        box-sizing: border-box;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        padding: 40px;
+        background: #ffffff;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.12);
+      }
+      .xiaocai-entry-blocker div {
+        margin-bottom: 16px;
+        color: #8b5cf6;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+      .xiaocai-entry-blocker h1 {
+        margin: 0 0 16px;
+        font-size: 36px;
+        line-height: 1.2;
+      }
+      .xiaocai-entry-blocker p {
+        margin: 0;
+        color: #475569;
+        font-size: 18px;
+        line-height: 1.7;
+      }
+    </style>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
