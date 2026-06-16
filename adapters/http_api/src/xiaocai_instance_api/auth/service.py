@@ -104,9 +104,6 @@ class AuthService:
             return self._build_exchange_response(identity)
 
         if mock and not self.settings.mock_auth and not root_token:
-            legacy_public_test_identity = self._verify_legacy_public_test_user(mock_user_id)
-            if legacy_public_test_identity:
-                return self._build_exchange_response(legacy_public_test_identity)
             raise AuthError("CREDENTIAL_INVALID", log_message="production mock auth disabled")
 
         provider = self._get_provider(
@@ -169,16 +166,6 @@ class AuthService:
             return None
         return self._build_public_test_identity()
 
-    def _verify_legacy_public_test_user(self, mock_user_id: str | None) -> AuthIdentity | None:
-        expected_user_id = self.settings.public_test_user_id.strip()
-        requested_user_id = (mock_user_id or "").strip()
-        if (
-            not self.settings.public_test_auth_enabled
-            or not expected_user_id
-            or requested_user_id != expected_user_id
-        ):
-            return None
-        return self._build_public_test_identity()
 
     def _build_public_test_identity(self) -> AuthIdentity:
         user_id = self.settings.public_test_user_id.strip() or "public-test-user"

@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     caigou_china_app_id: str = Field(default="yunhe_ai", description="采购中国分配的应用 ID")
     caigou_china_app_secret: str = Field(default="", description="采购中国接口签名密钥")
     public_test_auth_enabled: bool = Field(default=False, description="是否启用公开测试 credential")
-    public_test_credential: str = Field(default="public-test-credential", description="公开测试 credential")
+    public_test_credential: str = Field(default="", description="公开测试 credential")
     public_test_user_id: str = Field(default="public-test-user", description="公开测试账号用户 ID")
     public_test_display_name: str = Field(default="公开测试用户", description="公开测试账号展示名")
     root_auth_token: str = Field(default="", description="root 认证 token")
