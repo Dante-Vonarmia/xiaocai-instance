@@ -37,6 +37,12 @@ async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
             mock_user_id=request.mock_user_id,
             host_token=request.host_token,
             wechat_code=request.wechat_code,
+            login_ticket=request.login_ticket,
+            ticket=request.ticket,
+            token=request.token,
+            credential=request.credential,
+            sso_ticket=request.sso_ticket,
+            auth_code=request.auth_code,
             root_token=request.root_token,
         )
 
@@ -45,6 +51,10 @@ async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
             token_type=result["token_type"],
             expires_in=result["expires_in"],
             user_id=result["user_id"],
+            source=result["source"],
+            display_name=result["display_name"],
+            member_status=result["member_status"],
+            external_user_id=result["external_user_id"],
         )
     except ValueError as e:
         raise HTTPException(

@@ -20,6 +20,25 @@
   min-height: 0;
 }
 
+.core-entry-user-badge {
+  background: rgba(255, 255, 255, 0.90);
+  border: 1px solid rgba(var(--xiaocai-primary-rgb), 0.18);
+  border-radius: 999px;
+  color: #33446b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 7px 10px;
+  position: absolute;
+  right: calc(var(--xiaocai-safe-right) + 12px);
+  text-overflow: ellipsis;
+  top: calc(var(--xiaocai-safe-top) + 10px);
+  white-space: nowrap;
+  z-index: 40;
+}
+
 .core-entry-update-reminder {
   left: calc(var(--xiaocai-safe-left) + 220px);
   position: absolute;

@@ -1,0 +1,136 @@
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { AppAuthProvider, useAppAuth } from '@/context/AppAuthContext'
+
+const apiMocks = vi.hoisted(() => ({
+  bindProject: vi.fn(),
+  clearAccessToken: vi.fn(),
+  clearCurrentUserId: vi.fn(),
+  exchangeCaigouChinaTicket: vi.fn(),
+  exchangeTokenHost: vi.fn(),
+  exchangeTokenMock: vi.fn(),
+  exchangeTokenWechat: vi.fn(),
+  getAccessToken: vi.fn(),
+  getCurrentUserId: vi.fn(),
+  setAccessToken: vi.fn(),
+  setCurrentUserId: vi.fn(),
+}))
+
+vi.mock('@/services/api', () => ({
+  authApi: {
+    exchangeTokenHost: apiMocks.exchangeTokenHost,
+    exchangeTokenMock: apiMocks.exchangeTokenMock,
+    exchangeTokenWechat: apiMocks.exchangeTokenWechat,
+  },
+  clearAccessToken: apiMocks.clearAccessToken,
+  clearCurrentUserId: apiMocks.clearCurrentUserId,
+  getAccessToken: apiMocks.getAccessToken,
+  getCurrentUserId: apiMocks.getCurrentUserId,
+  projectApi: {
+    bindProject: apiMocks.bindProject,
+  },
+  setAccessToken: apiMocks.setAccessToken,
+  setCurrentUserId: apiMocks.setCurrentUserId,
+}))
+
+vi.mock('@/services/caigouChinaAuthApi', () => ({
+  exchangeCaigouChinaTicket: apiMocks.exchangeCaigouChinaTicket,
+}))
+
+function AuthProbe() {
+  const { hasAccessToken } = useAppAuth()
+  return <div>{hasAccessToken ? 'authed' : 'blocked'}</div>
+}
+
+describe('AppAuthProvider caigou china login', () => {
+  let storedToken = ''
+  let storedUserId = ''
+
+  beforeEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+    storedToken = ''
+    storedUserId = ''
+    apiMocks.getAccessToken.mockImplementation(() => storedToken)
+    apiMocks.getCurrentUserId.mockImplementation(() => storedUserId)
+    apiMocks.setAccessToken.mockImplementation((token: string) => {
+      storedToken = token
+    })
+    apiMocks.setCurrentUserId.mockImplementation((userId: string) => {
+      storedUserId = userId
+    })
+    apiMocks.clearAccessToken.mockImplementation(() => {
+      storedToken = ''
+    })
+    apiMocks.clearCurrentUserId.mockImplementation(() => {
+      storedUserId = ''
+    })
+    apiMocks.bindProject.mockResolvedValue({})
+    window.localStorage.clear()
+    window.history.replaceState({}, '', '/')
+  })
+
+  it('exchanges login_ticket and clears credential query from URL', async () => {
+    apiMocks.exchangeCaigouChinaTicket.mockResolvedValue({
+      access_token: 'xiaocai-token',
+      user_id: '316',
+      display_name: '韩经伟',
+    })
+    window.history.replaceState({}, '', '/?login_ticket=ticket-123')
+
+    render(
+      <AppAuthProvider>
+        <AuthProbe />
+      </AppAuthProvider>,
+    )
+
+    await waitFor(() => expect(apiMocks.exchangeCaigouChinaTicket).toHaveBeenCalledWith('ticket-123'))
+    await waitFor(() => expect(screen.getByText('authed')).toBeInTheDocument())
+    expect(apiMocks.setAccessToken).toHaveBeenCalledWith('xiaocai-token')
+    expect(apiMocks.setCurrentUserId).toHaveBeenCalledWith('316')
+    expect(window.localStorage.getItem('current_user_display_name')).toBe('韩经伟')
+    expect(window.location.search).toBe('')
+  })
+
+  it('exchanges ticket alias and clears all credential aliases from URL', async () => {
+    apiMocks.exchangeCaigouChinaTicket.mockResolvedValue({
+      access_token: 'xiaocai-token',
+      user_id: '316',
+      display_name: '采购会员',
+    })
+    window.history.replaceState({}, '', '/?ticket=ticket-alias&token=stale-token')
+
+    render(
+      <AppAuthProvider>
+        <AuthProbe />
+      </AppAuthProvider>,
+    )
+
+    await waitFor(() => expect(apiMocks.exchangeCaigouChinaTicket).toHaveBeenCalledWith('ticket-alias'))
+    await waitFor(() => expect(screen.getByText('authed')).toBeInTheDocument())
+    expect(window.localStorage.getItem('current_user_display_name')).toBe('采购会员')
+    expect(window.location.search).toBe('')
+  })
+
+  it('exchanges login_ticket even when a previous token exists', async () => {
+    storedToken = 'old-token'
+    storedUserId = 'old-user'
+    apiMocks.exchangeCaigouChinaTicket.mockResolvedValue({
+      access_token: 'new-token',
+      user_id: '316',
+    })
+    window.history.replaceState({}, '', '/?login_ticket=ticket-456')
+
+    render(
+      <AppAuthProvider>
+        <AuthProbe />
+      </AppAuthProvider>,
+    )
+
+    await waitFor(() => expect(apiMocks.exchangeCaigouChinaTicket).toHaveBeenCalledWith('ticket-456'))
+    expect(apiMocks.clearAccessToken).toHaveBeenCalled()
+    expect(apiMocks.setAccessToken).toHaveBeenCalledWith('new-token')
+    expect(apiMocks.setCurrentUserId).toHaveBeenCalledWith('316')
+  })
+})

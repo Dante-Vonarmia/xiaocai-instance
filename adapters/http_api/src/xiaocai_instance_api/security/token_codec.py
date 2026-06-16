@@ -18,6 +18,10 @@ def create_access_token(
     tenant_id: str | None = None,
     org_id: str | None = None,
     roles: list[str] | tuple[str, ...] | None = None,
+    source: str | None = None,
+    display_name: str | None = None,
+    member_status: str | None = None,
+    external_user_id: str | None = None,
 ) -> str:
     """
     生成 JWT access token
@@ -48,6 +52,16 @@ def create_access_token(
         payload["tenant_id"] = tenant_id
     if org_id:
         payload["org_id"] = org_id
+    if source:
+        payload["source"] = source
+    if display_name:
+        payload["display_name"] = display_name
+    if member_status:
+        payload["member_status"] = member_status
+    if external_user_id:
+        payload["external_user_id"] = external_user_id
+    if source:
+        payload["last_login_at"] = now.isoformat()
 
     # 2. 编码
     token = jwt.encode(payload, settings.instance_jwt_secret, algorithm=settings.jwt_algorithm)

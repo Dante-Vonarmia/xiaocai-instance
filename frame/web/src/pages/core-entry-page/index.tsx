@@ -1,6 +1,7 @@
 import { App as FlareChatCoreApp } from 'flare-chat-core'
 import { useBranding } from '@/hooks/chat/useBranding'
 import { getAccessToken, getCurrentUserId } from '@/services/api'
+import { getCurrentUserDisplayName } from '@/services/authSession'
 import './styles.css'
 
 const FUNCTION_TYPE = import.meta.env.VITE_FLARE_CHAT_FUNCTION_TYPE || 'auto'
@@ -14,11 +15,15 @@ function CoreEntryPage() {
   const branding = useBranding()
   const accessToken = getAccessToken()
   const currentUserId = getCurrentUserId() || 'anonymous-user'
+  const currentUserName = getCurrentUserDisplayName() || currentUserId
   const projectSlot = branding.projectSlot
   const uiLabels = branding.uiLabels
 
   return (
     <div className="core-entry-page">
+      <div className="core-entry-user-badge" aria-label="当前用户">
+        当前用户：{currentUserName}
+      </div>
       <main className="core-entry-main">
         <FlareChatCoreApp
           apiBaseUrl={API_BASE_URL}

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   authApi,
   clearAccessToken,
@@ -9,13 +9,17 @@ import {
   setAccessToken,
   setCurrentUserId,
 } from '@/services/api'
+import { clearCurrentUserDisplayName, setCurrentUserDisplayName } from '@/services/authSession'
+import { exchangeCaigouChinaTicket } from '@/services/caigouChinaAuthApi'
 
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
 const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
+const MOCK_AUTH_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK_AUTH === 'true'
+const CAIGOU_CHINA_TICKET_PARAMS = ['login_ticket', 'ticket', 'token', 'credential', 'sso_ticket', 'auth_code'] as const
 
 type AuthStage = 'idle' | 'loading' | 'error'
-type AuthMode = 'host_token' | 'wechat_code' | 'mock'
-type AuthEntryMode = 'host_token' | 'wechat_code' | 'select'
+type AuthMode = 'host_token' | 'wechat_code' | 'caigou_china' | 'mock'
+type AuthEntryMode = 'host_token' | 'wechat_code' | 'caigou_china' | 'select'
 
 type MockUser = {
   user_id: string
@@ -35,6 +39,7 @@ type AppAuthContextValue = {
   authError: string
   authParams: AuthParams
   hasAccessToken: boolean
+  mockAuthEnabled: boolean
   mockUsers: MockUser[]
   selectedMockUser: MockUser
   setSelectedMockUserId: (userId: string) => void
@@ -55,18 +60,33 @@ function resolveAuthParams(): AuthParams {
   const searchParams = new URLSearchParams(window.location.search)
   const hostToken = (searchParams.get('host_token') || '').trim()
   const wechatCode = (searchParams.get('wechat_code') || '').trim()
+  const loginTicket = CAIGOU_CHINA_TICKET_PARAMS
+    .map((paramName) => (searchParams.get(paramName) || '').trim())
+    .find(Boolean) || ''
   if (hostToken) {
     return { mode: 'host_token', value: hostToken }
   }
   if (wechatCode) {
     return { mode: 'wechat_code', value: wechatCode }
   }
+  if (loginTicket) {
+    return { mode: 'caigou_china', value: loginTicket }
+  }
   return { mode: 'select', value: '' }
+}
+
+function clearLoginTicketFromUrl() {
+  const url = new URL(window.location.href)
+  CAIGOU_CHINA_TICKET_PARAMS.forEach((paramName) => {
+    url.searchParams.delete(paramName)
+  })
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
 }
 
 function resetAuthState(setAccessTokenState: (value: string) => void, setAuthError: (value: string) => void, setAuthStage: (value: AuthStage) => void) {
   clearAccessToken()
   clearCurrentUserId()
+  clearCurrentUserDisplayName()
   setAccessTokenState('')
   setAuthError('')
   setAuthStage('idle')
@@ -78,6 +98,8 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState('')
   const [selectedMockUserId, setSelectedMockUserId] = useState(DEFAULT_MOCK_USER.user_id)
   const authParams = useMemo(resolveAuthParams, [])
+  const previousAuthModeRef = useRef<AuthEntryMode>(authParams.mode)
+  const authParamAttemptRef = useRef('')
 
   const selectedMockUser = useMemo(
     () => MOCK_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
@@ -100,12 +122,18 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
         result = await authApi.exchangeTokenHost(value)
       } else if (mode === 'wechat_code') {
         result = await authApi.exchangeTokenWechat(value)
+      } else if (mode === 'caigou_china') {
+        result = await exchangeCaigouChinaTicket(value)
       } else {
+        if (!MOCK_AUTH_ENABLED) {
+          throw new Error('请从采购中国小程序进入云鹤AI服务')
+        }
         result = await authApi.exchangeTokenMock(value)
       }
 
       const token = typeof result.access_token === 'string' ? result.access_token.trim() : ''
       const userIdFromResult = typeof result.user_id === 'string' ? result.user_id.trim() : ''
+      const displayName = typeof result.display_name === 'string' ? result.display_name.trim() : ''
       const fallbackUserId = mode === 'mock' ? value : ''
       const userId = userIdFromResult || fallbackUserId
       if (!token) {
@@ -115,8 +143,12 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       if (userId) {
         setCurrentUserId(userId)
       }
+      setCurrentUserDisplayName(displayName || userId)
       setAccessToken(token)
       await projectApi.bindProject(DEFAULT_PROJECT_ID)
+      if (mode === 'caigou_china') {
+        clearLoginTicketFromUrl()
+      }
       setAccessTokenState(token)
       setAuthStage('idle')
     } catch (error) {
@@ -127,11 +159,15 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   }, [authParams])
 
   useEffect(() => {
+    if (previousAuthModeRef.current === authParams.mode) {
+      return
+    }
+    previousAuthModeRef.current = authParams.mode
     resetAuthState(setAccessTokenState, setAuthError, setAuthStage)
   }, [authParams.mode])
 
   useEffect(() => {
-    if (authParams.mode !== 'select') {
+    if (authParams.mode !== 'select' || !MOCK_AUTH_ENABLED) {
       return
     }
     const currentUserId = getCurrentUserId().trim()
@@ -144,12 +180,13 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const syncToken = () => {
-      if (authParams.mode === 'select' && authStage !== 'loading') {
+      if (MOCK_AUTH_ENABLED && authParams.mode === 'select' && authStage !== 'loading') {
         const currentUserId = getCurrentUserId().trim()
         const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
         if (currentUserId && !isKnownMockUser) {
           clearAccessToken()
           clearCurrentUserId()
+          clearCurrentUserDisplayName()
           setAccessTokenState('')
           return
         }
@@ -174,13 +211,20 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   }, [authParams.mode, authStage])
 
   useEffect(() => {
-    if (!accessToken.trim() && authStage !== 'loading' && authParams.mode !== 'select') {
-      void authenticate()
+    if (authStage === 'loading' || authParams.mode === 'select') {
+      return
     }
-  }, [accessToken, authStage, authParams.mode, authenticate])
+    const authParamKey = `${authParams.mode}:${authParams.value}`
+    if (authParamAttemptRef.current === authParamKey) {
+      return
+    }
+    authParamAttemptRef.current = authParamKey
+    resetAuthState(setAccessTokenState, setAuthError, setAuthStage)
+    void authenticate()
+  }, [authStage, authParams, authenticate])
 
   useEffect(() => {
-    if (!accessToken.trim() && authStage === 'idle' && authParams.mode === 'select') {
+    if (!accessToken.trim() && authStage === 'idle' && authParams.mode === 'select' && MOCK_AUTH_ENABLED) {
       void authenticate('mock', DEFAULT_MOCK_USER.user_id)
     }
   }, [accessToken, authStage, authParams.mode, authenticate])
@@ -202,6 +246,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
     authError,
     authParams,
     hasAccessToken: accessToken.trim().length > 0,
+    mockAuthEnabled: MOCK_AUTH_ENABLED,
     mockUsers: MOCK_USERS,
     selectedMockUser,
     setSelectedMockUserId,

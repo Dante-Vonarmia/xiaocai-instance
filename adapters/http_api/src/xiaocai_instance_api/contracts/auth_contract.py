@@ -21,6 +21,12 @@ class AuthExchangeRequest(BaseModel):
     # 真实模式参数
     host_token: str | None = Field(default=None, description="宿主应用的 token")
     wechat_code: str | None = Field(default=None, description="微信小程序 code")
+    login_ticket: str | None = Field(default=None, description="采购中国小程序登录凭证")
+    ticket: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
+    token: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
+    credential: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
+    sso_ticket: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
+    auth_code: str | None = Field(default=None, description="采购中国登录凭证兼容字段")
     root_token: str | None = Field(default=None, description="root 登录 token")
 
 
@@ -31,3 +37,7 @@ class AuthExchangeResponse(BaseModel):
     token_type: str = Field(default="bearer", description="Token 类型")
     expires_in: int = Field(..., description="过期时间（秒）")
     user_id: str = Field(..., description="用户 ID")
+    source: str = Field(default="", description="身份来源")
+    display_name: str = Field(default="", description="用户名称或昵称")
+    member_status: str = Field(default="", description="会员/账号状态")
+    external_user_id: str = Field(default="", description="外部用户 ID")

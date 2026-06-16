@@ -9,9 +9,10 @@ type MockUser = {
 }
 
 type AuthScreenProps = {
-  authMode: 'host_token' | 'wechat_code' | 'select'
+  authMode: 'host_token' | 'wechat_code' | 'caigou_china' | 'select'
   authStage: 'idle' | 'loading' | 'error'
   authError: string
+  mockAuthEnabled: boolean
   mockUsers: MockUser[]
   selectedMockUser: MockUser
   onSelectMockUser: (userId: string) => void
@@ -23,6 +24,7 @@ export function AuthScreen({
   authMode,
   authStage,
   authError,
+  mockAuthEnabled,
   mockUsers,
   selectedMockUser,
   onSelectMockUser,
@@ -30,14 +32,17 @@ export function AuthScreen({
   onRetry,
 }: AuthScreenProps) {
   const helperText = useMemo(() => (
-    authMode === 'select'
+    authMode === 'select' && mockAuthEnabled
       ? '选择模拟身份后进入会话，不同用户会看到自己的会话历史。'
+      : authMode === 'select'
+        ? '请从采购中国小程序进入云鹤AI服务。'
       : '正在完成成员身份接入并自动进入会话。'
-  ), [authMode])
+  ), [authMode, mockAuthEnabled])
   const loadingHint = useMemo(() => (authStage === 'loading' ? <p>认证中...</p> : null), [authStage])
-  const showMockForm = authMode === 'select'
+  const showMockForm = authMode === 'select' && mockAuthEnabled
   const showRetryForm = authStage === 'error' && authMode !== 'select'
   const showMockError = authStage === 'error'
+  const showEntryHint = authMode === 'select' && !mockAuthEnabled
   const handleMockUserChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     onSelectMockUser(event.target.value)
   }, [onSelectMockUser])
@@ -79,6 +84,11 @@ export function AuthScreen({
               进入会话
             </button>
             {showMockError ? <p>{authError || '认证失败，请稍后重试。'}</p> : null}
+          </div>
+        ) : null}
+        {showEntryHint ? (
+          <div className="auth-form">
+            <p>请回到采购中国小程序，点击云鹤AI入口重新进入。</p>
           </div>
         ) : null}
         {showRetryForm ? (

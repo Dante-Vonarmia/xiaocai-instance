@@ -4,6 +4,7 @@ Root 认证提供者
 用途: 在未接入宿主真实认证前，提供可控的 root 真实登录能力（非 mock）
 """
 
+from xiaocai_instance_api.auth.identity import AuthIdentity
 from xiaocai_instance_api.auth.providers.base import AuthProvider
 
 
@@ -18,12 +19,19 @@ class RootAuthProvider(AuthProvider):
         self,
         host_token: str | None = None,
         wechat_code: str | None = None,
+        login_ticket: str | None = None,
         root_token: str | None = None,
-    ) -> str:
+    ) -> AuthIdentity:
         if not self.root_auth_token:
             raise ValueError("Root auth token is not configured")
         if not root_token:
             raise ValueError("Root token is required")
         if root_token != self.root_auth_token:
             raise ValueError("Invalid root token")
-        return self.root_user_id
+        return AuthIdentity(
+            user_id=self.root_user_id,
+            source="root",
+            display_name=self.root_user_id,
+            member_status="active",
+            external_user_id=self.root_user_id,
+        )

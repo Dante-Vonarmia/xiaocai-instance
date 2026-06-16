@@ -106,6 +106,9 @@ class Settings(BaseSettings):
     # 认证配置
     mock_auth: bool = Field(default=True, description="是否使用 Mock 认证")
     real_auth_verify_url: str = Field(default="", description="真实认证验证 URL")
+    caigou_china_auth_verify_url: str = Field(default="", description="采购中国登录凭证校验 URL")
+    caigou_china_app_id: str = Field(default="yunhe_ai", description="采购中国分配的应用 ID")
+    caigou_china_app_secret: str = Field(default="", description="采购中国接口签名密钥")
     root_auth_token: str = Field(default="", description="root 认证 token")
     root_user_id: str = Field(default="root", description="root 用户 ID")
 
