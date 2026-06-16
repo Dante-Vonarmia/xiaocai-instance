@@ -200,6 +200,10 @@
   background: conic-gradient(var(--xiaocai-primary) var(--flare-context-ratio), rgba(15, 23, 42, 0.12) 0) !important;
 }
 
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workspace-context-status {
+  display: none !important;
+}
+
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-canvas-content-main {
   overflow-x: auto !important;
 }
