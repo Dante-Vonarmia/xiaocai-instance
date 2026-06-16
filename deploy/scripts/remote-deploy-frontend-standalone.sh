@@ -12,6 +12,7 @@ REPO_DIR=${REPO_DIR:-$HOME/mnt/xiaocai-instance}
 WEB_DIR="$REPO_DIR/frame/web"
 DOMAIN_PACKS_DIR="$REPO_DIR/domain-packs"
 REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/var/www/xiaocai-web}
+EXTRA_WEB_ROOTS=${EXTRA_WEB_ROOTS:-/var/www/html}
 FRONTEND_API_BASE_URL=${FRONTEND_API_BASE_URL:-/api}
 API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:28001}
 SERVER_NAME=${SERVER_NAME:-_}
@@ -46,14 +47,27 @@ if [ ! -d "$WEB_DIR/dist" ]; then
   exit 1
 fi
 
-echo "[frontend] install dist -> $REMOTE_WEB_ROOT"
-mkdir -p "$REMOTE_WEB_ROOT"
-find "$REMOTE_WEB_ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-cp -a "$WEB_DIR/dist/." "$REMOTE_WEB_ROOT/"
+install_web_root() {
+  local target_root="$1"
+  if [ -z "$target_root" ]; then
+    return
+  fi
+  echo "[frontend] install dist -> $target_root"
+  mkdir -p "$target_root"
+  find "$target_root" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+  cp -a "$WEB_DIR/dist/." "$target_root/"
 
-echo "[frontend] install domain-packs -> $REMOTE_WEB_ROOT/domain-packs"
-rm -rf "$REMOTE_WEB_ROOT/domain-packs"
-cp -a "$DOMAIN_PACKS_DIR" "$REMOTE_WEB_ROOT/domain-packs"
+  echo "[frontend] install domain-packs -> $target_root/domain-packs"
+  rm -rf "$target_root/domain-packs"
+  cp -a "$DOMAIN_PACKS_DIR" "$target_root/domain-packs"
+}
+
+install_web_root "$REMOTE_WEB_ROOT"
+for extra_root in $EXTRA_WEB_ROOTS; do
+  if [ "$extra_root" != "$REMOTE_WEB_ROOT" ]; then
+    install_web_root "$extra_root"
+  fi
+done
 
 TMP_CONF=$(mktemp)
 trap 'rm -f "$TMP_CONF"' EXIT
