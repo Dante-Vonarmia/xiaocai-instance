@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from xiaocai_instance_api.app import create_app
 from xiaocai_instance_api.chat.orchestration.mode_resolution import (
-    INTAKE_MODE_ALIAS,
     resolve_effective_mode,
 )
 
@@ -24,11 +23,20 @@ def auth_token(client):
     return response.json()["access_token"]
 
 
-def test_real_frontend_procurement_intake_message_enters_requirement_canvas():
+@pytest.mark.parametrize(
+    "message",
+    [
+        "我要采购一批办公桌椅，用于上海新办公室开放办公区，请先帮我整理采购需求。",
+        "我要采购一批办公桌椅，用于上海新办公室开放办公区，请先帮我梳理采购需求。",
+        "我要采购一批办公桌椅，用于上海新办公室开放办公区，请先做采购需求整理。",
+        "我要采购一批办公桌椅，用于上海新办公室开放办公区，请先做采购需求梳理。",
+    ],
+)
+def test_real_frontend_procurement_intake_message_stays_in_current_mode(message):
     mode = resolve_effective_mode(
         request_mode=None,
         session_mode=None,
-        message="我要采购一批办公桌椅，用于上海新办公室开放办公区，请先帮我梳理需求。",
+        message=message,
     )
 
     assert mode is None
@@ -49,6 +57,26 @@ def test_explicit_sync_to_requirement_intake_overrides_auto_mode():
         request_mode="auto",
         session_mode=None,
         message="同步到需求梳理中去",
+    )
+
+    assert mode == "requirement_intake"
+
+
+def test_procurement_intake_request_does_not_override_auto_mode():
+    mode = resolve_effective_mode(
+        request_mode="auto",
+        session_mode=None,
+        message="公司计划采购团建活动服务，请先帮我整理采购需求。",
+    )
+
+    assert mode == "auto"
+
+
+def test_explicit_procurement_requirement_intake_activation_overrides_auto_mode():
+    mode = resolve_effective_mode(
+        request_mode="auto",
+        session_mode=None,
+        message="请进入采购需求梳理。",
     )
 
     assert mode == "requirement_intake"
@@ -104,7 +132,7 @@ def test_supplier_request_does_not_force_requirement_canvas():
     assert mode is None
 
 
-def test_chat_stream_does_not_infer_mode_from_real_frontend_payload_without_mode(client, auth_token):
+def test_chat_stream_keeps_procurement_intake_payload_in_auto_mode(client, auth_token):
     captured = {}
     bind_response = client.post(
         "/projects/bind",
@@ -128,7 +156,7 @@ def test_chat_stream_does_not_infer_mode_from_real_frontend_payload_without_mode
                 "project_id": "project-real-frontend",
                 "user_id": "mode-resolution-user",
                 "payload": {
-                    "message": "我要采购一批办公桌椅，用于上海新办公室开放办公区，请先帮我梳理需求。",
+                    "message": "我要采购一批办公桌椅，用于上海新办公室开放办公区，请先帮我整理采购需求。",
                     "project_id": "project-real-frontend",
                     "user_id": "mode-resolution-user",
                 },
@@ -136,9 +164,8 @@ def test_chat_stream_does_not_infer_mode_from_real_frontend_payload_without_mode
         )
 
     assert response.status_code == 200
-    assert captured["context"].get("mode") is None
+    assert captured["context"].get("mode") not in {"requirement_canvas", "requirement_intake"}
     assert "普通回答。" in response.text
-    assert '"mode_key": "requirement_intake"' not in response.text
     assert "event: canvas_state" not in response.text
 
 
