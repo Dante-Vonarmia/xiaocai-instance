@@ -13,8 +13,21 @@ from typing import Any
 
 import httpx
 
+from xiaocai_instance_api.auth.errors import AuthError
 from xiaocai_instance_api.auth.identity import AuthIdentity
 from xiaocai_instance_api.auth.providers.base import AuthProvider
+
+
+UPSTREAM_ERROR_CODE_MAP = {
+    "CREDENTIAL_MISSING": "CREDENTIAL_MISSING",
+    "CREDENTIAL_INVALID": "CREDENTIAL_INVALID",
+    "CREDENTIAL_EXPIRED": "CREDENTIAL_EXPIRED",
+    "CREDENTIAL_USED": "CREDENTIAL_USED",
+    "USER_DISABLED": "USER_DISABLED",
+    "SIGNATURE_INVALID": "SIGNATURE_INVALID",
+    "APP_UNAUTHORIZED": "APP_UNAUTHORIZED",
+    "VERIFY_FAILED": "VERIFY_FAILED",
+}
 
 
 @dataclass(frozen=True)
@@ -44,24 +57,34 @@ class CaigouChinaAuthProvider(AuthProvider):
         """调用采购中国服务端接口校验登录凭证并返回 xiaocai 用户 ID。"""
         credential = (login_ticket or "").strip()
         if not self.verify_url:
-            raise ValueError("Caigou China auth verification URL is not configured")
+            raise AuthError("CONFIG_MISSING", log_message="caigou china verify url missing")
         if not self.app_secret:
-            raise ValueError("Caigou China app secret is not configured")
+            raise AuthError("CONFIG_MISSING", log_message="caigou china app secret missing")
         if not credential:
-            raise ValueError("Caigou China login ticket is required")
+            raise AuthError("CREDENTIAL_MISSING", log_message="caigou china login ticket missing")
 
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(self.verify_url, json=self._build_payload(credential))
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
-                raise ValueError("Caigou China auth verification failed") from exc
+                raise AuthError(
+                    "VERIFY_FAILED",
+                    log_message=f"caigou china verify http status {exc.response.status_code}",
+                ) from exc
+            except httpx.TimeoutException as exc:
+                raise AuthError("VERIFY_TIMEOUT", log_message="caigou china verify timeout") from exc
             except httpx.RequestError as exc:
-                raise ValueError("Caigou China auth verification request failed") from exc
+                raise AuthError("VERIFY_FAILED", log_message="caigou china verify request failed") from exc
 
-        verified_user = self._normalize_response(response.json())
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise AuthError("RESPONSE_INVALID", log_message="caigou china verify response not json") from exc
+
+        verified_user = self._normalize_response(payload)
         if verified_user.status and verified_user.status != "active":
-            raise ValueError("Caigou China user is not active")
+            raise AuthError("USER_DISABLED", log_message="caigou china user status is not active")
         return AuthIdentity(
             user_id=verified_user.user_id,
             source="caigou_china",
@@ -97,22 +120,24 @@ class CaigouChinaAuthProvider(AuthProvider):
 
     def _normalize_response(self, data: dict[str, Any]) -> CaigouChinaVerifiedUser:
         if not isinstance(data, dict):
-            raise ValueError("Caigou China auth response must be an object")
+            raise AuthError("RESPONSE_INVALID", log_message="caigou china auth response must be object")
 
         valid = data.get("valid")
         if valid is not True:
-            message = data.get("message") or data.get("error") or "Caigou China credential is invalid"
-            raise ValueError(str(message))
+            upstream_code = str(data.get("error") or "CREDENTIAL_INVALID").strip().upper()
+            code = UPSTREAM_ERROR_CODE_MAP.get(upstream_code, "CREDENTIAL_INVALID")
+            upstream_message = str(data.get("message") or upstream_code).strip()
+            raise AuthError(code, log_message=f"caigou china verify rejected: {upstream_message}")
 
         user = data.get("user")
         if not isinstance(user, dict) and isinstance(data.get("data"), dict):
             user = data["data"].get("user")
         if not isinstance(user, dict):
-            raise ValueError("Caigou China auth response missing user")
+            raise AuthError("RESPONSE_INVALID", log_message="caigou china auth response missing user")
 
         user_id = str(user.get("id") or user.get("user_id") or "").strip()
         if not user_id:
-            raise ValueError("Caigou China auth response missing user id")
+            raise AuthError("RESPONSE_INVALID", log_message="caigou china auth response missing user id")
         display_name = str(
             user.get("name")
             or user.get("nickname")

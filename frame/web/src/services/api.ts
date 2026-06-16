@@ -230,6 +230,9 @@ function getMessageFromUnknown(value: unknown, fallback: string) {
       if (typeof candidate === 'string' && candidate.trim()) {
         return candidate.trim()
       }
+      if (isPlainObject(candidate) && typeof candidate.message === 'string' && candidate.message.trim()) {
+        return candidate.message.trim()
+      }
     }
   }
 

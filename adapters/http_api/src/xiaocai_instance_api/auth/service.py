@@ -8,6 +8,7 @@
 """
 
 from xiaocai_instance_api.settings import get_settings
+from xiaocai_instance_api.auth.errors import AuthError
 from xiaocai_instance_api.auth.identity import AuthIdentity
 from xiaocai_instance_api.auth.providers.base import AuthProvider
 from xiaocai_instance_api.auth.providers.caigou_china_provider import CaigouChinaAuthProvider
@@ -137,7 +138,7 @@ class AuthService:
 
     def _verify_local_caigou_china_ticket(self, ticket: str) -> AuthIdentity:
         if ticket != CAIGOU_CHINA_LOCAL_TEST_TICKET:
-            raise ValueError("Caigou China credential is invalid")
+            raise AuthError("CREDENTIAL_INVALID", log_message="local caigou china test ticket invalid")
         return AuthIdentity(
             user_id="caigou-china-test-user",
             source="caigou_china",
