@@ -5,6 +5,8 @@
 """
 
 import httpx
+
+from xiaocai_instance_api.auth.identity import AuthIdentity
 from xiaocai_instance_api.auth.providers.base import AuthProvider
 
 
@@ -22,8 +24,9 @@ class RealAuthProvider(AuthProvider):
         self,
         host_token: str | None = None,
         wechat_code: str | None = None,
+        login_ticket: str | None = None,
         root_token: str | None = None,
-    ) -> str:
+    ) -> AuthIdentity:
         """
         真实验证 - 调用宿主应用或微信 API 验证身份
 
@@ -62,4 +65,14 @@ class RealAuthProvider(AuthProvider):
             user_id = data["data"].get("user_id")
         if not user_id:
             raise ValueError("Auth verification response missing user_id")
-        return str(user_id)
+        display_name = data.get("display_name") or data.get("name")
+        if not display_name and isinstance(data.get("data"), dict):
+            display_name = data["data"].get("display_name") or data["data"].get("name")
+        normalized_user_id = str(user_id)
+        return AuthIdentity(
+            user_id=normalized_user_id,
+            source="host",
+            display_name=str(display_name or normalized_user_id),
+            member_status="active",
+            external_user_id=normalized_user_id,
+        )

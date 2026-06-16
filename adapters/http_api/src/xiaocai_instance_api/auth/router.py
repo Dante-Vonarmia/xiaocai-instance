@@ -5,7 +5,11 @@
 - POST /auth/exchange - 身份换取（宿主应用 token 或微信 code 换取 xiaocai token）
 """
 
-from fastapi import APIRouter, HTTPException, status
+import logging
+
+from fastapi import APIRouter, HTTPException
+from xiaocai_instance_api.auth.errors import AuthError
+from xiaocai_instance_api.auth.errors import AUTH_ERROR_SPECS
 from xiaocai_instance_api.contracts.auth_contract import (
     AuthExchangeRequest,
     AuthExchangeResponse,
@@ -14,6 +18,7 @@ from xiaocai_instance_api.auth.service import get_auth_service
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/exchange", response_model=AuthExchangeResponse)
@@ -37,6 +42,12 @@ async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
             mock_user_id=request.mock_user_id,
             host_token=request.host_token,
             wechat_code=request.wechat_code,
+            login_ticket=request.login_ticket,
+            ticket=request.ticket,
+            token=request.token,
+            credential=request.credential,
+            sso_ticket=request.sso_ticket,
+            auth_code=request.auth_code,
             root_token=request.root_token,
         )
 
@@ -45,14 +56,34 @@ async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
             token_type=result["token_type"],
             expires_in=result["expires_in"],
             user_id=result["user_id"],
+            source=result["source"],
+            display_name=result["display_name"],
+            member_status=result["member_status"],
+            external_user_id=result["external_user_id"],
+        )
+    except AuthError as e:
+        logger.warning(
+            "auth exchange failed",
+            extra={"auth_error_code": e.code, "auth_log_message": e.log_message},
+        )
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.to_detail(),
         )
     except ValueError as e:
+        error = AuthError("CREDENTIAL_INVALID", log_message=str(e))
+        logger.warning(
+            "auth exchange failed",
+            extra={"auth_error_code": error.code, "auth_log_message": error.log_message},
+        )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            status_code=error.status_code,
+            detail=error.to_detail(),
         )
     except Exception as e:
+        spec = AUTH_ERROR_SPECS["VERIFY_FAILED"]
+        logger.exception("auth exchange unexpected failure")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Authentication failed: {str(e)}",
+            status_code=spec.status_code,
+            detail={"code": spec.code, "message": spec.user_message},
         )

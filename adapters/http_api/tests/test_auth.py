@@ -11,7 +11,10 @@
 import pytest
 from fastapi.testclient import TestClient
 from xiaocai_instance_api.app import create_app
-from xiaocai_instance_api.security.token_codec import create_access_token, decode_access_token
+from xiaocai_instance_api.security.token_codec import (
+    create_access_token,
+    decode_access_token,
+)
 from xiaocai_instance_api.settings import get_settings
 
 

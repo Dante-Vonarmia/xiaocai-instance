@@ -1,8 +1,9 @@
 import { apiClient, authApi, sourceApi } from '@/services/api'
+import { exchangeCaigouChinaTicket } from '@/services/caigouChinaAuthApi'
 
 type DomainFieldsResponse = Record<string, unknown>
 
-type AuthExchangeMode = 'mock' | 'host_token' | 'wechat_code'
+type AuthExchangeMode = 'mock' | 'host_token' | 'wechat_code' | 'caigou_china'
 
 type UploadSourcePayload = {
   file: File
@@ -51,6 +52,9 @@ async function authExchange(
   }
   if (mode === 'wechat_code') {
     return authApi.exchangeTokenWechat(value)
+  }
+  if (mode === 'caigou_china') {
+    return exchangeCaigouChinaTicket(value)
   }
   return authApi.exchangeTokenMock(value)
 }

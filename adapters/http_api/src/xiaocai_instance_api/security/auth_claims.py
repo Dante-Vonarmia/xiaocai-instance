@@ -14,6 +14,11 @@ class AuthClaims:
     tenant_id: str | None = None
     org_id: str | None = None
     roles: tuple[str, ...] = ("user",)
+    source: str | None = None
+    display_name: str | None = None
+    member_status: str | None = None
+    external_user_id: str | None = None
+    last_login_at: str | None = None
 
     def has_role(self, role: str) -> bool:
         return role in self.roles
@@ -45,4 +50,15 @@ def claims_from_payload(payload: dict[str, Any]) -> AuthClaims:
         tenant_id=tenant_id,
         org_id=org_id,
         roles=roles,
+        source=_optional_text(payload.get("source")),
+        display_name=_optional_text(payload.get("display_name")),
+        member_status=_optional_text(payload.get("member_status")),
+        external_user_id=_optional_text(payload.get("external_user_id")),
+        last_login_at=_optional_text(payload.get("last_login_at")),
     )
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value).strip() or None
