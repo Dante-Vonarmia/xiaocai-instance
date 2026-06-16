@@ -7,19 +7,38 @@
 3. 作为 FastAPI Depends() 注入到需要认证的路由
 """
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from xiaocai_instance_api.security.auth_claims import AuthClaims, claims_from_payload
+from xiaocai_instance_api.security.session_cookie import ACCESS_COOKIE_NAME
 from xiaocai_instance_api.security.token_codec import decode_access_token, decode_access_token_claims
 import jwt
 
 
 # HTTP Bearer 认证 scheme
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+
+def _extract_access_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> str:
+    if credentials and credentials.credentials.strip():
+        return credentials.credentials.strip()
+    return (request.cookies.get(ACCESS_COOKIE_NAME) or "").strip()
+
+
+def _raise_unauthorized(detail: str) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> str:
     """
     从请求中提取并验证 JWT token，返回 user_id
@@ -43,7 +62,9 @@ async def get_current_user_id(
         - Token 格式: Authorization: Bearer <token>
         - 如果 token 无效，返回 401 Unauthorized
     """
-    token = credentials.credentials
+    token = _extract_access_token(request, credentials)
+    if not token:
+        _raise_unauthorized("Invalid token")
 
     try:
         user_id = decode_access_token(token)
@@ -69,9 +90,13 @@ async def get_current_user_id(
 
 
 async def get_current_auth_claims(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> AuthClaims:
-    token = credentials.credentials
+    token = _extract_access_token(request, credentials)
+    if not token:
+        _raise_unauthorized("Invalid token")
+
     try:
         payload = decode_access_token_claims(token)
         return claims_from_payload(payload)

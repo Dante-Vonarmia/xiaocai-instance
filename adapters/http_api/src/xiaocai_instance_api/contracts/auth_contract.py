@@ -41,3 +41,14 @@ class AuthExchangeResponse(BaseModel):
     display_name: str = Field(default="", description="用户名称或昵称")
     member_status: str = Field(default="", description="会员/账号状态")
     external_user_id: str = Field(default="", description="外部用户 ID")
+
+
+class AuthSessionResponse(BaseModel):
+    """当前浏览器会话认证状态"""
+
+    authenticated: bool = Field(default=True, description="是否已认证")
+    user_id: str = Field(..., description="用户 ID")
+    source: str = Field(default="", description="身份来源")
+    display_name: str = Field(default="", description="用户名称或昵称")
+    member_status: str = Field(default="", description="会员/账号状态")
+    external_user_id: str = Field(default="", description="外部用户 ID")

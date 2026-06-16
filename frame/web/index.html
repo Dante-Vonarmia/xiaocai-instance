@@ -12,7 +12,19 @@
         const searchParams = new URLSearchParams(window.location.search)
         const authParamNames = ['credential', 'login_ticket', 'ticket', 'token', 'sso_ticket', 'auth_code', 'host_token', 'wechat_code']
         const hasEntryCredential = authParamNames.some((name) => (searchParams.get(name) || '').trim().length > 0)
-        if (hasEntryCredential) {
+        const hasSessionMarker = (() => {
+          try {
+            const hasSessionStorageMarker = window.sessionStorage?.getItem('xiaocai_session_active') === 'true'
+            const hasCookieMarker = document.cookie
+              .split(';')
+              .map((item) => item.trim())
+              .some((item) => item === 'xiaocai_session_active=1')
+            return hasSessionStorageMarker || hasCookieMarker
+          } catch {
+            return false
+          }
+        })()
+        if (hasEntryCredential || hasSessionMarker) {
           return
         }
         document.documentElement.dataset.xiaocaiEntryBlocked = 'true'

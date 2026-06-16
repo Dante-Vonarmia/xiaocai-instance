@@ -5,6 +5,7 @@ import {
   clearCurrentUserId,
   getAccessToken,
   getCurrentUserId,
+  hasSessionAuthMarker,
   projectApi,
   setAccessToken,
   setCurrentUserId,
@@ -16,6 +17,7 @@ const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
 const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
 const MOCK_AUTH_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK_AUTH === 'true'
 const CAIGOU_CHINA_CREDENTIAL_PARAMS = ['credential', 'login_ticket', 'ticket', 'token', 'sso_ticket', 'auth_code'] as const
+const COOKIE_SESSION_AUTH_STATE = 'cookie-session'
 
 type AuthStage = 'idle' | 'loading' | 'error'
 type AuthMode = 'host_token' | 'wechat_code' | 'caigou_china' | 'mock'
@@ -100,6 +102,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   const authParams = useMemo(resolveAuthParams, [])
   const previousAuthModeRef = useRef<AuthEntryMode>(authParams.mode)
   const authParamAttemptRef = useRef('')
+  const sessionRestoreAttemptRef = useRef(false)
 
   const selectedMockUser = useMemo(
     () => MOCK_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
@@ -180,12 +183,45 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const syncToken = () => {
-      // Production entry must carry a credential; root refresh should not reuse an old browser token.
       if (!MOCK_AUTH_ENABLED && authParams.mode === 'select') {
-        clearCurrentUserId()
-        clearCurrentUserDisplayName()
-        clearAccessToken()
-        setAccessTokenState('')
+        const currentToken = getAccessToken()
+        if (currentToken.trim()) {
+          setAccessTokenState(currentToken)
+          return
+        }
+        if (!hasSessionAuthMarker()) {
+          clearCurrentUserId()
+          clearCurrentUserDisplayName()
+          clearAccessToken()
+          setAccessTokenState('')
+          return
+        }
+        if (sessionRestoreAttemptRef.current || authStage === 'loading') {
+          return
+        }
+        sessionRestoreAttemptRef.current = true
+        setAuthStage('loading')
+        void authApi.getSession()
+          .then((result) => {
+            const userId = typeof result.user_id === 'string' ? result.user_id.trim() : ''
+            const displayName = typeof result.display_name === 'string' ? result.display_name.trim() : ''
+            if (userId) {
+              setCurrentUserId(userId)
+            }
+            setCurrentUserDisplayName(displayName || userId)
+            setAccessTokenState(COOKIE_SESSION_AUTH_STATE)
+            setAuthError('')
+            setAuthStage('idle')
+          })
+          .catch((error) => {
+            const message = error instanceof Error ? error.message : '认证失败'
+            clearCurrentUserId()
+            clearCurrentUserDisplayName()
+            clearAccessToken()
+            setAccessTokenState('')
+            setAuthError(message)
+            setAuthStage('idle')
+          })
         return
       }
       if (MOCK_AUTH_ENABLED && authParams.mode === 'select' && authStage !== 'loading') {
@@ -249,12 +285,14 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       return
     }
     void projectApi.bindProject(DEFAULT_PROJECT_ID).catch(() => {
-      setAccessTokenState(getAccessToken())
+      const currentToken = getAccessToken()
+      setAccessTokenState(currentToken || (hasSessionAuthMarker() ? COOKIE_SESSION_AUTH_STATE : ''))
     })
   }, [accessToken])
 
   const logout = useCallback(() => {
     resetAuthState(setAccessTokenState, setAuthError, setAuthStage)
+    void authApi.logout().catch(() => undefined)
   }, [])
 
   const value = useMemo<AppAuthContextValue>(() => ({

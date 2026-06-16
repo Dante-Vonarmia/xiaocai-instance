@@ -15,6 +15,10 @@ from xiaocai_instance_api.security.token_codec import (
     create_access_token,
     decode_access_token,
 )
+from xiaocai_instance_api.security.session_cookie import (
+    ACCESS_COOKIE_NAME,
+    SESSION_MARKER_COOKIE_NAME,
+)
 from xiaocai_instance_api.settings import get_settings
 
 
@@ -53,6 +57,27 @@ def test_mock_auth_exchange(client):
     assert data["user_id"] == "test-user-456"
     assert data["token_type"] == "bearer"
     assert data["expires_in"] > 0
+
+
+def test_mock_auth_exchange_sets_browser_session_cookies():
+    """测试身份换取后写入浏览器会话 Cookie"""
+    app = create_app()
+    client = TestClient(app, base_url="https://testserver")
+    response = client.post(
+        "/auth/exchange",
+        json={
+            "mock": True,
+            "mock_user_id": "cookie-user",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.cookies.get(ACCESS_COOKIE_NAME)
+    assert response.cookies.get(SESSION_MARKER_COOKIE_NAME) == "1"
+
+    session_response = client.get("/auth/session")
+    assert session_response.status_code == 200
+    assert session_response.json()["user_id"] == "cookie-user"
 
 
 def test_public_test_auth_exchange_success(monkeypatch):
@@ -133,6 +158,36 @@ def test_auth_dependency(client):
                 "message": "测试消息",
                 "session_id": "test-session",
             }
+        )
+
+    assert chat_response.status_code == 200
+
+
+def test_auth_dependency_accepts_session_cookie():
+    """测试认证依赖可从 HttpOnly 会话 Cookie 读取 token"""
+    app = create_app()
+    client = TestClient(app, base_url="https://testserver")
+    auth_response = client.post(
+        "/auth/exchange",
+        json={"mock": True, "mock_user_id": "cookie-chat-user"},
+    )
+    assert auth_response.status_code == 200
+
+    from unittest.mock import patch
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_run") as mock_chat:
+        mock_chat.return_value = {
+            "message": "ok",
+            "cards": [],
+            "session_id": "test-session",
+        }
+
+        chat_response = client.post(
+            "/chat/run",
+            json={
+                "message": "测试消息",
+                "session_id": "test-session",
+            },
         )
 
     assert chat_response.status_code == 200

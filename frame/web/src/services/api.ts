@@ -136,11 +136,54 @@ export type FlareUpdateStatusResponse = {
 
 const ACCESS_TOKEN_KEY = 'access_token'
 const CURRENT_USER_ID_KEY = 'current_user_id'
+const SESSION_ACTIVE_KEY = 'xiaocai_session_active'
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 function canUseBrowserStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
+}
+
+function canUseBrowserCookie() {
+  return typeof document !== 'undefined'
+}
+
+function secureCookieAttribute() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  return window.location.protocol === 'https:' ? '; Secure' : ''
+}
+
+function markSessionActive() {
+  if (canUseBrowserStorage()) {
+    window.sessionStorage.setItem(SESSION_ACTIVE_KEY, 'true')
+  }
+  if (canUseBrowserCookie()) {
+    document.cookie = `${SESSION_ACTIVE_KEY}=1; Path=/; SameSite=Lax${secureCookieAttribute()}`
+  }
+}
+
+function clearSessionActive() {
+  if (canUseBrowserStorage()) {
+    window.sessionStorage.removeItem(SESSION_ACTIVE_KEY)
+  }
+  if (canUseBrowserCookie()) {
+    document.cookie = `${SESSION_ACTIVE_KEY}=; Path=/; Max-Age=0; SameSite=Lax${secureCookieAttribute()}`
+  }
+}
+
+export function hasSessionAuthMarker() {
+  if (canUseBrowserStorage() && window.sessionStorage.getItem(SESSION_ACTIVE_KEY) === 'true') {
+    return true
+  }
+  if (!canUseBrowserCookie()) {
+    return false
+  }
+  return document.cookie
+    .split(';')
+    .map((item) => item.trim())
+    .some((item) => item === `${SESSION_ACTIVE_KEY}=1`)
 }
 
 export function getAccessToken() {
@@ -149,7 +192,7 @@ export function getAccessToken() {
   }
 
   try {
-    return window.localStorage.getItem(ACCESS_TOKEN_KEY) || ''
+    return window.sessionStorage.getItem(ACCESS_TOKEN_KEY) || ''
   } catch {
     return ''
   }
@@ -160,7 +203,14 @@ export function setAccessToken(token: string) {
     return
   }
 
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token.trim())
+  const normalizedToken = token.trim()
+  if (!normalizedToken) {
+    clearAccessToken()
+    return
+  }
+
+  window.sessionStorage.setItem(ACCESS_TOKEN_KEY, normalizedToken)
+  markSessionActive()
   window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
 }
 
@@ -170,7 +220,7 @@ export function getCurrentUserId() {
   }
 
   try {
-    return window.localStorage.getItem(CURRENT_USER_ID_KEY) || ''
+    return window.sessionStorage.getItem(CURRENT_USER_ID_KEY) || ''
   } catch {
     return ''
   }
@@ -181,7 +231,7 @@ export function setCurrentUserId(userId: string) {
     return
   }
 
-  window.localStorage.setItem(CURRENT_USER_ID_KEY, userId.trim())
+  window.sessionStorage.setItem(CURRENT_USER_ID_KEY, userId.trim())
 }
 
 export function clearCurrentUserId() {
@@ -189,16 +239,18 @@ export function clearCurrentUserId() {
     return
   }
 
-  window.localStorage.removeItem(CURRENT_USER_ID_KEY)
+  window.sessionStorage.removeItem(CURRENT_USER_ID_KEY)
 }
 
 export function clearAccessToken() {
-  if (!canUseBrowserStorage()) {
-    return
+  if (canUseBrowserStorage()) {
+    window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
   }
 
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
-  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
+  clearSessionActive()
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
+  }
 }
 
 export class ApiError extends Error {
@@ -652,6 +704,7 @@ async function consumeSseBody(
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -701,6 +754,16 @@ export const authApi = {
     })
     return response.data as JsonRecord
   },
+
+  getSession: async () => {
+    const response = await apiClient.get('/auth/session')
+    return response.data as JsonRecord
+  },
+
+  logout: async () => {
+    const response = await apiClient.post('/auth/logout')
+    return response.data as JsonRecord
+  },
 }
 
 export const chatApi = {
@@ -714,6 +777,7 @@ export const chatApi = {
   stream: async (params: ChatRequestPayload, callbacks: ChatStreamCallbacks = {}) => {
     const response = await fetch(buildUrl('/chat/stream'), {
       method: 'POST',
+      credentials: 'include',
       headers: buildAuthHeaders({
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',

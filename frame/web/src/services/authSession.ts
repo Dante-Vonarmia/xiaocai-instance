@@ -1,7 +1,7 @@
 const CURRENT_USER_DISPLAY_NAME_KEY = 'current_user_display_name'
 
 function canUseBrowserStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
 }
 
 export function getCurrentUserDisplayName() {
@@ -10,7 +10,7 @@ export function getCurrentUserDisplayName() {
   }
 
   try {
-    return window.localStorage.getItem(CURRENT_USER_DISPLAY_NAME_KEY) || ''
+    return window.sessionStorage.getItem(CURRENT_USER_DISPLAY_NAME_KEY) || ''
   } catch {
     return ''
   }
@@ -21,7 +21,7 @@ export function setCurrentUserDisplayName(displayName: string) {
     return
   }
 
-  window.localStorage.setItem(CURRENT_USER_DISPLAY_NAME_KEY, displayName.trim())
+  window.sessionStorage.setItem(CURRENT_USER_DISPLAY_NAME_KEY, displayName.trim())
 }
 
 export function clearCurrentUserDisplayName() {
@@ -29,5 +29,5 @@ export function clearCurrentUserDisplayName() {
     return
   }
 
-  window.localStorage.removeItem(CURRENT_USER_DISPLAY_NAME_KEY)
+  window.sessionStorage.removeItem(CURRENT_USER_DISPLAY_NAME_KEY)
 }

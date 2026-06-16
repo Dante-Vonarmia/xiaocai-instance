@@ -13,6 +13,9 @@ const apiMocks = vi.hoisted(() => ({
   exchangeTokenWechat: vi.fn(),
   getAccessToken: vi.fn(),
   getCurrentUserId: vi.fn(),
+  getSession: vi.fn(),
+  hasSessionAuthMarker: vi.fn(),
+  logout: vi.fn(),
   setAccessToken: vi.fn(),
   setCurrentUserId: vi.fn(),
 }))
@@ -22,11 +25,14 @@ vi.mock('@/services/api', () => ({
     exchangeTokenHost: apiMocks.exchangeTokenHost,
     exchangeTokenMock: apiMocks.exchangeTokenMock,
     exchangeTokenWechat: apiMocks.exchangeTokenWechat,
+    getSession: apiMocks.getSession,
+    logout: apiMocks.logout,
   },
   clearAccessToken: apiMocks.clearAccessToken,
   clearCurrentUserId: apiMocks.clearCurrentUserId,
   getAccessToken: apiMocks.getAccessToken,
   getCurrentUserId: apiMocks.getCurrentUserId,
+  hasSessionAuthMarker: apiMocks.hasSessionAuthMarker,
   projectApi: {
     bindProject: apiMocks.bindProject,
   },
@@ -67,7 +73,11 @@ describe('AppAuthProvider caigou china login', () => {
       storedUserId = ''
     })
     apiMocks.bindProject.mockResolvedValue({})
+    apiMocks.getSession.mockResolvedValue({})
+    apiMocks.hasSessionAuthMarker.mockReturnValue(false)
+    apiMocks.logout.mockResolvedValue({})
     window.localStorage.clear()
+    window.sessionStorage.clear()
     window.history.replaceState({}, '', '/')
   })
 
@@ -89,7 +99,7 @@ describe('AppAuthProvider caigou china login', () => {
     await waitFor(() => expect(screen.getByText('authed')).toBeInTheDocument())
     expect(apiMocks.setAccessToken).toHaveBeenCalledWith('xiaocai-token')
     expect(apiMocks.setCurrentUserId).toHaveBeenCalledWith('316')
-    expect(window.localStorage.getItem('current_user_display_name')).toBe('韩经伟')
+    expect(window.sessionStorage.getItem('current_user_display_name')).toBe('韩经伟')
     expect(window.location.search).toBe('')
   })
 
@@ -109,7 +119,7 @@ describe('AppAuthProvider caigou china login', () => {
 
     await waitFor(() => expect(apiMocks.exchangeCaigouChinaCredential).toHaveBeenCalledWith('ticket-alias'))
     await waitFor(() => expect(screen.getByText('authed')).toBeInTheDocument())
-    expect(window.localStorage.getItem('current_user_display_name')).toBe('采购会员')
+    expect(window.sessionStorage.getItem('current_user_display_name')).toBe('采购会员')
     expect(window.location.search).toBe('')
   })
 

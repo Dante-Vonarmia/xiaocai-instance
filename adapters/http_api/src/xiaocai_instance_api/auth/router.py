@@ -7,14 +7,21 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from xiaocai_instance_api.auth.errors import AuthError
 from xiaocai_instance_api.auth.errors import AUTH_ERROR_SPECS
 from xiaocai_instance_api.contracts.auth_contract import (
     AuthExchangeRequest,
     AuthExchangeResponse,
+    AuthSessionResponse,
 )
 from xiaocai_instance_api.auth.service import get_auth_service
+from xiaocai_instance_api.security.auth_claims import AuthClaims
+from xiaocai_instance_api.security.dependencies import get_current_auth_claims
+from xiaocai_instance_api.security.session_cookie import (
+    clear_auth_session_cookies,
+    set_auth_session_cookies,
+)
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -22,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/exchange", response_model=AuthExchangeResponse)
-async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
+async def exchange_token(request: AuthExchangeRequest, response: Response) -> AuthExchangeResponse:
     """
     身份换取 - 宿主应用 token 或微信 code 换取 xiaocai JWT token
 
@@ -51,6 +58,7 @@ async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
             root_token=request.root_token,
         )
 
+        set_auth_session_cookies(response, result["access_token"])
         return AuthExchangeResponse(
             access_token=result["access_token"],
             token_type=result["token_type"],
@@ -87,3 +95,23 @@ async def exchange_token(request: AuthExchangeRequest) -> AuthExchangeResponse:
             status_code=spec.status_code,
             detail={"code": spec.code, "message": spec.user_message},
         )
+
+
+@router.get("/session", response_model=AuthSessionResponse)
+async def get_auth_session(claims: AuthClaims = Depends(get_current_auth_claims)) -> AuthSessionResponse:
+    """校验当前浏览器会话 Cookie，并返回前端展示所需的认证身份。"""
+    return AuthSessionResponse(
+        authenticated=True,
+        user_id=claims.user_id,
+        source=claims.source or "",
+        display_name=claims.display_name or "",
+        member_status=claims.member_status or "",
+        external_user_id=claims.external_user_id or "",
+    )
+
+
+@router.post("/logout")
+async def logout(response: Response) -> dict[str, bool]:
+    """清理浏览器会话 Cookie。"""
+    clear_auth_session_cookies(response)
+    return {"success": True}
