@@ -55,6 +55,59 @@ def test_mock_auth_exchange(client):
     assert data["expires_in"] > 0
 
 
+def test_public_test_auth_exchange_success(monkeypatch):
+    """测试生产关闭任意 mock 后，仅允许固定公开测试用户换取 token"""
+    monkeypatch.setenv("MOCK_AUTH", "false")
+    monkeypatch.setenv("PUBLIC_TEST_AUTH_ENABLED", "true")
+    monkeypatch.setenv("PUBLIC_TEST_USER_ID", "public-test-user")
+    monkeypatch.setenv("PUBLIC_TEST_DISPLAY_NAME", "云鹤AI公开测试用户")
+    get_settings.cache_clear()
+
+    app = create_app()
+    client = TestClient(app)
+    response = client.post(
+        "/auth/exchange",
+        json={
+            "mock": True,
+            "mock_user_id": "public-test-user",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["user_id"] == "public-test-user"
+    assert data["display_name"] == "云鹤AI公开测试用户"
+    assert data["source"] == "public_test"
+    assert data["member_status"] == "active"
+    assert data["external_user_id"] == "public-test-user"
+    get_settings.cache_clear()
+
+
+def test_public_test_auth_rejects_arbitrary_mock_user(monkeypatch):
+    """测试生产公开测试入口不放开任意 mock 用户"""
+    monkeypatch.setenv("MOCK_AUTH", "false")
+    monkeypatch.setenv("PUBLIC_TEST_AUTH_ENABLED", "true")
+    monkeypatch.setenv("PUBLIC_TEST_USER_ID", "public-test-user")
+    get_settings.cache_clear()
+
+    app = create_app()
+    client = TestClient(app)
+    response = client.post(
+        "/auth/exchange",
+        json={
+            "mock": True,
+            "mock_user_id": "wx_user_bob",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == {
+        "code": "CREDENTIAL_INVALID",
+        "message": "登录凭证无效，请返回采购中国小程序重新进入",
+    }
+    get_settings.cache_clear()
+
+
 def test_auth_dependency(client):
     """测试认证依赖注入"""
     auth_response = client.post(

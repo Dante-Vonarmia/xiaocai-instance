@@ -33,7 +33,7 @@ export function AuthScreen({
 }: AuthScreenProps) {
   const helperText = useMemo(() => (
     authMode === 'select' && mockAuthEnabled
-      ? '选择模拟身份后进入会话，不同用户会看到自己的会话历史。'
+      ? '使用测试账号进入会话，用于内部和外部联调验证。'
       : authMode === 'select'
         ? '请从采购中国小程序进入云鹤AI服务。'
       : '正在完成成员身份接入并自动进入会话。'
@@ -59,7 +59,7 @@ export function AuthScreen({
         {loadingHint}
         {showMockForm ? (
           <div className="auth-form">
-            <label className="auth-form__label" htmlFor="mock-user-select">模拟用户</label>
+            <label className="auth-form__label" htmlFor="mock-user-select">测试账号</label>
             <select
               className="auth-form__input"
               disabled={authStage === 'loading'}
@@ -74,14 +74,13 @@ export function AuthScreen({
               ))}
             </select>
             <p>身份：{selectedMockUser.identity}</p>
-            <p>Bearer Token：{selectedMockUser.bearer_token}</p>
             <button
               className="auth-form__button"
               disabled={authStage === 'loading'}
               onClick={handleSubmitMock}
               type="button"
             >
-              进入会话
+              使用测试账号进入
             </button>
             {showMockError ? <p>{authError || '认证失败，请稍后重试。'}</p> : null}
           </div>

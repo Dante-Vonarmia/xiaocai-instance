@@ -15,6 +15,9 @@ REMOTE_WEB_ROOT=${REMOTE_WEB_ROOT:-/var/www/xiaocai-web}
 FRONTEND_API_BASE_URL=${FRONTEND_API_BASE_URL:-/api}
 API_UPSTREAM_URL=${API_UPSTREAM_URL:-http://127.0.0.1:28001}
 SERVER_NAME=${SERVER_NAME:-_}
+PUBLIC_TEST_AUTH_ENABLED=${PUBLIC_TEST_AUTH_ENABLED:-false}
+PUBLIC_TEST_USER_ID=${PUBLIC_TEST_USER_ID:-public-test-user}
+PUBLIC_TEST_DISPLAY_NAME=${PUBLIC_TEST_DISPLAY_NAME:-云鹤AI公开测试用户}
 TEMPLATE_FILE="$REPO_DIR/deploy/nginx/frontend-standalone-http.conf.template"
 NGINX_CONF=${NGINX_CONF:-/etc/nginx/conf.d/xiaocai-frontend.conf}
 
@@ -37,7 +40,12 @@ echo "[frontend] install exact npm dependencies"
 npm ci --no-audit --no-fund
 
 echo "[frontend] build standalone frontend"
-LOCAL_FLARE_ROOT=/__no_local_flare__ API_BASE_URL="$FRONTEND_API_BASE_URL" ./scripts/build-standalone.sh
+LOCAL_FLARE_ROOT=/__no_local_flare__ \
+  API_BASE_URL="$FRONTEND_API_BASE_URL" \
+  ENABLE_PUBLIC_TEST_AUTH="$PUBLIC_TEST_AUTH_ENABLED" \
+  PUBLIC_TEST_USER_ID="$PUBLIC_TEST_USER_ID" \
+  PUBLIC_TEST_DISPLAY_NAME="$PUBLIC_TEST_DISPLAY_NAME" \
+  ./scripts/build-standalone.sh
 
 if [ ! -d "$WEB_DIR/dist" ]; then
   echo "dist not found after build: $WEB_DIR/dist"

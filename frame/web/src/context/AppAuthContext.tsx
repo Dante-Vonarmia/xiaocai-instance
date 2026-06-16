@@ -14,7 +14,10 @@ import { exchangeCaigouChinaTicket } from '@/services/caigouChinaAuthApi'
 
 const AUTH_CHANGED_EVENT = 'xiaocai-auth-change'
 const DEFAULT_PROJECT_ID = import.meta.env.VITE_DEFAULT_PROJECT_ID || 'project-default'
-const MOCK_AUTH_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK_AUTH === 'true'
+const PUBLIC_TEST_AUTH_ENABLED = import.meta.env.VITE_ENABLE_PUBLIC_TEST_AUTH === 'true'
+const PUBLIC_TEST_USER_ID = import.meta.env.VITE_PUBLIC_TEST_USER_ID || 'public-test-user'
+const PUBLIC_TEST_DISPLAY_NAME = import.meta.env.VITE_PUBLIC_TEST_DISPLAY_NAME || '云鹤AI公开测试用户'
+const MOCK_AUTH_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCK_AUTH === 'true' || PUBLIC_TEST_AUTH_ENABLED
 const CAIGOU_CHINA_TICKET_PARAMS = ['login_ticket', 'ticket', 'token', 'credential', 'sso_ticket', 'auth_code'] as const
 
 type AuthStage = 'idle' | 'loading' | 'error'
@@ -52,7 +55,14 @@ const MOCK_USERS: MockUser[] = [
   { user_id: 'wx_user_bob', label: 'Bob（微信号 B）', identity: '手机号 139****2222', bearer_token: 'mock-bearer-bob' },
   { user_id: 'wx_user_cathy', label: 'Cathy（微信号 C）', identity: '手机号 137****3333', bearer_token: 'mock-bearer-cathy' },
 ]
-const DEFAULT_MOCK_USER = MOCK_USERS[0]
+const PUBLIC_TEST_USER: MockUser = {
+  user_id: PUBLIC_TEST_USER_ID,
+  label: PUBLIC_TEST_DISPLAY_NAME,
+  identity: '公开测试账号',
+  bearer_token: '',
+}
+const AUTH_TEST_USERS = PUBLIC_TEST_AUTH_ENABLED ? [PUBLIC_TEST_USER] : MOCK_USERS
+const DEFAULT_MOCK_USER = AUTH_TEST_USERS[0]
 
 const AppAuthContext = createContext<AppAuthContextValue | null>(null)
 
@@ -84,9 +94,9 @@ function clearLoginTicketFromUrl() {
 }
 
 function resetAuthState(setAccessTokenState: (value: string) => void, setAuthError: (value: string) => void, setAuthStage: (value: AuthStage) => void) {
-  clearAccessToken()
   clearCurrentUserId()
   clearCurrentUserDisplayName()
+  clearAccessToken()
   setAccessTokenState('')
   setAuthError('')
   setAuthStage('idle')
@@ -102,7 +112,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   const authParamAttemptRef = useRef('')
 
   const selectedMockUser = useMemo(
-    () => MOCK_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
+    () => AUTH_TEST_USERS.find((item) => item.user_id === selectedMockUserId) || DEFAULT_MOCK_USER,
     [selectedMockUserId],
   )
 
@@ -171,7 +181,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
       return
     }
     const currentUserId = getCurrentUserId().trim()
-    const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
+    const isKnownMockUser = AUTH_TEST_USERS.some((item) => item.user_id === currentUserId)
     if (!currentUserId || isKnownMockUser) {
       return
     }
@@ -182,16 +192,23 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
     const syncToken = () => {
       if (MOCK_AUTH_ENABLED && authParams.mode === 'select' && authStage !== 'loading') {
         const currentUserId = getCurrentUserId().trim()
-        const isKnownMockUser = MOCK_USERS.some((item) => item.user_id === currentUserId)
+        const isKnownMockUser = AUTH_TEST_USERS.some((item) => item.user_id === currentUserId)
         if (currentUserId && !isKnownMockUser) {
-          clearAccessToken()
           clearCurrentUserId()
           clearCurrentUserDisplayName()
+          clearAccessToken()
           setAccessTokenState('')
           return
         }
       }
-      setAccessTokenState(getAccessToken())
+      const currentToken = getAccessToken()
+      if (!currentToken.trim()) {
+        clearCurrentUserId()
+        clearCurrentUserDisplayName()
+        setAccessTokenState('')
+        return
+      }
+      setAccessTokenState(currentToken)
     }
 
     const handleStorage = (event: StorageEvent) => {
@@ -233,7 +250,9 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
     if (!accessToken.trim()) {
       return
     }
-    void projectApi.bindProject(DEFAULT_PROJECT_ID)
+    void projectApi.bindProject(DEFAULT_PROJECT_ID).catch(() => {
+      setAccessTokenState(getAccessToken())
+    })
   }, [accessToken])
 
   const logout = useCallback(() => {
@@ -247,7 +266,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
     authParams,
     hasAccessToken: accessToken.trim().length > 0,
     mockAuthEnabled: MOCK_AUTH_ENABLED,
-    mockUsers: MOCK_USERS,
+    mockUsers: AUTH_TEST_USERS,
     selectedMockUser,
     setSelectedMockUserId,
     authenticate,

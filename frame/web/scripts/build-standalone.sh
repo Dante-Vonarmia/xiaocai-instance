@@ -6,6 +6,9 @@ cd "$ROOT_DIR"
 
 API_BASE_URL=${API_BASE_URL:-/api}
 CORE_ENTRY_URL=${CORE_ENTRY_URL:-/core/}
+ENABLE_PUBLIC_TEST_AUTH=${ENABLE_PUBLIC_TEST_AUTH:-${VITE_ENABLE_PUBLIC_TEST_AUTH:-false}}
+PUBLIC_TEST_USER_ID=${PUBLIC_TEST_USER_ID:-${VITE_PUBLIC_TEST_USER_ID:-public-test-user}}
+PUBLIC_TEST_DISPLAY_NAME=${PUBLIC_TEST_DISPLAY_NAME:-${VITE_PUBLIC_TEST_DISPLAY_NAME:-云鹤AI公开测试用户}}
 
 if [ ! -f package.json ]; then
   echo "package.json not found in $ROOT_DIR"
@@ -54,7 +57,12 @@ if [ -f "$LOCAL_FLARE_ROOT/packages/flare-chat-core/package.json" ] && [ -f "$LO
     flare-generative-ui@"$FLARE_GENERATIVE_UI_VERSION"
 fi
 
-VITE_API_BASE_URL="$API_BASE_URL" VITE_FLARE_CORE_ENTRY_URL="$CORE_ENTRY_URL" npm run build
+VITE_API_BASE_URL="$API_BASE_URL" \
+  VITE_FLARE_CORE_ENTRY_URL="$CORE_ENTRY_URL" \
+  VITE_ENABLE_PUBLIC_TEST_AUTH="$ENABLE_PUBLIC_TEST_AUTH" \
+  VITE_PUBLIC_TEST_USER_ID="$PUBLIC_TEST_USER_ID" \
+  VITE_PUBLIC_TEST_DISPLAY_NAME="$PUBLIC_TEST_DISPLAY_NAME" \
+  npm run build
 
 DIST_BUNDLE=$(find "$ROOT_DIR/dist/assets" -maxdepth 1 -name 'index-*.js' | head -n 1)
 if [ -z "${DIST_BUNDLE:-}" ]; then
@@ -64,4 +72,4 @@ fi
 
 node ./scripts/patch-flare-chat-core.cjs "$DIST_BUNDLE"
 
-echo "build complete: $ROOT_DIR/dist (VITE_API_BASE_URL=$API_BASE_URL, VITE_FLARE_CORE_ENTRY_URL=$CORE_ENTRY_URL)"
+echo "build complete: $ROOT_DIR/dist (VITE_API_BASE_URL=$API_BASE_URL, VITE_FLARE_CORE_ENTRY_URL=$CORE_ENTRY_URL, VITE_ENABLE_PUBLIC_TEST_AUTH=$ENABLE_PUBLIC_TEST_AUTH)"

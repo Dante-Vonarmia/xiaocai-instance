@@ -98,6 +98,10 @@ class AuthService:
             identity = self._verify_local_caigou_china_ticket(caigou_login_ticket)
             return self._build_exchange_response(identity)
 
+        if mock and not self.settings.mock_auth and not caigou_login_ticket and not root_token:
+            identity = self._verify_public_test_user(mock_user_id)
+            return self._build_exchange_response(identity)
+
         provider = self._get_provider(
             use_mock=mock,
             use_root=bool(root_token),
@@ -145,6 +149,24 @@ class AuthService:
             display_name="采购中国测试用户",
             member_status="active",
             external_user_id="test",
+        )
+
+    def _verify_public_test_user(self, mock_user_id: str | None) -> AuthIdentity:
+        expected_user_id = self.settings.public_test_user_id.strip()
+        requested_user_id = (mock_user_id or "").strip()
+        if (
+            not self.settings.public_test_auth_enabled
+            or not expected_user_id
+            or requested_user_id != expected_user_id
+        ):
+            raise AuthError("CREDENTIAL_INVALID", log_message="public test auth user not allowed")
+        display_name = self.settings.public_test_display_name.strip() or expected_user_id
+        return AuthIdentity(
+            user_id=expected_user_id,
+            source="public_test",
+            display_name=display_name,
+            member_status="active",
+            external_user_id=expected_user_id,
         )
 
     def _first_present(self, *values: str | None) -> str | None:
