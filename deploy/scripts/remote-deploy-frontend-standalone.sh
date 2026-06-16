@@ -69,6 +69,27 @@ for extra_root in $EXTRA_WEB_ROOTS; do
   fi
 done
 
+sync_openresty_container_root() {
+  if ! command -v docker >/dev/null 2>&1; then
+    return
+  fi
+  local container_name="${FRONTEND_OPENRESTY_CONTAINER:-}"
+  local container_root="${FRONTEND_OPENRESTY_WEB_ROOT:-/usr/share/nginx/html}"
+  if [ -z "$container_name" ]; then
+    container_name=$(docker ps --format '{{.Names}}' | grep -m 1 '^1Panel-openresty-' || true)
+  fi
+  if [ -z "$container_name" ]; then
+    return
+  fi
+  echo "[frontend] install dist -> $container_name:$container_root"
+  docker exec "$container_name" sh -lc "mkdir -p '$container_root' && find '$container_root' -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
+  docker cp "$WEB_DIR/dist/." "$container_name:$container_root/"
+  docker cp "$DOMAIN_PACKS_DIR" "$container_name:$container_root/domain-packs"
+  docker exec "$container_name" sh -lc 'nginx -t && nginx -s reload'
+}
+
+sync_openresty_container_root
+
 TMP_CONF=$(mktemp)
 trap 'rm -f "$TMP_CONF"' EXIT
 sed "s|__SERVER_NAME__|$SERVER_NAME|g; s|__API_UPSTREAM__|$API_UPSTREAM_URL|g" "$TEMPLATE_FILE" > "$TMP_CONF"
