@@ -175,6 +175,30 @@
   border-color: var(--xiaocai-primary-border) !important;
 }
 
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workspace-tab-switch {
+  justify-self: start !important;
+  max-width: min(100%, 220px) !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workspace-tab-switch-item {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-canvas-panel button[aria-pressed] {
+  max-width: 170px !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-canvas-panel.is-compact button[aria-pressed] {
+  max-width: 140px !important;
+}
+
+:is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-composer-target-chip {
+  max-width: 160px !important;
+}
+
 :is(.xiaocai-chat-page, .xiaocai-settings-page, .core-entry-page) .flare-workspace-context-popover-chart {
   border-color: rgba(var(--xiaocai-primary-rgb), 0.26) !important;
   box-shadow: inset 0 0 0 1px rgba(var(--xiaocai-primary-rgb), 0.14) !important;

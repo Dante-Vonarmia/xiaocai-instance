@@ -35,6 +35,7 @@ from xiaocai_instance_api.chat.stream_turn import (
     get_stream_turn_registry,
     serialize_sse_event,
 )
+from xiaocai_instance_api.chat.structured_reasoning_canvas import build_structured_reasoning_canvas_event
 from xiaocai_instance_api.settings import get_settings
 from xiaocai_instance_api.storage.conversation_store import get_conversation_store
 import json
@@ -470,6 +471,9 @@ async def chat_stream(
                     event_type = event.get("type", "message")
                     if event_type == "instance_profile":
                         event = project_instance_profile_event(event if isinstance(event, dict) else {})
+                    structured_canvas_event = build_structured_reasoning_canvas_event(event)
+                    if structured_canvas_event:
+                        yield serialize_sse_event("canvas_state", structured_canvas_event)
                     chunk = _extract_event_chunk(event)
                     if chunk and _should_accumulate_stream_chunk(event_type, event):
                         event, chunk_delta, should_emit_event = text_accumulator.normalize_event(

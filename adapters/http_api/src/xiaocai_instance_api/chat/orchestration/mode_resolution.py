@@ -23,6 +23,12 @@ EXPLICIT_INTAKE_SYNC_TERMS = (
     "切换到需求梳理",
     "切换到采购需求梳理",
 )
+PROCUREMENT_INTAKE_ACTIVATION_TERMS = (
+    "整理采购需求",
+    "梳理采购需求",
+    "采购需求整理",
+    "采购需求梳理",
+)
 
 
 def is_intake_mode(mode: str | None) -> bool:
@@ -38,7 +44,8 @@ def _clean_mode(mode: str | None) -> str | None:
 
 def _is_explicit_intake_sync_message(message: str) -> bool:
     normalized = "".join(str(message or "").split())
-    return any(term in normalized for term in EXPLICIT_INTAKE_SYNC_TERMS)
+    terms = (*EXPLICIT_INTAKE_SYNC_TERMS, *PROCUREMENT_INTAKE_ACTIVATION_TERMS)
+    return any(term in normalized for term in terms)
 
 
 def resolve_effective_mode(
