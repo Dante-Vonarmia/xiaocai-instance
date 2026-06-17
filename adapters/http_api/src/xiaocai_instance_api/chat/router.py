@@ -29,6 +29,7 @@ from xiaocai_instance_api.chat.orchestration.mode_resolution import (
 )
 from xiaocai_instance_api.chat.request_guard import evaluate_request_guard
 from xiaocai_instance_api.chat.response_text import normalize_assistant_display_text, replace_event_text
+from xiaocai_instance_api.chat.stream_artifact_projection import StreamArtifactProjector
 from xiaocai_instance_api.chat.stream_text import StreamTextAccumulator
 from xiaocai_instance_api.chat.stream_turn import (
     build_stream_busy_events,
@@ -457,6 +458,7 @@ async def chat_stream(
                 kernel_context = sanitize_kernel_context_for_kernel(kernel_context)
                 kernel_client = get_kernel_client()
                 text_accumulator = StreamTextAccumulator()
+                artifact_projector = StreamArtifactProjector()
                 done_message: str | None = None
                 emitted_done_event = False
                 exchange_persisted = False
@@ -508,6 +510,10 @@ async def chat_stream(
                             event = replace_event_text(event, done_message)
                     yield f"event: {event_type}\n"
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    for projected_event in artifact_projector.project(event):
+                        projected_event_type = projected_event.get("type", "message")
+                        yield f"event: {projected_event_type}\n"
+                        yield f"data: {json.dumps(projected_event, ensure_ascii=False)}\n\n"
                 final_message = normalize_assistant_display_text(done_message or text_accumulator.final_message())
                 if not _is_non_empty_text(final_message):
                     final_message = EMPTY_ASSISTANT_MESSAGE
