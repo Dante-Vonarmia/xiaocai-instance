@@ -35,6 +35,7 @@ function CoreEntryPage() {
           functionType={FUNCTION_TYPE}
           instanceId={INSTANCE_ID}
           instanceProfile={branding.instanceProfile}
+          modulePromptRegistry={branding.modulePromptRegistry}
           projectId=""
           productName={uiLabels.product_name}
           productTag={uiLabels.brand_tag}

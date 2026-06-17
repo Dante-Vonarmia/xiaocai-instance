@@ -61,6 +61,18 @@ describe('useBranding', () => {
       capabilityCatalog: [
         { key: 'requirement_intake', label: '需求梳理', summary: '结构化采购需求。' },
       ],
+      modulePromptRegistry: [
+        {
+          module_key: 'requirement_intake',
+          label: '需求梳理',
+          target_mode: 'requirement_intake',
+          trigger_keywords: ['梳理', '整理需求'],
+          action_text: '开启需求梳理',
+          reason: '输入提到了需求梳理相关词。',
+          action_commands: ['activate_requirement_intake'],
+          target_modes: ['requirement_intake'],
+        },
+      ],
       displayPolicy: {
         showUserFooter: true,
         showStarterScenarios: true,
@@ -85,6 +97,8 @@ describe('useBranding', () => {
       'analysis_mode',
     ])
     expect(result.current.capabilityCatalog.map((item) => item.key)).toEqual(['requirement_intake'])
+    expect(result.current.modulePromptRegistry.map((item) => item.module_key)).toEqual(['requirement_intake'])
+    expect(result.current.modulePromptRegistry[0].trigger_keywords).toEqual(['梳理', '整理需求'])
     expect(result.current.branding.colors?.primary).toBe('#8b5cf6')
     expect(result.current.branding.themeTokens?.appBg).toBe('#ffffff')
     expect(result.current.instanceProfile.ui_labels.scenario_panel_title).toBe('起步入口')

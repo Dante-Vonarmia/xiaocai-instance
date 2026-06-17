@@ -4,6 +4,7 @@ import {
   type CapabilityCatalogItem,
   type CanvasUiLabels,
   type ComposerModeOption,
+  type ModulePromptRegistryItem,
   type StarterPrompt,
 } from '@/constants/chat'
 
@@ -73,6 +74,64 @@ export function toCapabilityCatalog(value: unknown): CapabilityCatalogItem[] {
     && typeof item.label === 'string'
     && typeof item.summary === 'string'
   ))
+}
+
+function toOptionalStringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+  const items = value.map(toText).filter(Boolean)
+  return items.length > 0 ? items : undefined
+}
+
+function toOptionalPromptTemplates(value: unknown): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+  const items = value.filter(isObject)
+  return items.length > 0 ? items : undefined
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
+
+function isModulePromptRegistryItem(value: ModulePromptRegistryItem | null): value is ModulePromptRegistryItem {
+  return Boolean(value)
+}
+
+function toModulePromptRegistryItem(value: unknown): ModulePromptRegistryItem | null {
+  if (!isObject(value)) {
+    return null
+  }
+  const moduleKey = toText(value.module_key)
+  if (!moduleKey) {
+    return null
+  }
+  return Object.fromEntries(
+    Object.entries({
+      module_key: moduleKey,
+      label: toText(value.label) || undefined,
+      target_mode: toText(value.target_mode) || undefined,
+      trigger_keywords: toOptionalStringList(value.trigger_keywords),
+      action_text: toText(value.action_text) || undefined,
+      reason: toText(value.reason) || undefined,
+      action_commands: toOptionalStringList(value.action_commands),
+      target_modes: toOptionalStringList(value.target_modes),
+      prompt_templates: toOptionalPromptTemplates(value.prompt_templates),
+      prompt_instruction: toText(value.prompt_instruction) || undefined,
+      runtime_instruction: toText(value.runtime_instruction) || undefined,
+      priority: toOptionalNumber(value.priority),
+    }).filter((entry) => entry[1] !== undefined),
+  ) as ModulePromptRegistryItem
+}
+
+export function toModulePromptRegistry(value: unknown): ModulePromptRegistryItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.map(toModulePromptRegistryItem).filter(isModulePromptRegistryItem)
 }
 
 export function toCanvasUiLabels(value: unknown): CanvasUiLabels {

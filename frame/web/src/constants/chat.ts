@@ -18,6 +18,21 @@ export type CapabilityCatalogItem = {
   summary: string
 }
 
+export type ModulePromptRegistryItem = {
+  module_key: string
+  label?: string
+  target_mode?: string
+  trigger_keywords?: string[]
+  action_text?: string
+  reason?: string
+  action_commands?: string[]
+  target_modes?: string[]
+  prompt_templates?: Array<Record<string, unknown>>
+  prompt_instruction?: string
+  runtime_instruction?: string
+  priority?: number
+}
+
 export type DisplayPolicy = {
   showUserFooter?: boolean
   showStarterScenarios?: boolean
@@ -120,5 +135,6 @@ export const DEFAULT_INSTANCE_PROFILE: InstanceProfile = {
 export const DEFAULT_STARTER_PROMPTS: StarterPrompt[] = []
 export const DEFAULT_COMPOSER_MODE_OPTIONS: ComposerModeOption[] = []
 export const DEFAULT_CAPABILITY_CATALOG: CapabilityCatalogItem[] = []
+export const DEFAULT_MODULE_PROMPT_REGISTRY: ModulePromptRegistryItem[] = []
 export const DEFAULT_DISPLAY_POLICY: DisplayPolicy = {}
 export const DEFAULT_APP_BRANDING: AppBranding = {}

@@ -9,6 +9,7 @@ import {
   DEFAULT_FUNCTION_TYPE,
   DEFAULT_INTERACTION_MODE,
   DEFAULT_INSTANCE_PROFILE,
+  DEFAULT_MODULE_PROMPT_REGISTRY,
   DEFAULT_PROJECT_SLOT,
   DEFAULT_STARTER_PROMPTS,
   type AppBranding,
@@ -18,6 +19,7 @@ import {
   type DisplayPolicy,
   type InstanceProfile,
   type InteractionMode,
+  type ModulePromptRegistryItem,
   type ProjectSlot,
   type StarterPrompt,
 } from '@/constants/chat'
@@ -27,6 +29,7 @@ import {
   toCapabilityCatalog,
   toCanvasUiLabels,
   toComposerModeOptions,
+  toModulePromptRegistry,
   toStarterPrompts,
   toStringRecord,
   toText,
@@ -43,6 +46,7 @@ type BrandingState = {
   displayPolicy: DisplayPolicy
   composerModeOptions: ComposerModeOption[]
   capabilityCatalog: CapabilityCatalogItem[]
+  modulePromptRegistry: ModulePromptRegistryItem[]
 }
 
 type BrandingPayload = {
@@ -76,6 +80,7 @@ type AppProfilePayload = {
   capabilityCatalog?: unknown
   composerModeOptions?: unknown
   displayPolicy?: unknown
+  modulePromptRegistry?: unknown
   instanceProfile?: {
     brand_tag?: unknown
     logo_text?: unknown
@@ -97,6 +102,7 @@ const DEFAULT_BRANDING_STATE: BrandingState = {
   displayPolicy: DEFAULT_DISPLAY_POLICY,
   composerModeOptions: DEFAULT_COMPOSER_MODE_OPTIONS,
   capabilityCatalog: DEFAULT_CAPABILITY_CATALOG,
+  modulePromptRegistry: DEFAULT_MODULE_PROMPT_REGISTRY,
 }
 
 const APP_PROFILE_PATH = '/domain-packs/xiaocai/app-profile.json'
@@ -206,6 +212,7 @@ function normalizeAppProfileState(payload: AppProfilePayload | null | undefined)
     displayPolicy: toDisplayPolicy(payload.displayPolicy),
     composerModeOptions: toComposerModeOptions(payload.composerModeOptions),
     capabilityCatalog: toCapabilityCatalog(payload.capabilityCatalog),
+    modulePromptRegistry: toModulePromptRegistry(payload.modulePromptRegistry),
   }
 }
 
@@ -241,6 +248,7 @@ function normalizeBrandingState(payload: BrandingPayload | null | undefined): Br
     displayPolicy: DEFAULT_DISPLAY_POLICY,
     composerModeOptions: DEFAULT_COMPOSER_MODE_OPTIONS,
     capabilityCatalog: DEFAULT_CAPABILITY_CATALOG,
+    modulePromptRegistry: DEFAULT_MODULE_PROMPT_REGISTRY,
   }
 }
 

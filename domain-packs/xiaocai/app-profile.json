@@ -128,5 +128,52 @@
       "label": "智能寻源",
       "summary": "根据明确需求查找和比较候选供应商/方案。"
     }
+  ],
+  "modulePromptRegistry": [
+    {
+      "module_key": "requirement_intake",
+      "label": "需求梳理",
+      "target_mode": "requirement_intake",
+      "trigger_keywords": [
+        "梳理",
+        "梳理需求",
+        "整理需求"
+      ],
+      "action_text": "开启需求梳理",
+      "reason": "输入提到了需求梳理相关词，可以开启需求梳理能力。",
+      "action_commands": [
+        "activate_requirement_intake"
+      ],
+      "target_modes": [
+        "requirement_intake"
+      ]
+    },
+    {
+      "module_key": "analysis_mode",
+      "label": "需求分析",
+      "target_mode": "analysis_mode",
+      "trigger_keywords": [
+        "分析",
+        "报告",
+        "分析报告",
+        "需求分析",
+        "RFI",
+        "RFX",
+        "RFP",
+        "RFQ",
+        "rfi",
+        "rfx",
+        "rfp",
+        "rfq"
+      ],
+      "action_text": "开启需求分析",
+      "reason": "输入提到了分析或报告相关词，可以开启需求分析能力。",
+      "action_commands": [
+        "generate_analysis"
+      ],
+      "target_modes": [
+        "analysis_mode"
+      ]
+    }
   ]
 }
