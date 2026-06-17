@@ -5,6 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+STRUCTURAL_FIELD_KEYS = frozenset({"字段", "当前口径", "状态", "维度", "待确认点"})
+
 
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
@@ -15,7 +17,11 @@ def _as_list(value: Any) -> list[Any]:
 
 
 def _text(value: Any) -> str:
-    return value.strip() if isinstance(value, str) and value.strip() else ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    return ""
 
 
 def _first_text(*values: Any) -> str:
@@ -26,18 +32,79 @@ def _first_text(*values: Any) -> str:
     return ""
 
 
+def _quoted_evidence_text(value: str) -> str:
+    for left, right in [("“", "”"), ('"', '"'), ("'", "'")]:
+        if left not in value:
+            continue
+        suffix = value.split(left, 1)[1]
+        if right in suffix:
+            return suffix.split(right, 1)[0].strip()
+    return value
+
+
+def _evidence_text(value: Any) -> str:
+    if isinstance(value, list):
+        return _first_text(*[_quoted_evidence_text(_text(item)) for item in value])
+    return _quoted_evidence_text(_text(value))
+
+
+def _display_text(value: Any) -> str:
+    payload = _as_dict(value)
+    if payload:
+        return _first_text(
+            payload.get("display_value"),
+            payload.get("value"),
+            payload.get("normalized_value"),
+            payload.get("text"),
+            _evidence_text(payload.get("evidence")),
+        )
+    if isinstance(value, list):
+        return _first_text(*value)
+    return _text(value)
+
+
+def _field_display_value(payload: dict[str, Any]) -> str:
+    return _first_text(
+        _display_text(payload.get("display_value")),
+        _display_text(payload.get("value")),
+        _display_text(payload.get("normalized_value")),
+        _display_text(payload.get("text")),
+        _evidence_text(payload.get("evidence")),
+    )
+
+
+def _is_displayable_field_key(field_key: str) -> bool:
+    return field_key not in STRUCTURAL_FIELD_KEYS
+
+
 def _field_item(field_key: str, payload: dict[str, Any], *, status: str) -> dict[str, Any]:
-    value = payload.get("value", payload.get("normalized_value"))
+    display_value = _field_display_value(payload)
+    value_payload = _as_dict(payload.get("value"))
     return {
         "field_key": field_key,
         "key": field_key,
         "label": _first_text(payload.get("label"), field_key),
-        "value": value,
-        "display_value": _text(value),
+        "value": display_value or None,
+        "display_value": display_value,
         "status": status,
-        "confidence": payload.get("confidence"),
+        "confidence": payload.get("confidence", value_payload.get("confidence")),
         "needs_confirmation": payload.get("needs_confirmation") is True,
     }
+
+
+def _has_field_value(payload: dict[str, Any]) -> bool:
+    return bool(_field_display_value(payload))
+
+
+def _normalize_field_items(items: Any, *, status: str) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for item in _as_list(items):
+        payload = _as_dict(item)
+        field_key = _first_text(payload.get("field_key"), payload.get("key"), payload.get("label"))
+        if not field_key or not _is_displayable_field_key(field_key):
+            continue
+        normalized.append(_field_item(field_key, payload, status=status))
+    return normalized
 
 
 def _confirmed_from_structured_reasoning(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
@@ -46,14 +113,19 @@ def _confirmed_from_structured_reasoning(reasoning: dict[str, Any]) -> list[dict
         return [
             _field_item(field_key, _as_dict(payload), status="confirmed")
             for field_key, payload in node_fields.items()
-            if _text(_as_dict(payload).get("value"))
+            if _is_displayable_field_key(field_key) and _has_field_value(_as_dict(payload))
         ]
 
     extraction_fields = _as_list(_as_dict(reasoning.get("field_extraction")).get("confirmed_fields"))
     return [
         _field_item(_text(item.get("field_key")), _as_dict(item), status="confirmed")
         for item in extraction_fields
-        if isinstance(item, dict) and _text(item.get("field_key")) and _text(item.get("value"))
+        if (
+            isinstance(item, dict)
+            and _text(item.get("field_key"))
+            and _is_displayable_field_key(_text(item.get("field_key")))
+            and _has_field_value(item)
+        )
     ]
 
 
@@ -63,7 +135,7 @@ def _missing_from_structured_reasoning(reasoning: dict[str, Any]) -> list[dict[s
     for item in patches:
         payload = _as_dict(item)
         field_key = _text(payload.get("field_key"))
-        if not field_key or _text(payload.get("value")):
+        if not field_key or not _is_displayable_field_key(field_key) or _has_field_value(payload):
             continue
         missing.append(_field_item(field_key, payload, status="missing"))
     return missing
@@ -110,12 +182,14 @@ def _procurement_packages(structured_package: dict[str, Any]) -> list[dict[str, 
         missing = [
             _first_text(field.get("label"), field.get("field_key"))
             for field in fields
-            if not _text(field.get("value"))
+            if _is_displayable_field_key(_first_text(field.get("field_key"), field.get("label")))
+            and not _field_display_value(field)
         ]
         confirmed = [
-            f"{_first_text(field.get('label'), field.get('field_key'))}：{_text(field.get('value'))}"
+            f"{_first_text(field.get('label'), field.get('field_key'))}：{_field_display_value(field)}"
             for field in fields
-            if _text(field.get("value"))
+            if _is_displayable_field_key(_first_text(field.get("field_key"), field.get("label")))
+            and _field_display_value(field)
         ]
         packages.append({
             "package_id": group_key,
@@ -205,8 +279,14 @@ class StreamArtifactProjector:
             artifact_document,
             self._latest_structured_package,
         )
-        confirmed = _confirmed_from_structured_reasoning(reasoning) or _as_list(canvas_state.get("collected"))
-        missing = _missing_from_structured_reasoning(reasoning) or _as_list(canvas_state.get("missing"))
+        confirmed = _confirmed_from_structured_reasoning(reasoning) or _normalize_field_items(
+            canvas_state.get("collected"),
+            status="confirmed",
+        )
+        missing = _missing_from_structured_reasoning(reasoning) or _normalize_field_items(
+            canvas_state.get("missing"),
+            status="missing",
+        )
         questions = _question_texts(reasoning)
         if questions:
             document["missing_questions"] = questions
@@ -242,4 +322,3 @@ class StreamArtifactProjector:
                 "projection_source": "structured_reasoning",
             },
         }
-

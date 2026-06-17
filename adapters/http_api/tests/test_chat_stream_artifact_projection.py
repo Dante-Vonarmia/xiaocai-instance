@@ -143,3 +143,84 @@ def test_stream_without_structured_artifact_does_not_project_canvas(monkeypatch,
     assert response.status_code == 200
     assert [event_type for event_type, _ in _sse_events(response.text)].count("canvas_state") == 0
 
+
+def test_structured_projection_normalizes_raw_dict_field_values(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STORAGE_DB_PATH", str(tmp_path / "storage.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = _headers(client, user_id="stream-raw-field-user")
+
+    with patch("xiaocai_instance_api.chat.kernel_client.KernelClient.chat_stream") as mock_stream:
+        async def mock_generator():
+            yield {
+                "type": "canvas_state",
+                "mode_key": "requirement_intake",
+                "canvas_state": {
+                    "artifact_document": {"title": "需求文档"},
+                    "collected": [
+                        {
+                            "field_key": "采购目的",
+                            "label": "采购目的",
+                            "value": {
+                                "value": None,
+                                "confidence": 0.0,
+                                "state": "candidate",
+                                "evidence": ["用户描述“用于自动化测试和压测环境”"],
+                            },
+                        },
+                        {
+                            "field_key": "数量",
+                            "label": "数量",
+                            "value": {
+                                "value": None,
+                                "confidence": 0.0,
+                                "state": "candidate",
+                                "evidence": ["待评估"],
+                            },
+                        },
+                    ],
+                    "missing": [
+                        {"field_key": "预算币种", "label": "预算币种"},
+                        {"field_key": "当前口径", "label": "当前口径"},
+                        {"field_key": "状态", "label": "状态"},
+                    ],
+                    "progress": 0.4,
+                },
+            }
+            yield {
+                "type": "patch_event",
+                "payload": {
+                    "structured_reasoning": {
+                        "artifact_document": {
+                            "artifact_type": "requirements_document",
+                            "content": "# 测试服务器采购需求\n\n## 项目概述",
+                            "content_format": "markdown",
+                            "title": "测试服务器采购需求",
+                        },
+                        "field_extraction": {"field_state_patches": []},
+                    },
+                },
+            }
+            yield {"type": "done", "session_id": "sess-raw-field-projection"}
+
+        mock_stream.return_value = mock_generator()
+        response = client.post(
+            "/chat/stream",
+            headers=headers,
+            json={
+                "message": "帮我梳理测试服务器采购需求",
+                "session_id": "sess-raw-field-projection",
+                "context": {"mode": "requirement_intake"},
+            },
+        )
+
+    assert response.status_code == 200
+    canvas_events = [payload for event_type, payload in _sse_events(response.text) if event_type == "canvas_state"]
+    projected_state = canvas_events[-1]["canvas_state"]
+    collected = projected_state["collected"]
+    assert collected[0]["value"] == "用于自动化测试和压测环境"
+    assert collected[0]["display_value"] == "用于自动化测试和压测环境"
+    assert collected[1]["value"] == "待评估"
+    assert all(not isinstance(item["value"], (dict, list)) for item in collected)
+    assert [item["field_key"] for item in projected_state["missing"]] == ["预算币种"]
