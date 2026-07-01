@@ -25,6 +25,60 @@
       {
         "field_key": "预算金额",
         "match_terms": ["预算", "预算金额", "预算上限", "金额"],
+        "value_terms": ["元", "万元", "万", "人民币"],
+        "change_type": "field_value_update",
+        "auto_apply": true,
+        "artifact_actions": {
+          "requirements_document": "patch",
+          "analysis_report": "patch",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "mark_stale"
+        }
+      },
+      {
+        "field_key": "数量",
+        "match_terms": ["数量", "人数", "参与人数", "员工人数", "份数", "规模"],
+        "value_terms": ["人", "名", "份", "个", "台"],
+        "change_type": "field_value_update",
+        "auto_apply": true,
+        "decision": "needs_confirmation",
+        "artifact_actions": {
+          "requirements_document": "patch",
+          "analysis_report": "patch",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "mark_stale"
+        }
+      },
+      {
+        "field_key": "时间安排",
+        "match_terms": ["时间", "日期", "时长", "周期", "活动时间", "举办时间", "交付时间"],
+        "value_terms": ["天", "小时", "半天", "全天", "周", "月", "日"],
+        "change_type": "field_value_update",
+        "auto_apply": true,
+        "artifact_actions": {
+          "requirements_document": "patch",
+          "analysis_report": "patch",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "mark_stale"
+        }
+      },
+      {
+        "field_key": "产品/服务 说明",
+        "match_terms": ["产品要求", "产品要求补充", "供应商要求", "供应商要求补充", "质量要求", "质量要求补充"],
+        "value_markers": ["补充", "选择", "尽量选择", "优先选择", "要求"],
+        "allow_text_value": true,
+        "change_type": "field_value_update",
+        "auto_apply": true,
+        "artifact_actions": {
+          "requirements_document": "patch",
+          "analysis_report": "patch",
+          "sourcing_result": "mark_stale",
+          "rfx_strategy": "mark_stale"
+        }
+      },
+      {
+        "field_key": "范围约束",
+        "match_terms": ["范围", "服务范围", "采购范围", "边界", "约束", "限制"],
         "change_type": "field_value_update",
         "auto_apply": true,
         "artifact_actions": {

@@ -1,0 +1,69 @@
+{
+  "version": "2026-06-26",
+  "domain": "xiaocai",
+  "sources": [
+    {
+      "source_id": "public:ocds:data-standard",
+      "title": "Open Contracting Data Standard",
+      "source_type": "public",
+      "url": "https://www.open-contracting.org/data-standard/",
+      "use_scope": "采购流程、合同数据字段、可追溯公开标准参考"
+    },
+    {
+      "source_id": "public:ocds:release-schema",
+      "title": "OCDS Release Schema Reference",
+      "source_type": "public",
+      "url": "https://standard.open-contracting.org/latest/en/schema/reference/",
+      "use_scope": "采购项目、标的、供应商、合同、交付节点字段参考"
+    },
+    {
+      "source_id": "public:eu:cpv",
+      "title": "EU Common Procurement Vocabulary",
+      "source_type": "public",
+      "url": "https://single-market-economy.ec.europa.eu/single-market/public-procurement/digital-procurement/common-procurement-vocabulary_en",
+      "use_scope": "品类分类和采购对象标准化参考"
+    },
+    {
+      "source_id": "public:cn:government-procurement-law",
+      "title": "中华人民共和国政府采购法",
+      "source_type": "public",
+      "url": "https://www.ndrc.gov.cn/xxgk/zcfb/qt/200507/t20050706_967929.html",
+      "use_scope": "采购公开、公平、合规和验收责任的一般法律参考"
+    },
+    {
+      "source_id": "public:cn:government-procurement-regulation",
+      "title": "中华人民共和国政府采购法实施条例",
+      "source_type": "public",
+      "url": "https://www.mee.gov.cn/zcwj/gwywj/202001/t20200114_759319.shtml",
+      "use_scope": "采购执行、合同履约、验收和资料留存参考"
+    },
+    {
+      "source_id": "public:nist:sp-800-161-r1",
+      "title": "NIST SP 800-161 Rev. 1",
+      "source_type": "public",
+      "url": "https://csrc.nist.gov/pubs/sp/800/161/r1/final",
+      "use_scope": "ICT/供应链风险、供应商评估与安全要求参考"
+    },
+    {
+      "source_id": "public:iso:9001",
+      "title": "ISO 9001 Quality Management Systems",
+      "source_type": "public",
+      "url": "https://www.iso.org/standard/62085.html",
+      "use_scope": "质量管理体系和质量要求表达参考"
+    },
+    {
+      "source_id": "public:iso:25010",
+      "title": "ISO/IEC 25010 Systems and software Quality Requirements and Evaluation",
+      "source_type": "public",
+      "url": "https://www.iso.org/standard/35733.html",
+      "use_scope": "软件和系统质量模型参考"
+    },
+    {
+      "source_id": "internal:procurement-china:supplier-optimization-v3",
+      "title": "采购中国供应商功能优化方案 V3",
+      "source_type": "user_provided_reference",
+      "file_name": "1供应商功能优化方案V3.docx",
+      "use_scope": "xiaocai/采购中国实例租户、角色、供应商分级、检索链路和会员中台参考"
+    }
+  ]
+}
