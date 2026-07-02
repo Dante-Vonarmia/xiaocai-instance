@@ -12,3 +12,5 @@ frame/web/node_modules/
 frame/web/dist/
 deploy/backups/
 deploy/*.log
+deploy/nginx/backups/
+deploy/nginx/certbot-webroot/
